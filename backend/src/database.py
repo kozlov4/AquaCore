@@ -1,9 +1,18 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, declared_attr
 from dotenv import load_dotenv
 
 load_dotenv()
+
+class Base(DeclarativeBase):
+    pass
+
+class TableNameMixin:
+    @declared_attr.directive
+    def __tablename__(cls) -> str:
+        return cls.__name__.lower()
+
 
 DATABASE_URL = (
     f"postgresql+psycopg2://{os.getenv('DB_USER')}:"
