@@ -8,7 +8,7 @@ from sqlalchemy import (
     CheckConstraint, DECIMAL, BIGINT, INTEGER, func
 )
 from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, ENUM
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr, relationship
 
 class Base(DeclarativeBase):
     pass
@@ -75,6 +75,23 @@ class User(Base, TableNameMixin):
     hashed_password: Mapped[str_255_not_null]
     role: Mapped[UserRole] = mapped_column(ENUM(UserRole), default=UserRole.user)
     created_at: Mapped[timestamp_now]
+    
+    user_profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False)
+    user_settings: Mapped["UserSettings"] = relationship(back_populates="user", uselist=False)
+    knowledge_base_articles: Mapped[list["KnowledgeBaseArticle"]] = relationship(back_populates="author")
+    
+    aquariums: Mapped[list["Aquarium"]] = relationship(back_populates="user")
+    posts: Mapped[list["Post"]] = relationship(back_populates="user")
+    likes: Mapped[list["Like"]] = relationship(back_populates="user")
+    tasks: Mapped[list["Task"]] = relationship(back_populates="user")
+    
+    followed: Mapped[list["Follow"]] = relationship(
+        foreign_keys="Follow.follower_id", back_populates="follower"
+    )
+    followers: Mapped[list["Follow"]] = relationship(
+        foreign_keys="Follow.following_id", back_populates="following"
+    )
+
 
 class UserProfile(Base, TableNameMixin):
     user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
@@ -82,12 +99,16 @@ class UserProfile(Base, TableNameMixin):
     first_name: Mapped[Optional[str]] = mapped_column(String(100))
     last_name: Mapped[Optional[str]] = mapped_column(String(100))
 
+    user = relationship("User", back_populates="user_profile", uselist=False)
+
 class UserSettings(Base, TableNameMixin):
     user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
     theme: Mapped[ThemeType] = mapped_column(ENUM(ThemeType), default=ThemeType.light)
     language: Mapped[str] = mapped_column(String(5), default='ua')
     temperature_unit: Mapped[TempUnit] = mapped_column(ENUM(TempUnit), default=TempUnit.C)
     volume_unit: Mapped[VolumeUnit] = mapped_column(ENUM(VolumeUnit), default=VolumeUnit.L)
+
+    user = relationship("User", back_populates="user_settings", uselist=False)
 
 
 class Aquarium(Base, TableNameMixin):
@@ -104,6 +125,13 @@ class Aquarium(Base, TableNameMixin):
     ground_type: Mapped[Optional[str]] = mapped_column(String(100))
     lighting_model: Mapped[Optional[str]] = mapped_column(String(100))
     filter_model: Mapped[Optional[str]] = mapped_column(String(100))
+
+    user: Mapped["User"] = relationship(back_populates="aquariums")
+    inhabitants: Mapped[list["AquariumInhabitant"]] = relationship(back_populates="aquarium")
+    activity_logs: Mapped[list["ActivityLog"]] = relationship(back_populates="aquarium")
+    device: Mapped["Device"] = relationship(back_populates="aquarium")
+    manual_measurements: Mapped[list["ManualMeasurement"]] = relationship(back_populates="aquarium")
+    tasks: Mapped[list["Task"]] = relationship(back_populates="aquarium")
 
 
 class CatalogInhabitant(Base, TableNameMixin):
@@ -130,6 +158,8 @@ class CatalogInhabitant(Base, TableNameMixin):
     gh_min: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     gh_max: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
 
+    aquarium_links: Mapped[list["AquariumInhabitant"]] = relationship(back_populates="inhabitant")
+
 class CatalogDisease(Base, TableNameMixin):
     id: Mapped[int_pk]
     name: Mapped[str_100_not_null]
@@ -144,6 +174,9 @@ class AquariumInhabitant(Base, TableNameMixin):
     quantity: Mapped[int] = mapped_column(INTEGER, default=1)
     added_at: Mapped[Optional[date]] = mapped_column(Date)
 
+    aquarium: Mapped["Aquarium"] = relationship(back_populates="inhabitants")
+    inhabitant: Mapped["CatalogInhabitant"] = relationship(back_populates="aquarium_links")
+
 
 class ActivityLog(Base, TableNameMixin):
     id: Mapped[int_pk]
@@ -153,12 +186,17 @@ class ActivityLog(Base, TableNameMixin):
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     reference_id: Mapped[Optional[int]] = mapped_column(BIGINT)
 
+    aquarium: Mapped["Aquarium"] = relationship(back_populates="activity_logs")
+
 class Device(Base, TableNameMixin):
     id: Mapped[int_pk]
     aquarium_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('aquarium.id', ondelete='SET NULL'))
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100))
     status: Mapped[DeviceStatus] = mapped_column(ENUM(DeviceStatus), default=DeviceStatus.offline)
+
+    aquarium: Mapped[Optional["Aquarium"]] = relationship(back_populates="device")
+    sensor_measurements: Mapped[list["SensorMeasurement"]] = relationship(back_populates="device")
 
 class SensorMeasurement(Base, TableNameMixin):
     id: Mapped[int_pk]
@@ -168,6 +206,8 @@ class SensorMeasurement(Base, TableNameMixin):
     ph: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     tds: Mapped[Optional[int]] = mapped_column(INTEGER)
     turbidity: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
+
+    device: Mapped["Device"] = relationship(back_populates="sensor_measurements")
 
 class ManualMeasurement(Base, TableNameMixin):
     id: Mapped[int_pk]
@@ -179,6 +219,8 @@ class ManualMeasurement(Base, TableNameMixin):
     gh: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     kh: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     phosphate: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
+
+    aquarium: Mapped["Aquarium"] = relationship(back_populates="manual_measurements")
 
 
 class Media(Base, TableNameMixin):
@@ -196,14 +238,23 @@ class Post(Base, TableNameMixin):
     content: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[timestamp_now]
 
+    user: Mapped["User"] = relationship(back_populates="posts")
+    likes: Mapped[list["Like"]] = relationship(back_populates="post")
+
 class Like(Base, TableNameMixin):
     user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
     post_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('post.id', ondelete='CASCADE'), primary_key=True)
     created_at: Mapped[timestamp_now]
 
+    user: Mapped["User"] = relationship(back_populates="likes")
+    post: Mapped["Post"] = relationship(back_populates="likes")
+
 class Follow(Base, TableNameMixin):
     follower_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
     following_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
+
+    follower: Mapped["User"] = relationship(foreign_keys=[follower_id], back_populates="followed")
+    following: Mapped["User"] = relationship(foreign_keys=[following_id], back_populates="followers")
 
 
 class Task(Base, TableNameMixin):
@@ -216,10 +267,16 @@ class Task(Base, TableNameMixin):
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    user: Mapped["User"] = relationship(back_populates="tasks")
+    aquarium: Mapped[Optional["Aquarium"]] = relationship(back_populates="tasks")
+    completions: Mapped[list["TaskCompletion"]] = relationship(back_populates="task")
+
 class TaskCompletion(Base, TableNameMixin):
     id: Mapped[int_pk]
     task_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('task.id'), nullable=False)
     completion_date: Mapped[timestamp_now] = mapped_column(nullable=False)
+
+    task: Mapped["Task"] = relationship(back_populates="completions")
 
 class KnowledgeBaseArticle(Base, TableNameMixin):
     id: Mapped[int_pk]
@@ -227,3 +284,5 @@ class KnowledgeBaseArticle(Base, TableNameMixin):
     content: Mapped[text_not_null]
     category: Mapped[Optional[str]] = mapped_column(String(100))
     author_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('user.id'))
+
+    author: Mapped[Optional["User"]] = relationship(back_populates="knowledge_base_articles")
