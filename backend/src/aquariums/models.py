@@ -7,7 +7,7 @@ from sqlalchemy import (
     String, Text, Boolean, DateTime, Date, ForeignKey, 
     CheckConstraint, DECIMAL, BIGINT, INTEGER, func
 )
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, ENUM
+from sqlalchemy.dialects.postgresql import  ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr, relationship
 from src.database import Base, TableNameMixin
 

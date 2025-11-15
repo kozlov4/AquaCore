@@ -7,7 +7,7 @@ from sqlalchemy import (
     String, Text, Boolean, DateTime, Date, ForeignKey, 
     CheckConstraint, DECIMAL, BIGINT, INTEGER, func
 )
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, ENUM
+from sqlalchemy.dialects.postgresql import TIMESTAMP, ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr, relationship
 from src.database import Base, TableNameMixin
 
@@ -16,13 +16,13 @@ str_100_not_null = Annotated[str, mapped_column(String(100), nullable=False)]
 str_255_not_null = Annotated[str, mapped_column(String(255), nullable=False)]
 str_unique_not_null = Annotated[str, mapped_column(String(255), unique=True, nullable=False)]
 text_not_null = Annotated[str, mapped_column(Text, nullable=False)]
-timestamp_now = Annotated[datetime, mapped_column(TIMESTAMPTZ, server_default=func.now())]
+timestamp_now = Annotated[datetime, mapped_column(TIMESTAMP, server_default=func.now())]
 date_now = Annotated[date, mapped_column(Date, server_default=func.now())]
 
 class MediaType(enum.Enum):
     image = 'image'
     video = 'video'
-    
+
 class Media(Base, TableNameMixin):
     id: Mapped[int_pk]
     url: Mapped[str_255_not_null]
