@@ -23,6 +23,20 @@ class UserRole(enum.Enum):
     user = 'user'
     admin = 'admin'
 
+class ThemeType(enum.Enum):
+    light = 'light'
+    dark = 'dark'
+
+
+class VolumeUnit(enum.Enum):
+    L = 'L'
+    Gal = 'Gal'
+
+
+class TempUnit(enum.Enum):
+    C = 'C'
+    F = 'F'
+
 class User(Base, TableNameMixin):
     id: Mapped[int_pk]
     email: Mapped[str_unique_not_null]
@@ -45,6 +59,8 @@ class User(Base, TableNameMixin):
     followers: Mapped[list["Follow"]] = relationship(
         foreign_keys="Follow.following_id", back_populates="following"
     )
+
+
 
 
 class UserProfile(Base, TableNameMixin):

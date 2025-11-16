@@ -15,17 +15,9 @@ int_pk = Annotated[int, mapped_column(BIGINT, primary_key=True)]
 str_100_not_null = Annotated[str, mapped_column(String(100), nullable=False)]
 
 
-class ThemeType(enum.Enum):
-    light = 'light'
-    dark = 'dark'
 
-class TempUnit(enum.Enum):
-    C = 'C'
-    F = 'F'
 
-class VolumeUnit(enum.Enum):
-    L = 'L'
-    Gal = 'Gal'
+
 
 class WaterType(enum.Enum):
     freshwater = 'freshwater'

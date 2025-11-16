@@ -2,6 +2,15 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP32Servo.h> 
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <IRremote.hpp>
+
+#define IR_RECEIVE_PIN 15
+
+#define DHT_PIN 23      
+#define DHT_TYPE DHT11 
+DHT dht(DHT_PIN, DHT_TYPE); 
 
 #define ONE_WIRE_BUS 4       
 OneWire oneWire(ONE_WIRE_BUS);
@@ -14,6 +23,8 @@ DallasTemperature sensors(&oneWire);
 
 #define SERVO_PIN 12 
 Servo myServo;      
+
+#define BUZZER_PIN 19
 
 #define VREF 3.3 
 #define SCOUNT 30 
@@ -44,26 +55,40 @@ int getMedianNum(int bArray[], int iFilterLen) {
 }
 
 
+
 void setup() {
   Serial.begin(115200);
-  Serial.println("Тест: Температура, Поплавок, Серво, TDS, Каламутність та pH...");
+  Serial.println("Тест: Температура, Поплавок, Серво, TDS, Каламутність, pH та Зумер...");
 
   sensors.begin();
+  dht.begin();
   
   pinMode(FLOAT_SWITCH_PIN, INPUT_PULLUP);
 
   myServo.attach(SERVO_PIN); 
-  myServo.write(1000); 
+  myServo.write(0); 
   Serial.println("Сервопривід встановлено в 0 градусів.");
 
   pinMode(TDS_PIN, INPUT); 
   pinMode(TURBIDITY_PIN, INPUT);
   pinMode(PH_PIN, INPUT); 
+  
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  
+    IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+  Serial.println("IR receiver initialized!");
 }
 
 void loop() {
   loopCounter++; 
   float tempC = 25.0;
+  
+  if (IrReceiver.decode()) {
+    Serial.print("Code: ");
+    Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+    IrReceiver.resume();
+  }
   
   sensors.requestTemperatures(); 
   float tempReading = sensors.getTempCByIndex(0);
@@ -80,13 +105,15 @@ void loop() {
   int waterLevel = digitalRead(FLOAT_SWITCH_PIN);
   if(waterLevel == HIGH) {
     Serial.println("РІВЕНЬ ВОДИ: НЕБЕЗПЕКА! (Поплавок впав)");
+    digitalWrite(BUZZER_PIN, HIGH);
   } else {
     Serial.println("РІВЕНЬ ВОДИ: Норма (Поплавок сплив)");
+    digitalWrite(BUZZER_PIN, LOW);
   }
 
   if (loopCounter >= 3) {
     Serial.println("Серво: Рух -> 90 градусів (годування)");
-    myServo.write(360); 
+    myServo.write(90); 
     delay(100); 
     Serial.println("Серво: Рух -> 0 градусів (закрито)");
     myServo.write(0); 
@@ -103,6 +130,19 @@ void loop() {
     if (analogBufferIndex == SCOUNT) {
       analogBufferIndex = 0;
     }
+float roomHumidity = dht.readHumidity();
+float roomTemperature = dht.readTemperature();
+
+if (isnan(roomHumidity) || isnan(roomTemperature)) {
+  Serial.println("ПОМИЛКА: Датчик DHT11 не знайдено!");
+} else {
+  Serial.print("Вологість кімнати: ");
+  Serial.print(roomHumidity);
+  Serial.println(" %");
+  Serial.print("Температура кімнати: ");
+  Serial.print(roomTemperature);
+  Serial.println(" C");
+}
   }
 
   int analogValue = getMedianNum(analogBuffer, SCOUNT); 
@@ -141,7 +181,6 @@ void loop() {
 
 
   Serial.println("---------------------------------");
-  delay(2000); 
+  delay(4000);
 }
-
 
