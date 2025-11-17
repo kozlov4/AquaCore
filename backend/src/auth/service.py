@@ -13,7 +13,7 @@ from src.auth.models import Users, User_Settings, User_Profiles
 
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/login/")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login/")
 db_dependency = Annotated[Session, Depends(get_db)]
 
 def create_access_token(subject: str, id: int, expires_delta: timedelta):
@@ -81,3 +81,23 @@ def get_user_by_email(db:db_dependency, email:str):
     existing_user = db.query(Users).filter(Users.email == email).first()
     if existing_user:
          raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use.")
+    
+
+def get_user_by_id(db:db_dependency, user_id:int):
+    user = db.query(Users).filter(Users.id == user_id).first()
+    if user is None:
+        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Could not validate user id')
+    return user
+
+def authenticate_user(db: Session, email: str, password: str):
+    user = db.query(Users).filter(Users.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Неправильный email или пароль"
+        )
+    
+    if not bcrypt_context.verify(password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неправильний пароль")
+    
+    return user
