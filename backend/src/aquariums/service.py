@@ -13,8 +13,7 @@ from src.users.models import Users
 db_dependency = Annotated[Session, Depends(get_db)]
 
 
-# get_aquarium(db: Session, aquarium_id: int)
-# get_aquariums_by_user(db: Session, user_id: int)
+# 
 # update_aquarium(db: Session, aquarium_id: int, aquarium_data: AquariumUpdate)
 # delete_aquarium(db: Session, aquarium_id: int)
 
@@ -56,3 +55,15 @@ def create_aquarium(db: Session, aquarium: AquariumCreate, user_id: int):
   return {
         "message": "Акваріум успішно додано",
     }
+
+def  get_aquarium(db: Session, aquarium_id: int):
+   aquarium = db.query(Aquariums).filter(Aquariums.id == aquarium_id).first()
+   if aquarium is None:
+        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Акваріум не знайдено')
+   return aquarium
+
+def get_aquariums_by_user(db: Session, user_id: int):
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    aquariums = db.query(Aquariums).filter(Aquariums.user_id == user.id).all()
+    return {"aquariums": aquariums}

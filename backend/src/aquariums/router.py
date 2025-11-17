@@ -6,13 +6,28 @@ from src.database import get_db
 from src.auth.service import get_current_user
 from src.users.service import get_user_by_id, update_user_full, delete_user_by_id
 from src.users.schemas import UserRead, UserUpdate
-from src.aquariums.service import create_aquarium
-from src.aquariums.schemas import AquariumCreate
+from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user
+from src.aquariums.schemas import AquariumCreate, AquariumRead,  AquariumListResponse
 
 router = APIRouter(prefix="/aquariums", tags=["Aquariums 🪼"])
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
+
+
+@router.get("/", response_model=AquariumListResponse)
+async def get_all_my_aquariums(
+  db:db_dependency,
+  user:user_dependency
+):
+  return get_aquariums_by_user(db=db, user_id=user.get("user_id"))
+
+@router.get("/{aquarium_id}", response_model=AquariumRead)
+async def get_aquarium_by_id(
+  db:db_dependency,
+  aquarium_id:int
+):
+  return get_aquarium(db=db, aquarium_id=aquarium_id)
 
 @router.post("/", status_code=201)
 async def create(

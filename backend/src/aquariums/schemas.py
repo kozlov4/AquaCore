@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 
 from src.aquariums.models import WaterType
 
@@ -17,3 +17,58 @@ class AquariumCreate(BaseModel):
     ground_type: Optional[str] = Field(None, max_length=100)
     lighting_model: Optional[str] = Field(None, max_length=100)
     filter_model: Optional[str] = Field(None, max_length=100)
+
+class CatalogInhabitantSimple(BaseModel):
+    id: int
+    name: str
+    type: str 
+    image_url: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+class AquariumInhabitantRead(BaseModel):
+    id: int
+    quantity: int
+    added_at: Optional[date]
+    
+    inhabitant: Optional[CatalogInhabitantSimple] = None 
+
+    class Config:
+        from_attributes = True
+
+class DeviceRead(BaseModel):
+    id: int
+    name: Optional[str]
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+class AquariumListRead(BaseModel):
+    id: int
+    name: str
+    volume_l: Optional[int]
+    water_type: Optional[str]
+    description: Optional[str]
+    
+    ground_type: Optional[str]
+    lighting_model: Optional[str]
+    filter_model: Optional[str] 
+
+    class Config:
+        from_attributes = True
+
+
+class AquariumListResponse(BaseModel):
+    aquariums: List[AquariumListRead]
+
+class AquariumRead(AquariumListRead):
+
+    inhabitants: List[AquariumInhabitantRead] = [] 
+    devices: List[DeviceRead] = []
+    
+
+    class Config:
+        from_attributes = True
