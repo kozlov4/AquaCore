@@ -13,7 +13,7 @@ from src.database import Base, TableNameMixin
 
 int_pk = Annotated[int, mapped_column(BIGINT, primary_key=True)]
 str_100_not_null = Annotated[str, mapped_column(String(100), nullable=False)]
-
+int_not_null = Annotated[int, mapped_column(INTEGER, nullable=False)]
 
 
 
@@ -28,11 +28,11 @@ class Aquariums(Base, TableNameMixin):
     id: Mapped[int_pk]
     user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('users.id', ondelete='CASCADE'))
     name: Mapped[str_100_not_null]
-    volume_l: Mapped[Optional[int]] = mapped_column(INTEGER)
+    volume_l: Mapped[int_not_null]
     length_cm: Mapped[Optional[int]] = mapped_column(INTEGER)
     width_cm: Mapped[Optional[int]] = mapped_column(INTEGER)
     height_cm: Mapped[Optional[int]] = mapped_column(INTEGER)
-    water_type: Mapped[Optional[WaterType]] = mapped_column(ENUM(WaterType))
+    water_type: Mapped[Optional[WaterType]] = mapped_column(ENUM(WaterType), nullable=False)
     start_date: Mapped[Optional[date]] = mapped_column(Date)
     description: Mapped[Optional[str]] = mapped_column(Text)
     ground_type: Mapped[Optional[str]] = mapped_column(String(100))
