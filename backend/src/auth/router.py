@@ -11,7 +11,7 @@ from src.auth.schemas import UserRegistration
 
 
 
-router = APIRouter(tags=['Register 🔐'])
+router = APIRouter(tags=['Auth 🔐'], prefix=  "/auth")
 
 db_dependency = Annotated[Session, Depends(get_db)]
 

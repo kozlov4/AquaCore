@@ -36,9 +36,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
 
 
 async def create_user(db:db_dependency, new_user: UserRegistration):
-    existing_user = db.query(Users).filter(Users.email == new_user.email).first()
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use.")
+    get_user_by_email(db=db, email = new_user.email)
     
     create_user_model = Users(
         email = new_user.email,
@@ -77,3 +75,9 @@ async def create_user(db:db_dependency, new_user: UserRegistration):
         "token_type": "bearer", 
         "user_name": create_user_model.email
     }
+
+
+def get_user_by_email(db:db_dependency, email:str):
+    existing_user = db.query(Users).filter(Users.email == email).first()
+    if existing_user:
+         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use.")

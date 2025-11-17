@@ -4,7 +4,9 @@ from src.database import SessionLocal
 from src.auth.router import router as auth_router
 
 
-app = FastAPI()
+app = FastAPI(
+  title="AquaCore 🐠"
+)
 app.include_router(auth_router)
 
 
