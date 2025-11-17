@@ -40,3 +40,5 @@ async def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
         "token_type": "bearer",
         "user_name": user.email,
     }
+
+# TODO /auth/change-password /auth/change-email

@@ -2,6 +2,8 @@ from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional
 
+from src.users.models import ThemeType, TempUnit, VolumeUnit
+
 
 class UserProfileRead(BaseModel):
     nickname:Optional[str]
@@ -13,10 +15,10 @@ class UserProfileRead(BaseModel):
 
 
 class UserSettingsRead(BaseModel):
-    theme: str
+    theme: ThemeType
     language: str
-    temperature_unit: str
-    volume_unit: str
+    temperature_unit: TempUnit
+    volume_unit: VolumeUnit
 
     class Config:
         from_attributes = True
@@ -32,3 +34,19 @@ class UserRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserProfileUpdate(BaseModel):
+    nickname: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+class UserSettingsUpdate(BaseModel):
+    theme: Optional[ThemeType] = None 
+    language: Optional[str] = None
+    temperature_unit: Optional[TempUnit] = None
+    volume_unit: Optional[VolumeUnit] = None
+
+class UserUpdate(BaseModel):
+    
+    user_profile: Optional[UserProfileUpdate] = None
+    user_settings: Optional[UserSettingsUpdate] = None
