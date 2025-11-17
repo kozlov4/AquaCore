@@ -9,11 +9,12 @@ from src.aquariums.schemas import AquariumCreate, AquariumUpdate
 from src.users.service import get_user_by_id
 from src.aquariums.models import Aquariums
 from src.users.models import Users
+from src.tasks.models import Tasks
+from src.media.models import Media
+from src.monitoring.models import Activity_Log
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
-
-# delete_aquarium(db: Session, aquarium_id: int)
 
 
 def create_aquarium(db: Session, aquarium: AquariumCreate, user_id: int):
@@ -104,3 +105,36 @@ def update_aquarium(db: Session, aquarium_id: int, aquarium_data: AquariumUpdate
     db.refresh(aquarium)
     return aquarium
 
+
+def delete_aquarium(db: Session, aquarium_id: int, user_id:int):
+    aquarium = get_aquarium(db=db, aquarium_id=aquarium_id)
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    if aquarium.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ви не можете видаляти чужі акваріуми"
+        )
+    
+
+    db.query(Media).filter(
+        Media.attachable_type == "aquarium",
+        Media.attachable_id == aquarium_id
+    ).delete(synchronize_session=False)
+
+    db.query(Activity_Log).filter(
+        Activity_Log.aquarium_id == aquarium_id
+    ).delete(synchronize_session=False)
+
+    db.query(Tasks).filter(
+        Tasks.aquarium_id == aquarium_id
+    ).delete(synchronize_session=False)
+
+
+    db.delete(aquarium)
+    db.commit()
+
+    return {"message": f"Акваріум '{aquarium.name}' успішно видалено"}
+
+
+    

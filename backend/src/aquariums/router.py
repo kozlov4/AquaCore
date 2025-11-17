@@ -6,7 +6,7 @@ from src.database import get_db
 from src.auth.service import get_current_user
 from src.users.service import get_user_by_id, update_user_full, delete_user_by_id
 from src.users.schemas import UserRead, UserUpdate
-from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user, update_aquarium
+from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user, update_aquarium, delete_aquarium
 from src.aquariums.schemas import AquariumCreate, AquariumRead,  AquariumListResponse, AquariumUpdate
 
 router = APIRouter(prefix="/aquariums", tags=["Aquariums 🪼"])
@@ -45,3 +45,11 @@ async def update_my_aquarium(
   user:user_dependency
 ):
   return update_aquarium(db=db, aquarium_id=aquarium_id, aquarium_data=aquarium_data, user_id=user.get("user_id"))
+
+@router.delete("/{aquarium_id}")
+async def delete_my_aquarium(
+  db:db_dependency,
+  aquarium_id:int,
+  user:user_dependency
+):
+  return delete_aquarium(db=db, aquarium_id=aquarium_id, user_id=user.get("user_id"))
