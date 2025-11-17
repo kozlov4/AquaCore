@@ -46,3 +46,13 @@ def update_user_full(db: Session, user_id: int, update_data: UserUpdate):
     db.commit()
     db.refresh(user)
     return user
+
+def delete_user_by_id(db:Session, user_id:int):
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    db.delete(user.user_profile)
+    db.delete(user.user_settings)
+    db.delete(user)
+    db.commit()
+
+    return {"message": "Успішне видалення"}
