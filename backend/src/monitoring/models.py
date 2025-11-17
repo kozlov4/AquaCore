@@ -23,30 +23,30 @@ class DeviceStatus(enum.Enum):
     online = 'online'
     offline = 'offline'
 
-class Device(Base, TableNameMixin):
+class Devices(Base, TableNameMixin):
     id: Mapped[int_pk]
-    aquarium_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('aquarium.id', ondelete='SET NULL'))
+    aquarium_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('aquariums.id', ondelete='SET NULL'))
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100))
     status: Mapped[DeviceStatus] = mapped_column(ENUM(DeviceStatus), default=DeviceStatus.offline)
 
-    aquarium: Mapped[Optional["Aquarium"]] = relationship(back_populates="device")
-    sensor_measurements: Mapped[list["SensorMeasurement"]] = relationship(back_populates="device")
+    aquarium: Mapped[Optional["Aquariums"]] = relationship(back_populates="device")
+    sensor_measurements: Mapped[list["Sensor_Measurements"]] = relationship(back_populates="device")
 
-class SensorMeasurement(Base, TableNameMixin):
+class Sensor_Measurements(Base, TableNameMixin):
     id: Mapped[int_pk]
-    device_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('device.id', ondelete='CASCADE'))
+    device_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('devices.id', ondelete='CASCADE'))
     timestamp: Mapped[timestamp_now]
     temperature: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
     ph: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     tds: Mapped[Optional[int]] = mapped_column(INTEGER)
     turbidity: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
 
-    device: Mapped["Device"] = relationship(back_populates="sensor_measurements")
+    device: Mapped["Devices"] = relationship(back_populates="sensor_measurements")
 
-class ManualMeasurement(Base, TableNameMixin):
+class Manual_Measurements(Base, TableNameMixin):
     id: Mapped[int_pk]
-    aquarium_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('aquarium.id', ondelete='CASCADE'))
+    aquarium_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('aquariums.id', ondelete='CASCADE'))
     timestamp: Mapped[timestamp_now]
     ammonia: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     nitrite: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
@@ -55,15 +55,15 @@ class ManualMeasurement(Base, TableNameMixin):
     kh: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     phosphate: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
 
-    aquarium: Mapped["Aquarium"] = relationship(back_populates="manual_measurements")
+    aquarium: Mapped["Aquariums"] = relationship(back_populates="manual_measurements")
 
 
-class ActivityLog(Base, TableNameMixin):
+class Activity_Log(Base, TableNameMixin):
     id: Mapped[int_pk]
-    aquarium_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('aquarium.id'), nullable=False)
+    aquarium_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('aquariums.id'), nullable=False)
     timestamp: Mapped[timestamp_now] = mapped_column(nullable=False)
     description: Mapped[text_not_null]
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     reference_id: Mapped[Optional[int]] = mapped_column(BIGINT)
 
-    aquarium: Mapped["Aquarium"] = relationship(back_populates="activity_logs")
+    aquarium: Mapped["Aquariums"] = relationship(back_populates="activity_logs")

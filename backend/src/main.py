@@ -1,13 +1,10 @@
+import src.models_registry
 from fastapi import FastAPI
 from src.database import SessionLocal
-from src.auth.router import router_login
+from src.auth.router import router as auth_router
+
 
 app = FastAPI()
-app.include_router(router_login)
-
-@app.get("/hello")
-async def get_hello():
-  print(SessionLocal)
-  return "hello"
+app.include_router(auth_router)
 
 

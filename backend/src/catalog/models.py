@@ -30,7 +30,7 @@ class AggressivenessType(enum.Enum):
     semi_aggressive = 'semi-aggressive'
     aggressive = 'aggressive'
 
-class CatalogInhabitant(Base, TableNameMixin):
+class Catalog_Inhabitants(Base, TableNameMixin):
     id: Mapped[int_pk]
     type: Mapped[InhabitantType] = mapped_column(ENUM(InhabitantType), nullable=False)
     name: Mapped[str_100_not_null]
@@ -54,20 +54,20 @@ class CatalogInhabitant(Base, TableNameMixin):
     gh_min: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     gh_max: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
 
-    aquarium_links: Mapped[list["AquariumInhabitant"]] = relationship(back_populates="inhabitant")
+    aquarium_links: Mapped[list["Aquarium_Inhabitants"]] = relationship(back_populates="inhabitant")
 
-class CatalogDisease(Base, TableNameMixin):
+class Catalog_Diseases(Base, TableNameMixin):
     id: Mapped[int_pk]
     name: Mapped[str_100_not_null]
     description: Mapped[Optional[str]] = mapped_column(Text)
     symptoms: Mapped[Optional[str]] = mapped_column(Text)
     treatment: Mapped[Optional[str]] = mapped_column(Text)
 
-class KnowledgeBaseArticle(Base, TableNameMixin):
+class Knowledge_Base_Articles(Base, TableNameMixin):
     id: Mapped[int_pk]
     title: Mapped[str_255_not_null]
     content: Mapped[text_not_null]
     category: Mapped[Optional[str]] = mapped_column(String(100))
-    author_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('user.id'))
+    author_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('users.id'))
 
-    author: Mapped[Optional["User"]] = relationship(back_populates="knowledge_base_articles")
+    author: Mapped[Optional["Users"]] = relationship(back_populates="knowledge_base_articles")

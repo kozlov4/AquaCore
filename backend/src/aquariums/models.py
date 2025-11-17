@@ -24,9 +24,9 @@ class WaterType(enum.Enum):
     saltwater = 'saltwater'
 
 
-class Aquarium(Base, TableNameMixin):
+class Aquariums(Base, TableNameMixin):
     id: Mapped[int_pk]
-    user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('user.id', ondelete='CASCADE'))
+    user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('users.id', ondelete='CASCADE'))
     name: Mapped[str_100_not_null]
     volume_l: Mapped[Optional[int]] = mapped_column(INTEGER)
     length_cm: Mapped[Optional[int]] = mapped_column(INTEGER)
@@ -39,22 +39,22 @@ class Aquarium(Base, TableNameMixin):
     lighting_model: Mapped[Optional[str]] = mapped_column(String(100))
     filter_model: Mapped[Optional[str]] = mapped_column(String(100))
 
-    user: Mapped["User"] = relationship(back_populates="aquariums")
-    inhabitants: Mapped[list["AquariumInhabitant"]] = relationship(back_populates="aquarium")
-    activity_logs: Mapped[list["ActivityLog"]] = relationship(back_populates="aquarium")
-    device: Mapped["Device"] = relationship(back_populates="aquarium")
-    manual_measurements: Mapped[list["ManualMeasurement"]] = relationship(back_populates="aquarium")
-    tasks: Mapped[list["Task"]] = relationship(back_populates="aquarium")
+    user: Mapped["Users"] = relationship(back_populates="aquariums")
+    inhabitants: Mapped[list["Aquarium_Inhabitants"]] = relationship(back_populates="aquarium")
+    activity_logs: Mapped[list["Activity_Log"]] = relationship(back_populates="aquarium")
+    device: Mapped["Devices"] = relationship(back_populates="aquarium")
+    manual_measurements: Mapped[list["Manual_Measurements"]] = relationship(back_populates="aquarium")
+    tasks: Mapped[list["Tasks"]] = relationship(back_populates="aquarium")
 
 
 
 
-class AquariumInhabitant(Base, TableNameMixin):
+class Aquarium_Inhabitants(Base, TableNameMixin):
     id: Mapped[int_pk]
-    aquarium_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('aquarium.id', ondelete='CASCADE'))
-    inhabitant_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('cataloginhabitant.id'))
+    aquarium_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('aquariums.id', ondelete='CASCADE'))
+    inhabitant_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('catalog_inhabitants.id'))
     quantity: Mapped[int] = mapped_column(INTEGER, default=1)
     added_at: Mapped[Optional[date]] = mapped_column(Date)
 
-    aquarium: Mapped["Aquarium"] = relationship(back_populates="inhabitants")
-    inhabitant: Mapped["CatalogInhabitant"] = relationship(back_populates="aquarium_links")
+    aquarium: Mapped["Aquariums"] = relationship(back_populates="inhabitants")
+    inhabitant: Mapped["Catalog_Inhabitants"] = relationship(back_populates="aquarium_links")

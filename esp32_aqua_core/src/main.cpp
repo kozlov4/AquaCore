@@ -5,6 +5,14 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <IRremote.hpp>
+#include <RtcDS1302.h>
+
+
+#define RTC_DAT_PIN 17
+#define RTC_CLK_PIN 16
+#define RTC_RST_PIN 2
+ThreeWire myWire(RTC_DAT_PIN, RTC_CLK_PIN, RTC_RST_PIN);
+RtcDS1302<ThreeWire> Rtc(myWire);
 
 #define IR_RECEIVE_PIN 15
 
@@ -54,11 +62,13 @@ int getMedianNum(int bArray[], int iFilterLen) {
   return bTemp;
 }
 
+IRrecv irrecv(IR_RECEIVE_PIN);
+decode_results results;
 
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Тест: Температура, Поплавок, Серво, TDS, Каламутність, pH та Зумер...");
+  Serial.println("Тест: УСІ КОМПОНЕНТИ + ГОДИННИК DS1302...");
 
   sensors.begin();
   dht.begin();
@@ -66,7 +76,7 @@ void setup() {
   pinMode(FLOAT_SWITCH_PIN, INPUT_PULLUP);
 
   myServo.attach(SERVO_PIN); 
-  myServo.write(0); 
+  myServo.write(0);
   Serial.println("Сервопривід встановлено в 0 градусів.");
 
   pinMode(TDS_PIN, INPUT); 
@@ -76,8 +86,14 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
   
-    IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
-  Serial.println("IR receiver initialized!");
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+  Serial.println("ІЧ-приймач запущено.");
+
+
+  Rtc.Begin();
+  Serial.println("Годинник DS1302 запущено.");
+
+
 }
 
 void loop() {
@@ -85,9 +101,9 @@ void loop() {
   float tempC = 25.0;
   
   if (IrReceiver.decode()) {
-    Serial.print("Code: ");
+    Serial.print("Отримано ІЧ-код: ");
     Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-    IrReceiver.resume();
+    irrecv.resume(); 
   }
   
   sensors.requestTemperatures(); 
@@ -111,15 +127,29 @@ void loop() {
     digitalWrite(BUZZER_PIN, LOW);
   }
 
-  if (loopCounter >= 3) {
+  if (loopCounter >= 100) { 
     Serial.println("Серво: Рух -> 90 градусів (годування)");
     myServo.write(90); 
-    delay(100); 
+    delay(1000); 
     Serial.println("Серво: Рух -> 0 градусів (закрито)");
     myServo.write(0); 
     loopCounter = 0; 
   } else {
     Serial.println("Серво: (чекаємо)");
+  }
+
+  float roomHumidity = dht.readHumidity();
+  float roomTemperature = dht.readTemperature();
+
+  if (isnan(roomHumidity) || isnan(roomTemperature)) {
+    Serial.println("ПОМИЛКА: Датчик DHT11 не знайдено!");
+  } else {
+    Serial.print("Вологість кімнати: ");
+    Serial.print(roomHumidity);
+    Serial.println(" %");
+    Serial.print("Температура кімнати: ");
+    Serial.print(roomTemperature);
+    Serial.println(" C");
   }
 
   static unsigned long analogSampleTimepoint = millis();
@@ -130,19 +160,6 @@ void loop() {
     if (analogBufferIndex == SCOUNT) {
       analogBufferIndex = 0;
     }
-float roomHumidity = dht.readHumidity();
-float roomTemperature = dht.readTemperature();
-
-if (isnan(roomHumidity) || isnan(roomTemperature)) {
-  Serial.println("ПОМИЛКА: Датчик DHT11 не знайдено!");
-} else {
-  Serial.print("Вологість кімнати: ");
-  Serial.print(roomHumidity);
-  Serial.println(" %");
-  Serial.print("Температура кімнати: ");
-  Serial.print(roomTemperature);
-  Serial.println(" C");
-}
   }
 
   int analogValue = getMedianNum(analogBuffer, SCOUNT); 
@@ -179,8 +196,21 @@ if (isnan(roomHumidity) || isnan(roomTemperature)) {
   Serial.print(", pH (Розрахунковий): ");
   Serial.println(phValue, 2); 
 
+  RtcDateTime now = Rtc.GetDateTime();
+  Serial.print("Час з DS1302: ");
+  Serial.print(now.Year());
+  Serial.print("/");
+  Serial.print(now.Month());
+  Serial.print("/");
+  Serial.print(now.Day());
+  Serial.print(" - ");
+  Serial.print(now.Hour());
+  Serial.print(":");
+  Serial.print(now.Minute());
+  Serial.print(":");
+  Serial.println(now.Second());
+
 
   Serial.println("---------------------------------");
-  delay(4000);
+  delay(100);
 }
-
