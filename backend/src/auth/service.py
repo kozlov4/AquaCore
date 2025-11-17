@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from src.database import get_db
 from sqlalchemy.orm import Session
 from src.auth.schemas import UserRegistration
-from src.auth.models import Users, User_Settings, User_Profiles
+from src.users.models import Users, User_Settings, User_Profiles
 
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -83,11 +83,7 @@ def get_user_by_email(db:db_dependency, email:str):
          raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use.")
     
 
-def get_user_by_id(db:db_dependency, user_id:int):
-    user = db.query(Users).filter(Users.id == user_id).first()
-    if user is None:
-        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Could not validate user id')
-    return user
+
 
 def authenticate_user(db: Session, email: str, password: str):
     user = db.query(Users).filter(Users.email == email).first()
