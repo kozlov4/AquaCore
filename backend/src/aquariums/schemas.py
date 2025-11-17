@@ -18,6 +18,9 @@ class AquariumCreate(BaseModel):
     lighting_model: Optional[str] = Field(None, max_length=100)
     filter_model: Optional[str] = Field(None, max_length=100)
 
+class AquariumUpdate(AquariumCreate):
+    pass
+
 class CatalogInhabitantSimple(BaseModel):
     id: int
     name: str

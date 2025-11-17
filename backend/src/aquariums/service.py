@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from starlette import status
 from src.database import get_db
 from sqlalchemy.orm import Session
-from src.aquariums.schemas import AquariumCreate
+from src.aquariums.schemas import AquariumCreate, AquariumUpdate
 from src.users.service import get_user_by_id
 from src.aquariums.models import Aquariums
 from src.users.models import Users
@@ -13,8 +13,6 @@ from src.users.models import Users
 db_dependency = Annotated[Session, Depends(get_db)]
 
 
-# 
-# update_aquarium(db: Session, aquarium_id: int, aquarium_data: AquariumUpdate)
 # delete_aquarium(db: Session, aquarium_id: int)
 
 
@@ -67,3 +65,42 @@ def get_aquariums_by_user(db: Session, user_id: int):
 
     aquariums = db.query(Aquariums).filter(Aquariums.user_id == user.id).all()
     return {"aquariums": aquariums}
+
+
+def update_aquarium(db: Session, aquarium_id: int, aquarium_data: AquariumUpdate, user_id: int):
+    aquarium = get_aquarium(db=db, aquarium_id=aquarium_id)
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    if aquarium.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ви не можете змінювати чужі акваріуми"
+        )
+
+    update_data = aquarium_data.model_dump(exclude_unset=True)
+
+    new_name = update_data.get("name")
+    if new_name:
+        existing = (
+            db.query(Aquariums)
+            .filter(
+                Aquariums.user_id == user.id,
+                func.lower(Aquariums.name) == new_name.lower(),
+                Aquariums.id != aquarium.id 
+            )
+            .first()
+        )
+
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Name for aquarium already in use"
+            )
+
+    for key, value in update_data.items():
+        setattr(aquarium, key, value)
+
+    db.commit()
+    db.refresh(aquarium)
+    return aquarium
+
