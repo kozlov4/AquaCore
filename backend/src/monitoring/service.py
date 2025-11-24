@@ -14,18 +14,17 @@ from src.media.models import Media
 from src.monitoring.models import Activity_Log
 from src.aquariums.service import get_aquarium
 from src.monitoring.schemas import ManualDataCreate
-from src.monitoring.models import Manual_Measurements
+from src.monitoring.models import Manual_Measurements, Sensor_Measurements
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
 def create_manual_measurement(db: Session, data: ManualDataCreate, aquarium_id: int, user_id:int):
     aquarium = get_aquarium(db=db, aquarium_id=aquarium_id)
-    user = get_user_by_id(db=db, user_id=user_id)
 
-    if aquarium.user_id != user.id:
+    if aquarium.user_id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Ви не можете вносити тетси в чужі акваріуми"
+            detail="Ви не можете вносити тести в чужі акваріуми"
         )
     
     new_manual_measurement = Manual_Measurements(
@@ -47,6 +46,3 @@ def create_manual_measurement(db: Session, data: ManualDataCreate, aquarium_id: 
         "message": "Тести успішно додані",
         "measurement": new_manual_measurement
     }
-
-
-#get_measurements(db: Session, aquarium_id: int)
