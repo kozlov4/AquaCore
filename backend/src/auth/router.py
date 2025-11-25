@@ -31,6 +31,7 @@ async def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     token = create_access_token(
         subject=user.email,
         id=user.id,
+        role=user.role.value,
         expires_delta=timedelta(minutes=30),
         
     )
