@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from starlette import status
 from src.database import get_db
 from sqlalchemy.orm import Session
-from src.catalog.schemas import InhabitantsCreate
+from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate
 from src.users.service import get_user_by_id
 from src.catalog.models import Catalog_Inhabitants
 
@@ -56,3 +56,53 @@ def create_new_inhabitant_in_db(db: Session, inhabitant: InhabitantsCreate, user
         "message": "Запис успішно додано",
         "new_inhabitant": new_inhabitant,
     }
+
+def update_inhabitant_in_db(
+    db: Session,
+    inhabitant_id: int,
+    inhabitant_data: InhabitantsUpdate,
+    user_id: int
+):
+
+    user = get_user_by_id(db, user_id)
+    db_inhabitant = get_inhabitant_by_id(db, inhabitant_id)
+
+    if user.role.value != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Could not validate user'
+        )
+
+    update_data = inhabitant_data.model_dump(exclude_unset=True)
+
+    new_name = update_data.get("name")
+    if new_name:
+        existing = (
+            db.query(Catalog_Inhabitants)
+            .filter(
+                func.lower(Catalog_Inhabitants.name) == new_name.lower(),
+                Catalog_Inhabitants.id != db_inhabitant.id
+            )
+        ).first()
+
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Name for inhabitant already in use"
+            )
+
+    for key, value in update_data.items():
+        setattr(db_inhabitant, key, value)
+
+    db.commit()
+    db.refresh(db_inhabitant)
+    return db_inhabitant
+
+
+def  get_inhabitant_by_id(db: Session, inhabitant_id: int):
+   inhabitant = (db.query(Catalog_Inhabitants).
+                 filter(Catalog_Inhabitants.id == inhabitant_id).
+                 first())
+   if inhabitant is None:
+        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Inhabitant не знайдено')
+   return inhabitant

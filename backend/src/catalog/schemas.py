@@ -24,3 +24,6 @@ class InhabitantsCreate(BaseModel):
     dkh_max: condecimal(max_digits=4, decimal_places=2)
     gh_min: condecimal(max_digits=4, decimal_places=2)
     gh_max: condecimal(max_digits=4, decimal_places=2)
+
+class InhabitantsUpdate(InhabitantsCreate):
+    pass
