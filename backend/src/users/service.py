@@ -105,3 +105,24 @@ def delete_user_by_id(db:Session, user_id:int):
     db.commit()
 
     return {"message": "Успішне видалення"}
+
+def get_all_users(db: Session, user_id:int):
+    curr_user = get_user_by_id(db, user_id)
+    if curr_user.role.value != "admin":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+
+    users = db.query(Users).all()
+    return users
+
+def user_ban(db:Session,user_id:int ,admin_id:int):
+    admin = get_user_by_id(db, admin_id)
+    if admin.role.value != "admin":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+
+    user_to_ban = get_user_by_id(db, user_id)
+
+    user_to_ban.is_active = False
+    db.commit()
+    db.refresh(user_to_ban)
+    return user_to_ban
+

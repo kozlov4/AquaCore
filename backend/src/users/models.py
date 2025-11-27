@@ -43,6 +43,7 @@ class Users(Base, TableNameMixin):
     email: Mapped[str_unique_not_null]
     hashed_password: Mapped[str_255_not_null]
     role: Mapped[UserRole] = mapped_column(ENUM(UserRole), default=UserRole.user)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[timestamp_now]
     
     user_profile: Mapped["User_Profiles"] = relationship(back_populates="user", uselist=False)

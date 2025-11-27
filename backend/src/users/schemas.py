@@ -27,6 +27,7 @@ class UserRead(BaseModel):
     id:int
     email:EmailStr
     role:str
+    is_active: bool
     created_at:datetime
 
     user_profile: Optional[UserProfileRead] = None
@@ -34,6 +35,7 @@ class UserRead(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class UserProfileUpdate(BaseModel):
     nickname: Optional[str] = None
