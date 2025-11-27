@@ -8,14 +8,13 @@ from sqlalchemy.orm import Session
 from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate
 from src.users.service import get_user_by_id
 from src.catalog.models import Catalog_Inhabitants, Catalog_Diseases
+from src.admin.service import  check_admin
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
 def create_new_inhabitant_in_db(db: Session, inhabitant: InhabitantsCreate, user_id: int):
-    user = get_user_by_id(db, user_id)
-    if user.role.value != "admin":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+    check_admin(db=db, admin_id=user_id)
 
     new_inhabitant = Catalog_Inhabitants(
         type = inhabitant.type,
@@ -64,14 +63,9 @@ def update_inhabitant_in_db(
     user_id: int
 ):
 
-    user = get_user_by_id(db, user_id)
     db_inhabitant = get_inhabitant_by_id(db, inhabitant_id)
 
-    if user.role.value != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Could not validate user'
-        )
+    check_admin(db=db, admin_id=user_id)
 
     update_data = inhabitant_data.model_dump(exclude_unset=True)
 

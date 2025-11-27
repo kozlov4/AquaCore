@@ -13,6 +13,7 @@ from src.monitoring.models import Activity_Log
 from src.social.models import Posts
 from src.tasks.models import Tasks, Task_Completions
 from src.catalog.models import Knowledge_Base_Articles
+from src.admin.service import  check_admin
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
@@ -20,8 +21,19 @@ db_dependency = Annotated[Session, Depends(get_db)]
 def get_user_by_id(db:db_dependency, user_id:int):
     user = db.query(Users).filter(Users.id == user_id).first()
     if user is None:
+        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Користувача не знайдено')
+    return user
+
+def get_user_by_id_for_admin(db:db_dependency, user_id:int, search_user_id):
+    user = db.query(Users).filter(Users.id == search_user_id).first()
+    check_admin(db=db, admin_id=user_id)
+
+    if user is None:
         raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Could not validate user id')
     return user
+
+
+
 
 def update_user_full(db: Session, user_id: int, update_data: UserUpdate):
     user = get_user_by_id(db=db, user_id=user_id)
@@ -59,7 +71,6 @@ def delete_user_by_id(db:Session, user_id:int):
             Media.attachable_type == "user_profile",
             Media.attachable_id == user_id
         ).delete(synchronize_session=False)
-    
 
     user_aquarium_ids = db.query(Aquariums.id).filter(Aquariums.user_id == user_id).all()
     aquarium_ids = [id for (id,) in user_aquarium_ids]
@@ -106,18 +117,70 @@ def delete_user_by_id(db:Session, user_id:int):
 
     return {"message": "Успішне видалення"}
 
+
+def delete_user_by_id_for_admin(db:Session, admin_id:int ,user_id:int):
+    check_admin(db=db, admin_id=admin_id)
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    db.query(Media).filter(
+        Media.attachable_type == "user_profile",
+        Media.attachable_id == user_id
+    ).delete(synchronize_session=False)
+
+    user_aquarium_ids = db.query(Aquariums.id).filter(Aquariums.user_id == user_id).all()
+    aquarium_ids = [id for (id,) in user_aquarium_ids]
+
+    if aquarium_ids:
+        db.query(Media).filter(
+            Media.attachable_type == "aquarium",
+            Media.attachable_id.in_(aquarium_ids)
+        ).delete(synchronize_session=False)
+
+        db.query(Activity_Log).filter(
+            Activity_Log.aquarium_id.in_(aquarium_ids)
+        ).delete(synchronize_session=False)
+
+    user_post_ids = db.query(Posts.id).filter(Posts.user_id == user_id).all()
+    post_ids = [id for (id,) in user_post_ids]
+
+    if post_ids:
+        db.query(Media).filter(
+            Media.attachable_type == "post",
+            Media.attachable_id.in_(post_ids)
+        ).delete(synchronize_session=False)
+
+    user_task_ids = db.query(Tasks.id).filter(Tasks.user_id == user_id).all()
+    task_ids = [id for (id,) in user_task_ids]
+
+    if task_ids:
+        db.query(Task_Completions).filter(
+            Task_Completions.task_id.in_(task_ids)
+        ).delete(synchronize_session=False)
+        db.query(Tasks).filter(
+            Tasks.id.in_(task_ids)
+        ).delete(synchronize_session=False)
+
+    db.query(Knowledge_Base_Articles).filter(
+        Knowledge_Base_Articles.author_id == user_id
+    ).delete(synchronize_session=False)
+
+    db.delete(user.user_profile)
+    db.delete(user.user_settings)
+    db.delete(user)
+    db.commit()
+
+    return {"message": "Успішне видалення"}
+
+
 def get_all_users(db: Session, user_id:int):
-    curr_user = get_user_by_id(db, user_id)
-    if curr_user.role.value != "admin":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+    check_admin(db=db, admin_id=user_id)
 
     users = db.query(Users).all()
     return users
 
-def user_ban(db:Session,user_id:int ,admin_id:int):
-    admin = get_user_by_id(db, admin_id)
-    if admin.role.value != "admin":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+def user_ban(db:Session, user_id:int ,admin_id:int):
+    user = get_user_by_id(db=db, user_id=user_id)
+    check_admin(db=db, admin_id=admin_id)
 
     user_to_ban = get_user_by_id(db, user_id)
 
