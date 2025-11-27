@@ -10,9 +10,14 @@
 #include <RtcDS1302.h>
 #include <FastLED.h>
 
+const int RELAY_1 = 26;
+const int RELAY_2 = 25;
+const int RELAY_3 = 14;
+const int RELAY_4 = 2;
+
 
 #define LED_PIN 27        
-#define NUM_LEDS 20       
+#define NUM_LEDS 120       
 CRGB leds[NUM_LEDS];
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -78,6 +83,18 @@ int getMedianNum(int bArray[], int iFilterLen) {
 }
 
 void setup() {
+
+  pinMode(RELAY_1, OUTPUT);
+
+
+
+  Serial.println("Подаю сигнал LOW... Реле має клацнути!");
+  
+  digitalWrite(RELAY_1, LOW);
+
+
+ 
+
   Serial.begin(115200);
   Serial.println(">>> СТАРТ СИСТЕМИ (LCD + SERIAL) <<<");
 
@@ -106,7 +123,7 @@ void setup() {
   Rtc.SetIsRunning(true);
 
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(40); 
+  FastLED.setBrightness(50); 
 
   delay(1000);
   lcd.clear();
@@ -138,7 +155,7 @@ void loop() {
     digitalWrite(BUZZER_PIN, LOW);
   }
 
-  if (loopCounter >= 100) { 
+  if (loopCounter >= 10000) { 
     Serial.println(">>> FEEDING TIME <<<");
     myServo.write(90);
     delay(1000);
@@ -228,13 +245,11 @@ void loop() {
     }
   }
 
-    for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB(0, 0, 0);
-}
-leds[0] = CRGB::Blue;
-leds[1] = CRGB::Red;
-leds[2] = CRGB::Green;
-FastLED.show();
+for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CRGB::Blue; 
+  }
+  
+  FastLED.show();
 
-  delay(200);
+  delay(3000);
 }

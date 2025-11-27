@@ -106,3 +106,7 @@ def  get_inhabitant_by_id(db: Session, inhabitant_id: int):
    if inhabitant is None:
         raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Inhabitant не знайдено')
    return inhabitant
+
+def get_all_inhabitants(db: Session, user_id):
+    inhabitants = db.query(Catalog_Inhabitants).all()
+    return inhabitants
