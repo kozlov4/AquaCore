@@ -7,7 +7,7 @@ from src.database import get_db
 from sqlalchemy.orm import Session
 from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate
 from src.users.service import get_user_by_id
-from src.catalog.models import Catalog_Inhabitants
+from src.catalog.models import Catalog_Inhabitants, Catalog_Diseases
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -110,3 +110,7 @@ def  get_inhabitant_by_id(db: Session, inhabitant_id: int):
 def get_all_inhabitants(db: Session, user_id):
     inhabitants = db.query(Catalog_Inhabitants).all()
     return inhabitants
+
+def get_all_diseases(db: Session, user_id):
+    diseases = db.query(Catalog_Diseases).all()
+    return diseases

@@ -66,3 +66,9 @@ class InhabitantsShow(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class DiseasesShow(BaseModel):
+    name:str
+    description: Optional[Text] = None
+    symptoms:Optional[Text]
+    treatment:Optional[Text]
