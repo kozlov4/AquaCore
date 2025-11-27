@@ -91,10 +91,15 @@ def authenticate_user(db: Session, email: str, password: str):
     user = db.query(Users).filter(Users.email == email).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неправильный email или пароль"
         )
-    
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are blocked"
+        )
     if not bcrypt_context.verify(password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неправильний пароль")
     
