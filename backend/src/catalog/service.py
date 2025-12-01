@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from starlette import status
 from src.database import get_db
 from sqlalchemy.orm import Session
-from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate
+from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate, InhabitantsFilter
 from src.users.service import get_user_by_id
 from src.catalog.models import Catalog_Inhabitants, Catalog_Diseases
 from src.admin.service import  check_admin
@@ -101,9 +101,58 @@ def  get_inhabitant_by_id(db: Session, inhabitant_id: int):
         raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Inhabitant не знайдено')
    return inhabitant
 
-def get_all_inhabitants(db: Session, user_id):
-    inhabitants = db.query(Catalog_Inhabitants).all()
-    return inhabitants
+def get_all_inhabitants(db: Session, user_id: int, filters: InhabitantsFilter):
+    query = db.query(Catalog_Inhabitants)
+
+    if filters.name:
+        query = query.filter(Catalog_Inhabitants.name.ilike(f"%{filters.name}%"))
+
+    if filters.type:
+        query = query.filter(Catalog_Inhabitants.type == filters.type)
+
+    if filters.aggressiveness:
+        query = query.filter(Catalog_Inhabitants.aggressiveness == filters.aggressiveness)
+
+    if filters.min_size_cm:
+        query = query.filter(Catalog_Inhabitants.size_cm >= filters.min_size_cm)
+    if filters.max_size_cm:
+        query = query.filter(Catalog_Inhabitants.size_cm <= filters.max_size_cm)
+
+    if filters.min_lifespan:
+        query = query.filter(Catalog_Inhabitants.lifespan_years >= filters.min_lifespan)
+    if filters.max_lifespan:
+        query = query.filter(Catalog_Inhabitants.lifespan_years <= filters.max_lifespan)
+
+    if filters.min_tank_size_l:
+        query = query.filter(Catalog_Inhabitants.min_tank_size_l <= filters.min_tank_size_l)
+
+    if filters.min_water_volume_l:
+        query = query.filter(Catalog_Inhabitants.min_water_volume_l <= filters.min_water_volume_l)
+
+    if filters.aeration_needed is not None:
+        query = query.filter(Catalog_Inhabitants.aeration_needed == filters.aeration_needed)
+
+    if filters.ph_min:
+        query = query.filter(Catalog_Inhabitants.ph_min <= filters.ph_min)
+    if filters.ph_max:
+        query = query.filter(Catalog_Inhabitants.ph_max >= filters.ph_max)
+
+    if filters.temp_min_c:
+        query = query.filter(Catalog_Inhabitants.temp_min_c <= filters.temp_min_c)
+    if filters.temp_max_c:
+        query = query.filter(Catalog_Inhabitants.temp_max_c >= filters.temp_max_c)
+
+    if filters.gh_min:
+        query = query.filter(Catalog_Inhabitants.gh_min <= filters.gh_min)
+    if filters.gh_max:
+        query = query.filter(Catalog_Inhabitants.gh_max >= filters.gh_max)
+
+    if filters.dkh_min:
+        query = query.filter(Catalog_Inhabitants.dkh_min <= filters.dkh_min)
+    if filters.dkh_max:
+        query = query.filter(Catalog_Inhabitants.dkh_max >= filters.dkh_max)
+
+    return query.all()
 
 def get_all_diseases(db: Session, user_id):
     diseases = db.query(Catalog_Diseases).all()

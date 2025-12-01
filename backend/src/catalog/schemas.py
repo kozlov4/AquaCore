@@ -85,3 +85,31 @@ class DiseasesShow(BaseModel):
     description: Optional[Text] = None
     symptoms:Optional[Text]
     treatment:Optional[Text]
+
+class InhabitantsFilter(BaseModel):
+    name: Optional[str] = None
+    type: Optional[str] = None
+    aggressiveness: Optional[str] = None
+
+    min_size_cm: Optional[float] = None
+    max_size_cm: Optional[float] = None
+
+    min_lifespan: Optional[int] = None
+    max_lifespan: Optional[int] = None
+
+    min_tank_size_l: Optional[int] = None
+    min_water_volume_l: Optional[int] = None
+
+    aeration_needed: Optional[bool] = None
+
+    ph_min: Optional[float] = None
+    ph_max: Optional[float] = None
+
+    temp_min_c: Optional[float] = None
+    temp_max_c: Optional[float] = None
+
+    gh_min: Optional[float] = None
+    gh_max: Optional[float] = None
+
+    dkh_min: Optional[float] = None
+    dkh_max: Optional[float] = None
