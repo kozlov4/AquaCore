@@ -39,7 +39,8 @@ class InhabitantsUpdate(InhabitantsCreate):
         "from_attributes": True
     }
 
-class InhabitantsShow(BaseModel):
+class InhabitantsShowOne(BaseModel):
+    id:int
     type: InhabitantType
     name: str
     species: str
@@ -62,6 +63,18 @@ class InhabitantsShow(BaseModel):
     dkh_max: Optional[condecimal(max_digits=4, decimal_places=2)] = None
     gh_min: Optional[condecimal(max_digits=4, decimal_places=2)] = None
     gh_max: Optional[condecimal(max_digits=4, decimal_places=2)] = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class InhabitantsShowList(BaseModel):
+    id:int
+    name: str
+    species: str
+    image_url: Optional[str] = None
+    size_cm: Optional[int] = None
+    lifespan_years: Optional[int] = None
 
     model_config = {
         "from_attributes": True

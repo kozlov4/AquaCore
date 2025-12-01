@@ -3,7 +3,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate, InhabitantsShow
+from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate
 from src.database import get_db
 from src.auth.service import get_current_user
 from src.catalog.service import  create_new_inhabitant_in_db, update_inhabitant_in_db, get_all_inhabitants

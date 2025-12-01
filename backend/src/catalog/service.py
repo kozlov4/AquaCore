@@ -108,3 +108,7 @@ def get_all_inhabitants(db: Session, user_id):
 def get_all_diseases(db: Session, user_id):
     diseases = db.query(Catalog_Diseases).all()
     return diseases
+
+
+def get_inhabitant_logic(db: Session, inhabitant_id: int, user_id:int):
+    return get_inhabitant_by_id(db, inhabitant_id)
