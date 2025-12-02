@@ -1,6 +1,7 @@
 import os
 from typing import Annotated
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, select
+from datetime import date, timedelta
 from fastapi import Depends, HTTPException
 from starlette import status
 from src.database import get_db
@@ -12,8 +13,9 @@ from src.tasks.models import Tasks
 from src.media.models import Media
 from src.monitoring.models import Activity_Log
 from src.catalog.models import  Catalog_Inhabitants
-from src.aquariums.models import  Aquarium_Inhabitants
-from src.monitoring.models import Sensor_Measurements, Devices
+from src.aquariums.models import  Aquarium_Inhabitants, Aquariums
+
+from src.monitoring.models import Sensor_Measurements, Devices, Manual_Measurements
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
@@ -143,7 +145,7 @@ def delete_aquarium(db: Session, aquarium_id: int, user_id:int):
 
     return {"message": f"Акваріум '{aquarium.name}' успішно видалено"}
 
-
+#TODO Стайність
 def check_compatibility(
         db: Session,
         aquarium: Aquariums,
@@ -361,3 +363,104 @@ def recalculate_aquarium_targets(db: Session, aquarium: Aquariums):
 
     db.add(aquarium)
     db.commit()
+
+
+def predict_nitrogen_cycle_status(db: Session, aquarium_id: int) -> dict:
+
+    aquarium = db.query(Aquariums).filter(Aquariums.id == aquarium_id).first()
+
+    if not aquarium or not aquarium.start_date:
+        return {
+            "status": "Unknown",
+            "percent": 0,
+            "message": "Будь ласка, вкажіть дату запуску акваріума в налаштуваннях."
+        }
+
+    days_alive = (date.today() - aquarium.start_date).days
+
+    measurement = (
+        db.query(Manual_Measurements)
+        .filter(Manual_Measurements.aquarium_id == aquarium_id)
+        .order_by(desc(Manual_Measurements.timestamp))
+        .first()
+    )
+
+    if not measurement:
+        if days_alive < 5:
+            return {
+                "status": "New",
+                "percent": 5,
+                "message": "Акваріум стерильний. Додайте трохи корму, щоб запустити процес, і зробіть тест через 3 дні."
+            }
+        elif days_alive < 14:
+            return {
+                "status": "Cycling (Blind)",
+                "percent": 20,
+                "message": "Іде запуск. Без тестів неможливо сказати точно, але зараз має бути пік аміаку."
+            }
+        elif days_alive < 30:
+            return {
+                "status": "Cycling (Blind)",
+                "percent": 70,
+                "message": "Мав початися пік нітритів. Риб додавати ризиковано без тестів."
+            }
+        else:
+            return {
+                "status": "Probably Stable",
+                "percent": 95,
+                "message": "За часом цикл мав завершитися. Зробіть контрольний тест перед покупкою риби."
+            }
+
+    nh3 = float(measurement.ammonia) if measurement.ammonia is not None else 0.0
+    no2 = float(measurement.nitrite) if measurement.nitrite is not None else 0.0
+    no3 = float(measurement.nitrate) if measurement.nitrate is not None else 0.0
+
+    if days_alive > 35 and (nh3 > 0.2 or no2 > 0.2):
+        return {
+            "status": "CRASHED",
+            "percent": 0,
+            "color": "red",
+            "message": "УВАГА! Біофільтрація збилася (є аміак/нітрит у старому акваріумі). Терміново підмініть воду!"
+        }
+
+    if no2 > 0:
+        return {
+            "status": "Cycling: Nitrite Spike",
+            "percent": 60,
+            "color": "orange",
+            "message": "Високі нітрити! Це найнебезпечніша фаза. Бактерії працюють, чекайте падіння NO2 в 0."
+        }
+
+    if nh3 > 0 and no2 == 0:
+        return {
+            "status": "Cycling: Ammonia Spike",
+            "percent": 25,
+            "color": "yellow",
+            "message": "Рівень аміаку зростає. Процес пішов! Скоро з'являться нітрити."
+        }
+
+    if nh3 == 0 and no2 == 0 and no3 > 0:
+        return {
+            "status": "STABLE",
+            "percent": 100,
+            "color": "green",
+            "message": "Вітаємо! Азотний цикл встановлено. Вода безпечна для риб."
+        }
+
+    if nh3 == 0 and no2 == 0 and no3 == 0:
+        if days_alive < 10:
+            return {
+                "status": "New / Sterile",
+                "percent": 10,
+                "color": "grey",
+                "message": "Вода ідеально чиста. Цикл ще не почався. Додайте джерело аміаку (корм)."
+            }
+        else:
+            return {
+                "status": "Suspiciously Clean",
+                "percent": 100,
+                "color": "blue",
+                "message": "Ядів немає, але і нітратів немає. Якщо у вас багато рослин — це норма. Якщо ні — перевірте термін придатності тестів."
+            }
+
+    return {"status": "Analyzing", "percent": 50, "message": "Очікування нових даних..."}

@@ -7,9 +7,11 @@ from src.aquariums.models import Aquariums, Aquarium_Inhabitants
 from src.database import get_db
 from src.auth.service import get_current_user
 from src.catalog.schemas import  AddInhabitantRequest, AddInhabitantResponse
-from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user, update_aquarium, delete_aquarium, recalculate_aquarium_targets, calculate_stocking_level
+from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user, update_aquarium, delete_aquarium, recalculate_aquarium_targets, calculate_stocking_level, predict_nitrogen_cycle_status
 from src.aquariums.schemas import AquariumCreate, AquariumRead,  AquariumListResponse, AquariumUpdate
 from src.aquariums.service import check_compatibility, update_device_smart_config
+from src.monitoring.schemas import NitrogenStatusResponse
+
 
 router = APIRouter(prefix="/aquariums", tags=["Aquariums 🪼"])
 
@@ -30,6 +32,21 @@ async def get_aquarium_by_id(
   aquarium_id:int,
 ):
   return get_aquarium(db=db, aquarium_id=aquarium_id)
+
+
+@router.get("/{id}/cycle-status", response_model=NitrogenStatusResponse)
+def get_aquarium_cycle_status(
+        id: int,
+        db: db_dependency,
+        user_id: user_dependency
+):
+    aquarium = get_aquarium(db, id)
+    if aquarium.user_id != user_id.get("user_id"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = predict_nitrogen_cycle_status(db, id)
+
+    return result
 
 @router.post("/", status_code=201)
 async def create(

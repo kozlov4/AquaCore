@@ -10,3 +10,8 @@ class ManualDataCreate(BaseModel):
     gh: Optional[Decimal]
     kh: Optional[Decimal]
     phosphate: Optional[Decimal]
+
+class NitrogenStatusResponse(BaseModel):
+    status: str
+    percent: int
+    message: str
