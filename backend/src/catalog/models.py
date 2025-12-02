@@ -1,4 +1,5 @@
 import enum
+from sqlalchemy import Table, Column, ForeignKey, Integer, String
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional, Annotated
@@ -56,12 +57,26 @@ class Catalog_Inhabitants(Base, TableNameMixin):
 
     aquarium_links: Mapped[list["Aquarium_Inhabitants"]] = relationship(back_populates="inhabitant")
 
+disease_symptom_association = Table(
+    'disease_symptom_link',
+    Base.metadata,
+    Column('disease_id', Integer, ForeignKey('catalog_diseases.id', ondelete="CASCADE"), primary_key=True),
+    Column('symptom_id', Integer, ForeignKey('catalogsymptom.id', ondelete="CASCADE"), primary_key=True)
+)
+
+
 class Catalog_Diseases(Base, TableNameMixin):
     id: Mapped[int_pk]
     name: Mapped[str_100_not_null]
     description: Mapped[Optional[str]] = mapped_column(Text)
     symptoms: Mapped[Optional[str]] = mapped_column(Text)
     treatment: Mapped[Optional[str]] = mapped_column(Text)
+
+    symptoms_list: Mapped[list["CatalogSymptom"]] = relationship(
+        "CatalogSymptom",
+        secondary=disease_symptom_association,
+        back_populates="diseases"
+    )
 
 class Knowledge_Base_Articles(Base, TableNameMixin):
     id: Mapped[int_pk]
@@ -71,3 +86,16 @@ class Knowledge_Base_Articles(Base, TableNameMixin):
     author_id: Mapped[Optional[int]] = mapped_column(BIGINT, ForeignKey('users.id'))
 
     author: Mapped[Optional["Users"]] = relationship(back_populates="knowledge_base_articles")
+
+
+
+
+class CatalogSymptom(Base, TableNameMixin):
+    id: Mapped[int_pk]
+    name: Mapped[str_100_not_null]
+
+    diseases: Mapped[list["Catalog_Diseases"]] = relationship(
+        "Catalog_Diseases",
+        secondary=disease_symptom_association,
+        back_populates="symptoms_list"
+    )

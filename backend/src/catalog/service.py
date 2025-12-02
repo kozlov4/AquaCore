@@ -1,6 +1,7 @@
 import os
 from typing import Annotated
 from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 from fastapi import Depends, HTTPException, status
 from starlette import status
 from src.database import get_db
@@ -161,3 +162,33 @@ def get_all_diseases(db: Session, user_id):
 
 def get_inhabitant_logic(db: Session, inhabitant_id: int, user_id:int):
     return get_inhabitant_by_id(db, inhabitant_id)
+
+
+def diagnose_disease_smart(db: Session, selected_symptom_ids: list[int]) -> list[dict]:
+    diseases = db.query(Catalog_Diseases).options(selectinload(Catalog_Diseases.symptoms_list)).all()
+
+    results = []
+
+    if not selected_symptom_ids:
+        return []
+
+    user_symptoms_set = set(selected_symptom_ids)
+
+    for disease in diseases:
+        disease_symptom_ids = {s.id for s in disease.symptoms_list}
+
+        matches = user_symptoms_set.intersection(disease_symptom_ids)
+        match_count = len(matches)
+
+        if match_count > 0:
+            probability = (match_count / len(user_symptoms_set)) * 100
+
+            results.append({
+                "disease_name": disease.name,
+                "probability": round(probability, 0),
+                "matched_count": match_count,
+                "treatment": disease.treatment,
+                "matched_symptoms": [s.name for s in disease.symptoms_list if s.id in matches]
+            })
+
+    return sorted(results, key=lambda x: x['probability'], reverse=True)[:5]

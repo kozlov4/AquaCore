@@ -15,3 +15,10 @@ class NitrogenStatusResponse(BaseModel):
     status: str
     percent: int
     message: str
+
+class SymptomDTO(BaseModel):
+    id: int
+    name: str
+
+class SmartDiagnosisRequest(BaseModel):
+    symptom_ids: List[int]

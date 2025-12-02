@@ -6,6 +6,10 @@ from src.database import get_db
 from src.auth.service import get_current_user
 from src.catalog.schemas import InhabitantsShowList, DiseasesShow, InhabitantsShowOne, InhabitantsFilter
 from src.catalog.service import get_all_inhabitants, get_all_diseases, get_inhabitant_logic
+from src.monitoring.schemas import SymptomDTO, SmartDiagnosisRequest
+from src.catalog.service import diagnose_disease_smart
+from src.catalog.models import CatalogSymptom
+
 router = APIRouter(prefix="/catalog", tags=["Catalog 📚"])
 
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -23,3 +27,14 @@ async def get_diseases(db:db_dependency, user:user_dependency):
 @router.get("/inhabitants/{inhabitant_id}", response_model=InhabitantsShowOne)
 async def get_inhabitant(db:db_dependency, inhabitant_id:int, user_id:user_dependency):
     return get_inhabitant_logic(db=db, inhabitant_id=inhabitant_id, user_id=user_id.get("user_id"))
+
+@router.get("/symptoms", response_model=List[SymptomDTO])
+def get_all_symptoms(db: Session = Depends(get_db)):
+    return db.query(CatalogSymptom).all()
+
+@router.post("/diagnose-smart")
+def run_smart_diagnosis(
+    body: SmartDiagnosisRequest,
+    db: Session = Depends(get_db)
+):
+    return diagnose_disease_smart(db, body.symptom_ids)
