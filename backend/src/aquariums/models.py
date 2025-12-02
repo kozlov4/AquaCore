@@ -16,9 +16,6 @@ str_100_not_null = Annotated[str, mapped_column(String(100), nullable=False)]
 int_not_null = Annotated[int, mapped_column(INTEGER, nullable=False)]
 
 
-
-
-
 class WaterType(enum.Enum):
     freshwater = 'freshwater'
     saltwater = 'saltwater'
@@ -38,11 +35,43 @@ class Aquariums(Base, TableNameMixin):
     ground_type: Mapped[Optional[str]] = mapped_column(String(100))
     lighting_model: Mapped[Optional[str]] = mapped_column(String(100))
     filter_model: Mapped[Optional[str]] = mapped_column(String(100))
+    has_plants: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    target_temp_c_min: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+    target_temp_c_max: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+
+    target_ph_min: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+    target_ph_max: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+
+    target_tds_min: Mapped[Optional[int]] = mapped_column(INTEGER)
+    target_tds_max: Mapped[Optional[int]] = mapped_column(INTEGER)
+
+    target_gh_min: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+    target_gh_max: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+
+    target_kh_min: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+    target_kh_max: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+
+    target_ammonia_max: Mapped[Optional[float]] = mapped_column(
+        DECIMAL(4, 2), default=0.05
+    )
+    target_nitrite_max: Mapped[Optional[float]] = mapped_column(
+        DECIMAL(4, 2), default=0.05
+    )
+    target_nitrate_max: Mapped[Optional[float]] = mapped_column(
+        DECIMAL(5, 2), default=30.00
+    )
+
+    target_phosphate_max: Mapped[Optional[float]] = mapped_column(DECIMAL(4, 2))
+
+    is_auto_targets: Mapped[bool] = mapped_column(
+        Boolean, default=True
+    )
 
     user: Mapped["Users"] = relationship(back_populates="aquariums")
     inhabitants: Mapped[list["Aquarium_Inhabitants"]] = relationship(back_populates="aquarium")
     activity_logs: Mapped[list["Activity_Log"]] = relationship(back_populates="aquarium")
-    device: Mapped["Devices"] = relationship(back_populates="aquarium")
+    device: Mapped["Devices"] = relationship(back_populates="aquarium", uselist=False)
     manual_measurements: Mapped[list["Manual_Measurements"]] = relationship(back_populates="aquarium")
     tasks: Mapped[list["Tasks"]] = relationship(back_populates="aquarium")
 

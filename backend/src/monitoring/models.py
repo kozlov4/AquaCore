@@ -2,6 +2,7 @@ import enum
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional, Annotated
+from sqlalchemy.dialects.postgresql import JSONB
 
 from sqlalchemy import (
     String, Text, Boolean, DateTime, Date, ForeignKey, 
@@ -29,6 +30,7 @@ class Devices(Base, TableNameMixin):
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100))
     status: Mapped[DeviceStatus] = mapped_column(ENUM(DeviceStatus), default=DeviceStatus.offline)
+    config: Mapped[dict] = mapped_column(JSONB, default=dict)
 
     aquarium: Mapped[Optional["Aquariums"]] = relationship(back_populates="device")
     sensor_measurements: Mapped[list["Sensor_Measurements"]] = relationship(back_populates="device")
@@ -41,6 +43,10 @@ class Sensor_Measurements(Base, TableNameMixin):
     ph: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(4, 2))
     tds: Mapped[Optional[int]] = mapped_column(INTEGER)
     turbidity: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
+    water_level: Mapped[Optional[int]] = mapped_column(INTEGER)
+    room_temperature: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
+    room_humidity: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
+
 
     device: Mapped["Devices"] = relationship(back_populates="sensor_measurements")
 

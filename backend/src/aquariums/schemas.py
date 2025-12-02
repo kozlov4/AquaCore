@@ -70,7 +70,7 @@ class AquariumListResponse(BaseModel):
 class AquariumRead(AquariumListRead):
 
     inhabitants: List[AquariumInhabitantRead] = [] 
-    devices: List[DeviceRead] = []
+    device: Optional[DeviceRead] = None
     
 
     class Config:

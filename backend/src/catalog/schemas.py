@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, condecimal
-from typing import Optional, Text
+from typing import Optional, Text, List
 
 from pydantic.v1.errors import cls_kwargs
 
@@ -88,8 +88,8 @@ class DiseasesShow(BaseModel):
 
 class InhabitantsFilter(BaseModel):
     name: Optional[str] = None
-    type: Optional[str] = None
-    aggressiveness: Optional[str] = None
+    type: Optional[InhabitantType] = None
+    aggressiveness: Optional[AggressivenessType] = None
 
     min_size_cm: Optional[float] = None
     max_size_cm: Optional[float] = None
@@ -113,3 +113,15 @@ class InhabitantsFilter(BaseModel):
 
     dkh_min: Optional[float] = None
     dkh_max: Optional[float] = None
+
+
+class AddInhabitantRequest(BaseModel):
+    inhabitant_id: int
+    quantity: int = Field(gt=0)
+    ignore_warnings: bool = Field(False)
+
+class AddInhabitantResponse(BaseModel):
+    success: bool
+    added: bool
+    warnings: List[str] = []
+    message: str
