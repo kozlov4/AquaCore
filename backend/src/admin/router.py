@@ -9,6 +9,9 @@ from src.auth.service import get_current_user
 from src.catalog.service import  create_new_inhabitant_in_db, update_inhabitant_in_db, get_all_inhabitants
 from src.users.service import get_all_users, user_ban, get_user_by_id_for_admin, delete_user_by_id_for_admin
 from src.users.schemas import UserRead
+from src.admin.service import get_global_system_health
+from src.admin.schemas import SystemHealthResponse
+
 router = APIRouter(prefix="/admin", tags=["Admin 👑"])
 
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -21,6 +24,14 @@ async def get_users(db: db_dependency, user: user_dependency):
 @router.get("/users/{user_id}", response_model=UserRead)
 async def read_user(db: db_dependency, user: user_dependency, user_id:int):
     return get_user_by_id_for_admin(db=db, user_id=user.get("user_id"), search_user_id=user_id)
+
+@router.get("/health/", response_model=SystemHealthResponse)
+def admin_dashboard_stats(
+    db: db_dependency,
+    user_id: user_dependency
+):
+
+    return get_global_system_health(db)
 
 @router.post("/catalog/inhabitants/", status_code=201)
 async def create_new_inhabitant(
