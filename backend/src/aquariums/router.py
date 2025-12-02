@@ -11,6 +11,7 @@ from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_b
 from src.aquariums.schemas import AquariumCreate, AquariumRead,  AquariumListResponse, AquariumUpdate
 from src.aquariums.service import check_compatibility, update_device_smart_config
 from src.monitoring.schemas import NitrogenStatusResponse
+from src.monitoring.service import analyze_parameter_trends
 
 
 router = APIRouter(prefix="/aquariums", tags=["Aquariums 🪼"])
@@ -33,6 +34,19 @@ async def get_aquarium_by_id(
 ):
   return get_aquarium(db=db, aquarium_id=aquarium_id)
 
+
+@router.get("/{id}/analyze/{parameter}")
+def get_trend_analysis(
+        id: int,
+        parameter: str,
+        db: Session = Depends(get_db)  #
+):
+    if parameter not in ["ph", "temperature", "tds"]:
+        raise HTTPException(status_code=400, detail="Invalid parameter")
+
+    result = analyze_parameter_trends(db, aquarium_id=id, parameter=parameter)
+
+    return result
 
 @router.get("/{id}/cycle-status", response_model=NitrogenStatusResponse)
 def get_aquarium_cycle_status(
