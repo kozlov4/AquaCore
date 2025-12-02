@@ -8,6 +8,7 @@ from src.monitoring.router import router as monitoring_router
 from src.admin.router import router as admin_router
 from src.catalog.router import router as catalog_router
 from src.tasks.router import router as tasks_router
+from src.core.router import router as core_router
 
 app = FastAPI(
   title="AquaCore 🐠"
@@ -19,6 +20,7 @@ app.include_router(monitoring_router)
 app.include_router(admin_router)
 app.include_router(catalog_router)
 app.include_router(tasks_router)
+app.include_router(core_router)
 
 
 

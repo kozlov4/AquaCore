@@ -30,7 +30,9 @@ class Devices(Base, TableNameMixin):
     api_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100))
     status: Mapped[DeviceStatus] = mapped_column(ENUM(DeviceStatus), default=DeviceStatus.offline)
+    power_watts: Mapped[Optional[int]] = mapped_column(INTEGER, default=0)
     config: Mapped[dict] = mapped_column(JSONB, default=dict)
+
 
     aquarium: Mapped[Optional["Aquariums"]] = relationship(back_populates="device")
     sensor_measurements: Mapped[list["Sensor_Measurements"]] = relationship(back_populates="device")
