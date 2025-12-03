@@ -28,6 +28,10 @@ class ThemeType(enum.Enum):
     light = 'light'
     dark = 'dark'
 
+class Language(enum.Enum):
+    en = 'en'
+    ua = 'ua'
+    uk = "uk"
 
 class VolumeUnit(enum.Enum):
     L = 'L'
@@ -76,7 +80,7 @@ class User_Profiles(Base, TableNameMixin):
 class User_Settings(Base, TableNameMixin):
     user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     theme: Mapped[ThemeType] = mapped_column(ENUM(ThemeType), default=ThemeType.light)
-    language: Mapped[str] = mapped_column(String(5), default='ua')
+    language: Mapped[Language] = mapped_column(ENUM(Language), default=Language.ua)
     temperature_unit: Mapped[TempUnit] = mapped_column(ENUM(TempUnit), default=TempUnit.C)
     volume_unit: Mapped[VolumeUnit] = mapped_column(ENUM(VolumeUnit), default=VolumeUnit.L)
 

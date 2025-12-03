@@ -12,12 +12,14 @@ router = APIRouter(prefix="/users", tags=["Users 👤"])
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+
 @router.get("/me/", response_model=UserRead)
 def read_users_me(
     current_user: user_dependency,
     db: db_dependency
 ):
     return get_user_by_id(db=db, user_id=current_user.get("user_id"))
+
 
 @router.put("/me/", response_model=UserRead)
 def update_user(
@@ -29,6 +31,7 @@ def update_user(
         db=db, 
         user_id=current_user.get("user_id"), 
         update_data=update_data)
+
 
 @router.delete("/me/")
 def delete_user(

@@ -1,24 +1,23 @@
-import os
+from decimal import Decimal
 from typing import Annotated
-from sqlalchemy import func, desc, select
-from datetime import date, timedelta
+from sqlalchemy import func, desc
+from datetime import date
 from fastapi import Depends, HTTPException
+from sqlalchemy.orm.attributes import flag_modified
 from starlette import status
 from src.database import get_db
 from sqlalchemy.orm import Session, joinedload
 from src.aquariums.schemas import AquariumCreate, AquariumUpdate
 from src.users.service import get_user_by_id
-from src.aquariums.models import Aquariums
 from src.tasks.models import Tasks
 from src.media.models import Media
 from src.monitoring.models import Activity_Log
 from src.catalog.models import  Catalog_Inhabitants
 from src.aquariums.models import  Aquarium_Inhabitants, Aquariums
 
-from src.monitoring.models import Sensor_Measurements, Devices, Manual_Measurements
+from src.monitoring.models import Devices, Manual_Measurements
 
 db_dependency = Annotated[Session, Depends(get_db)]
-
 
 
 def create_aquarium(db: Session, aquarium: AquariumCreate, user_id: int):
@@ -69,6 +68,19 @@ def get_aquarium(db: Session, aquarium_id: int):
     if aquarium is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Акваріум не знайдено')
     return aquarium
+
+
+def get_aquarium_by_id_db(db: Session, aquarium_id: int, user_id:int):
+    aquarium = get_aquarium(db=db, aquarium_id=aquarium_id)
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    if aquarium.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ви не можете переглядати чужі акваріуми"
+        )
+    return  aquarium
+
 
 def get_aquariums_by_user(db: Session, user_id: int):
     user = get_user_by_id(db=db, user_id=user_id)
@@ -124,7 +136,6 @@ def delete_aquarium(db: Session, aquarium_id: int, user_id:int):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Ви не можете видаляти чужі акваріуми"
         )
-    
 
     db.query(Media).filter(
         Media.attachable_type == "aquarium",
@@ -145,6 +156,7 @@ def delete_aquarium(db: Session, aquarium_id: int, user_id:int):
 
     return {"message": f"Акваріум '{aquarium.name}' успішно видалено"}
 
+
 #TODO Стайність
 def check_compatibility(
         db: Session,
@@ -160,14 +172,17 @@ def check_compatibility(
         .join(Catalog_Inhabitants)
         .all()
     )
-
+    new_agg = new_fish.aggressiveness.value if hasattr(new_fish.aggressiveness, "value") else str(
+        new_fish.aggressiveness)
     for link in current_inhabitants:
         neighbor = link.inhabitant
 
-        if new_fish.aggressiveness == "aggressive" and neighbor.aggressiveness == "peaceful":
+        neigh_agg = neighbor.aggressiveness.value if hasattr(neighbor.aggressiveness, "value") else str(neighbor.aggressiveness)
+
+        if new_agg == "aggressive" and neigh_agg == "peaceful":
             warnings.append(f"НЕБЕЗПЕЧНО: Агресивний '{new_fish.name}' може з'їсти мирного '{neighbor.name}'!")
 
-        if new_fish.aggressiveness == "peaceful" and neighbor.aggressiveness == "aggressive":
+        if new_agg == "peaceful" and neigh_agg == "aggressive":
             warnings.append(f"НЕБЕЗПЕЧНО: Хижак '{neighbor.name}' може напасти на нових '{new_fish.name}'!")
 
     current_load_l = 0
@@ -210,6 +225,16 @@ def check_compatibility(
     return warnings
 
 
+def serialize_for_json(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {k: serialize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [serialize_for_json(i) for i in obj]
+    return obj
+
+
 def update_device_smart_config(db: Session, aquarium_id: int):
     device = db.query(Devices).filter(Devices.aquarium_id == aquarium_id).first()
     if not device:
@@ -232,9 +257,15 @@ def update_device_smart_config(db: Session, aquarium_id: int):
 
     config["last_auto_update"] = "Calculated based on livestock and aquarium settings"
 
-    device.config = config
+    clean_config = serialize_for_json(config)
+
+    device.config = clean_config
+
+    flag_modified(device, "config")
+
     db.add(device)
     db.commit()
+
 
 def calculate_feeding_config(inhabitants: list[Aquarium_Inhabitants]):
     feed_intervals = []
@@ -253,6 +284,7 @@ def calculate_feeding_config(inhabitants: list[Aquarium_Inhabitants]):
         "feed_interval_hours": new_interval
     }
 
+
 def calculate_lighting_config(aquarium: Aquariums):
     if not aquarium.has_plants:
         return {
@@ -268,6 +300,7 @@ def calculate_lighting_config(aquarium: Aquariums):
         "off_hour": off_hour,
         "duration_hours": off_hour - on_hour
     }
+
 
 def calculate_heating_config(aquarium: Aquariums):
     if aquarium.target_temp_c_min is None or aquarium.target_temp_c_max is None:
@@ -294,7 +327,8 @@ def calculate_stocking_level(db: Session, aquarium: Aquariums) -> dict:
 
     for link in inhabitants:
         fish = link.inhabitant
-        single_fish_load = fish.size_cm
+
+        single_fish_load =float(fish.size_cm)
 
         if (fish.size_cm or 0) > 15:
             single_fish_load *= 1.5

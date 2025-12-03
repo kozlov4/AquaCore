@@ -82,9 +82,7 @@ async def create_user(db:db_dependency, new_user: UserRegistration):
 def get_user_by_email(db:db_dependency, email:str):
     existing_user = db.query(Users).filter(Users.email == email).first()
     if existing_user:
-         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use.")
-    
-
+         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Користувач з таким email вже існує")
 
 
 def authenticate_user(db: Session, email: str, password: str):
@@ -92,15 +90,15 @@ def authenticate_user(db: Session, email: str, password: str):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неправильный email или пароль"
+            detail="Неправильный email, спробуйте ще раз"
         )
 
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are blocked"
+            detail="Ви заблоковані"
         )
     if not bcrypt_context.verify(password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неправильний пароль")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неправильний пароль, спробуйте ще раз")
     
     return user

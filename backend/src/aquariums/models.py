@@ -1,11 +1,10 @@
 import enum
-from datetime import datetime, date
-from decimal import Decimal
+from datetime import  date
 from typing import Optional, Annotated
 
 from sqlalchemy import (
-    String, Text, Boolean, DateTime, Date, ForeignKey, 
-    CheckConstraint, DECIMAL, BIGINT, INTEGER, func
+    String, Text, Boolean, Date, ForeignKey,
+     DECIMAL, BIGINT, INTEGER
 )
 from sqlalchemy.dialects.postgresql import  ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr, relationship

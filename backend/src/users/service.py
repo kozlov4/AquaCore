@@ -1,19 +1,21 @@
-import os
 from typing import Annotated
-from sqlalchemy import func
-from fastapi import Depends, HTTPException, status
+from sqlalchemy import func, or_
+from fastapi import Depends, HTTPException
 from starlette import status
 from src.database import get_db
 from sqlalchemy.orm import Session
 from src.users.models import Users, User_Profiles
 from src.media.models import Media
-from src.aquariums.models import Aquariums
+from src.aquariums.models import Aquariums, Aquarium_Inhabitants
 from src.users.schemas import UserUpdate
 from src.monitoring.models import Activity_Log
 from src.social.models import Posts
 from src.tasks.models import Tasks, Task_Completions
 from src.catalog.models import Knowledge_Base_Articles
 from src.admin.service import  check_admin
+from src.social.models import Follows, Likes
+from src.monitoring.models import Devices, Manual_Measurements, Sensor_Measurements
+
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
@@ -24,15 +26,14 @@ def get_user_by_id(db:db_dependency, user_id:int):
         raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Користувача не знайдено')
     return user
 
+
 def get_user_by_id_for_admin(db:db_dependency, user_id:int, search_user_id):
     user = db.query(Users).filter(Users.id == search_user_id).first()
     check_admin(db=db, admin_id=user_id)
 
     if user is None:
-        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Could not validate user id')
+        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Користувача не знайдено')
     return user
-
-
 
 
 def update_user_full(db: Session, user_id: int, update_data: UserUpdate):
@@ -58,11 +59,12 @@ def update_user_full(db: Session, user_id: int, update_data: UserUpdate):
     )
 
     if existing_nickname:
-        raise  HTTPException(status_code=status.HTTP_409_CONFLICT, detail='nickname already in use')
+        raise  HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Нік '{existing_nickname.nickname}' вже зайнятий")
 
     db.commit()
     db.refresh(user)
     return user
+
 
 def delete_user_by_id(db:Session, user_id:int):
     user = get_user_by_id(db=db, user_id=user_id)
@@ -83,6 +85,10 @@ def delete_user_by_id(db:Session, user_id:int):
         
         db.query(Activity_Log).filter(
             Activity_Log.aquarium_id.in_(aquarium_ids)
+        ).delete(synchronize_session=False)
+
+        db.query(Aquariums).filter(
+            Aquariums.id.in_(aquarium_ids)
         ).delete(synchronize_session=False)
 
     user_post_ids = db.query(Posts.id).filter(Posts.user_id == user_id).all()
@@ -118,26 +124,45 @@ def delete_user_by_id(db:Session, user_id:int):
     return {"message": "Успішне видалення"}
 
 
-def delete_user_by_id_for_admin(db:Session, admin_id:int ,user_id:int):
+def delete_user_by_id_for_admin(db: Session, admin_id: int, user_id: int):
     check_admin(db=db, admin_id=admin_id)
     user = get_user_by_id(db=db, user_id=user_id)
-
-    db.query(Media).filter(
-        Media.attachable_type == "user_profile",
-        Media.attachable_id == user_id
-    ).delete(synchronize_session=False)
 
     user_aquarium_ids = db.query(Aquariums.id).filter(Aquariums.user_id == user_id).all()
     aquarium_ids = [id for (id,) in user_aquarium_ids]
 
     if aquarium_ids:
+        db.query(Manual_Measurements).filter(
+            Manual_Measurements.aquarium_id.in_(aquarium_ids)
+        ).delete(synchronize_session=False)
+
+        db.query(Aquarium_Inhabitants).filter(
+            Aquarium_Inhabitants.aquarium_id.in_(aquarium_ids)
+        ).delete(synchronize_session=False)
+
+        db.query(Activity_Log).filter(
+            Activity_Log.aquarium_id.in_(aquarium_ids)
+        ).delete(synchronize_session=False)
+
         db.query(Media).filter(
             Media.attachable_type == "aquarium",
             Media.attachable_id.in_(aquarium_ids)
         ).delete(synchronize_session=False)
 
-        db.query(Activity_Log).filter(
-            Activity_Log.aquarium_id.in_(aquarium_ids)
+        device_ids_query = db.query(Devices.id).filter(Devices.aquarium_id.in_(aquarium_ids)).all()
+        device_ids = [d_id for (d_id,) in device_ids_query]
+
+        if device_ids:
+            db.query(Sensor_Measurements).filter(
+                Sensor_Measurements.device_id.in_(device_ids)
+            ).delete(synchronize_session=False)
+
+            db.query(Devices).filter(
+                Devices.id.in_(device_ids)
+            ).delete(synchronize_session=False)
+
+        db.query(Aquariums).filter(
+            Aquariums.id.in_(aquarium_ids)
         ).delete(synchronize_session=False)
 
     user_post_ids = db.query(Posts.id).filter(Posts.user_id == user_id).all()
@@ -149,27 +174,42 @@ def delete_user_by_id_for_admin(db:Session, admin_id:int ,user_id:int):
             Media.attachable_id.in_(post_ids)
         ).delete(synchronize_session=False)
 
+        db.query(Likes).filter(Likes.post_id.in_(post_ids)).delete(synchronize_session=False)
+
+        db.query(Posts).filter(Posts.id.in_(post_ids)).delete(synchronize_session=False)
+
+
+    db.query(Likes).filter(Likes.user_id == user_id).delete(synchronize_session=False)
+
     user_task_ids = db.query(Tasks.id).filter(Tasks.user_id == user_id).all()
     task_ids = [id for (id,) in user_task_ids]
 
     if task_ids:
-        db.query(Task_Completions).filter(
-            Task_Completions.task_id.in_(task_ids)
-        ).delete(synchronize_session=False)
-        db.query(Tasks).filter(
-            Tasks.id.in_(task_ids)
-        ).delete(synchronize_session=False)
+        db.query(Task_Completions).filter(Task_Completions.task_id.in_(task_ids)).delete(synchronize_session=False)
+        db.query(Tasks).filter(Tasks.id.in_(task_ids)).delete(synchronize_session=False)
 
     db.query(Knowledge_Base_Articles).filter(
         Knowledge_Base_Articles.author_id == user_id
     ).delete(synchronize_session=False)
 
-    db.delete(user.user_profile)
-    db.delete(user.user_settings)
+    db.query(Follows).filter(
+        or_(Follows.follower_id == user_id, Follows.following_id == user_id)
+    ).delete(synchronize_session=False)
+
+    db.query(Media).filter(
+        Media.attachable_type == "user_profile",
+        Media.attachable_id == user_id
+    ).delete(synchronize_session=False)
+
+    if user.user_profile:
+        db.delete(user.user_profile)
+    if user.user_settings:
+        db.delete(user.user_settings)
+
     db.delete(user)
     db.commit()
 
-    return {"message": "Успішне видалення"}
+    return {"message": f"Користувач {user_id} та всі його дані (акваріуми, пристрої, пости) успішно видалені"}
 
 
 def get_all_users(db: Session, user_id:int):
@@ -178,8 +218,9 @@ def get_all_users(db: Session, user_id:int):
     users = db.query(Users).all()
     return users
 
+
 def user_ban(db:Session, user_id:int ,admin_id:int):
-    user = get_user_by_id(db=db, user_id=user_id)
+    get_user_by_id(db=db, user_id=user_id)
     check_admin(db=db, admin_id=admin_id)
 
     user_to_ban = get_user_by_id(db, user_id)

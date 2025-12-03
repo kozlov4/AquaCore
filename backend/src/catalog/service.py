@@ -2,17 +2,17 @@ import os
 from typing import Annotated
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from starlette import status
 from src.database import get_db
 from sqlalchemy.orm import Session
 from src.catalog.schemas import InhabitantsCreate, InhabitantsUpdate, InhabitantsFilter
-from src.users.service import get_user_by_id
 from src.catalog.models import Catalog_Inhabitants, Catalog_Diseases
 from src.admin.service import  check_admin
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
+
 
 def create_new_inhabitant_in_db(db: Session, inhabitant: InhabitantsCreate, user_id: int):
     check_admin(db=db, admin_id=user_id)
@@ -46,7 +46,7 @@ def create_new_inhabitant_in_db(db: Session, inhabitant: InhabitantsCreate, user
                                .first())
     if existing_new_inhabitant:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail='Name for inhabitant already in use')
+                            detail='Це ім''я вже використовується')
 
     db.add(new_inhabitant)
     db.commit()
@@ -56,6 +56,7 @@ def create_new_inhabitant_in_db(db: Session, inhabitant: InhabitantsCreate, user
         "message": "Запис успішно додано",
         "new_inhabitant": new_inhabitant,
     }
+
 
 def update_inhabitant_in_db(
     db: Session,
@@ -101,6 +102,7 @@ def  get_inhabitant_by_id(db: Session, inhabitant_id: int):
    if inhabitant is None:
         raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Inhabitant не знайдено')
    return inhabitant
+
 
 def get_all_inhabitants(db: Session, user_id: int, filters: InhabitantsFilter):
     query = db.query(Catalog_Inhabitants)
@@ -154,6 +156,7 @@ def get_all_inhabitants(db: Session, user_id: int, filters: InhabitantsFilter):
         query = query.filter(Catalog_Inhabitants.dkh_max >= filters.dkh_max)
 
     return query.all()
+
 
 def get_all_diseases(db: Session, user_id):
     diseases = db.query(Catalog_Diseases).all()

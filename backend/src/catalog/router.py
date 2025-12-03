@@ -1,4 +1,4 @@
-from typing import Annotated, List, Optional
+from typing import Annotated, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,7 @@ router = APIRouter(prefix="/catalog", tags=["Catalog 📚"])
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+
 @router.get("/inhabitants/", response_model=List[InhabitantsShowList])
 async def get_inhabitants(db:db_dependency, user:user_dependency, filters: InhabitantsFilter = Depends()):
     return get_all_inhabitants(db=db, user_id=user.get("user_id"), filters=filters)
@@ -24,17 +25,21 @@ async def get_inhabitants(db:db_dependency, user:user_dependency, filters: Inhab
 async def get_diseases(db:db_dependency, user:user_dependency):
     return get_all_diseases(db=db, user_id=user.get("user_id"))
 
+
 @router.get("/inhabitants/{inhabitant_id}", response_model=InhabitantsShowOne)
 async def get_inhabitant(db:db_dependency, inhabitant_id:int, user_id:user_dependency):
     return get_inhabitant_logic(db=db, inhabitant_id=inhabitant_id, user_id=user_id.get("user_id"))
 
+
 @router.get("/symptoms", response_model=List[SymptomDTO])
-def get_all_symptoms(db: Session = Depends(get_db)):
+def get_all_symptoms(db: db_dependency, user:user_dependency):
     return db.query(CatalogSymptom).all()
+
 
 @router.post("/diagnose-smart")
 def run_smart_diagnosis(
     body: SmartDiagnosisRequest,
-    db: Session = Depends(get_db)
+    db: db_dependency,
+    user: user_dependency
 ):
     return diagnose_disease_smart(db, body.symptom_ids)

@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional
 
-from src.users.models import ThemeType, TempUnit, VolumeUnit
+from src.users.models import ThemeType, TempUnit, VolumeUnit, Language
 
 
 class UserProfileRead(BaseModel):
@@ -16,7 +16,7 @@ class UserProfileRead(BaseModel):
 
 class UserSettingsRead(BaseModel):
     theme: ThemeType
-    language: str
+    language: Language
     temperature_unit: TempUnit
     volume_unit: VolumeUnit
 
@@ -44,7 +44,7 @@ class UserProfileUpdate(BaseModel):
 
 class UserSettingsUpdate(BaseModel):
     theme: Optional[ThemeType] = None 
-    language: Optional[str] = None
+    language: Optional[Language] = None
     temperature_unit: Optional[TempUnit] = None
     volume_unit: Optional[VolumeUnit] = None
 

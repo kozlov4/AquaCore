@@ -9,6 +9,7 @@ from sqlalchemy import select, desc
 from src.aquariums.service import get_aquarium
 from src.monitoring.schemas import ManualDataCreate
 from src.monitoring.models import Manual_Measurements, Sensor_Measurements, Devices
+from src.users.service import get_user_by_id
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
@@ -46,8 +47,18 @@ def analyze_parameter_trends(
         db: Session,
         aquarium_id: int,
         parameter: str = "ph",
-        n_points: int = 10
+        n_points: int = 10,
+        user_id: int = None
 ) -> dict:
+    aquarium = get_aquarium(db=db, aquarium_id=aquarium_id)
+    user = get_user_by_id(db=db, user_id=user_id)
+
+    if aquarium.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ви не можете переглядати чужі акваріуми"
+        )
+
     target_field = getattr(Sensor_Measurements, parameter)
 
     stmt = (

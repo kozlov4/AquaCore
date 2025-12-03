@@ -73,7 +73,7 @@ class InhabitantsShowList(BaseModel):
     name: str
     species: str
     image_url: Optional[str] = None
-    size_cm: Optional[int] = None
+    size_cm: Optional[float] = None
     lifespan_years: Optional[int] = None
 
     model_config = {

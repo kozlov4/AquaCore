@@ -28,7 +28,7 @@ class InhabitantType(enum.Enum):
 
 class AggressivenessType(enum.Enum):
     peaceful = 'peaceful'
-    semi_aggressive = 'semi-aggressive'
+    semi_aggressive = 'semi_aggressive'
     aggressive = 'aggressive'
 
 class Catalog_Inhabitants(Base, TableNameMixin):

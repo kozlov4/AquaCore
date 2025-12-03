@@ -1,4 +1,3 @@
-from re import search
 from typing import Annotated, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -21,17 +20,19 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 async def get_users(db: db_dependency, user: user_dependency):
     return get_all_users(db=db, user_id=user.get("user_id"))
 
+
 @router.get("/users/{user_id}", response_model=UserRead)
 async def read_user(db: db_dependency, user: user_dependency, user_id:int):
     return get_user_by_id_for_admin(db=db, user_id=user.get("user_id"), search_user_id=user_id)
+
 
 @router.get("/health/", response_model=SystemHealthResponse)
 def admin_dashboard_stats(
     db: db_dependency,
     user_id: user_dependency
 ):
-
     return get_global_system_health(db)
+
 
 @router.post("/catalog/inhabitants/", status_code=201)
 async def create_new_inhabitant(
@@ -44,6 +45,7 @@ async def create_new_inhabitant(
         inhabitant=inhabitant,
         user_id=user.get("user_id")
     )
+
 
 @router.put("/catalog/inhabitants/{inhabitant_id}")
 async def update_inhabitant(
@@ -58,9 +60,11 @@ async def update_inhabitant(
         inhabitant_data=inhabitant,
         user_id=user.get("user_id"))
 
+
 @router.patch("/users/{user_id}/ban")
 async def banned_user_by_id(db:db_dependency, user_id:int, user: user_dependency):
     return user_ban(db=db, user_id=user_id, admin_id=user.get("user_id"))
+
 
 @router.delete("/users/{user_id}/")
 async def delete_user(db:db_dependency, admin:user_dependency, user_id:int):

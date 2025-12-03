@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from src.catalog.models import Catalog_Inhabitants
-from src.aquariums.models import Aquariums, Aquarium_Inhabitants
+from src.aquariums.models import Aquarium_Inhabitants
 from src.database import get_db
 from src.auth.service import get_current_user
 from src.catalog.schemas import  AddInhabitantRequest, AddInhabitantResponse
-from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user, update_aquarium, delete_aquarium, recalculate_aquarium_targets, calculate_stocking_level, predict_nitrogen_cycle_status
+from src.aquariums.service import create_aquarium, get_aquarium, get_aquariums_by_user, update_aquarium, delete_aquarium, recalculate_aquarium_targets, calculate_stocking_level, predict_nitrogen_cycle_status, get_aquarium_by_id_db
 from src.aquariums.schemas import AquariumCreate, AquariumRead,  AquariumListResponse, AquariumUpdate
 from src.aquariums.service import check_compatibility, update_device_smart_config
 from src.monitoring.schemas import NitrogenStatusResponse
@@ -27,26 +27,31 @@ async def get_all_my_aquariums(
 ):
   return get_aquariums_by_user(db=db, user_id=user.get("user_id"))
 
+
 @router.get("/{aquarium_id}", response_model=AquariumRead)
 async def get_aquarium_by_id(
   db:db_dependency,
   aquarium_id:int,
+    user: user_dependency
 ):
-  return get_aquarium(db=db, aquarium_id=aquarium_id)
+  return get_aquarium_by_id_db(db=db, aquarium_id=aquarium_id, user_id=user.get("user_id"))
 
 
 @router.get("/{id}/analyze/{parameter}")
 def get_trend_analysis(
         id: int,
         parameter: str,
-        db: Session = Depends(get_db)  #
+        db: db_dependency,
+        user:user_dependency
+
 ):
     if parameter not in ["ph", "temperature", "tds"]:
-        raise HTTPException(status_code=400, detail="Invalid parameter")
+        raise HTTPException(status_code=400, detail="Неправильні параметри")
 
-    result = analyze_parameter_trends(db, aquarium_id=id, parameter=parameter)
+    result = analyze_parameter_trends(db, aquarium_id=id, parameter=parameter, user_id = user.get("user_id"))
 
     return result
+
 
 @router.get("/{id}/cycle-status", response_model=NitrogenStatusResponse)
 def get_aquarium_cycle_status(
@@ -56,14 +61,15 @@ def get_aquarium_cycle_status(
 ):
     aquarium = get_aquarium(db, id)
     if aquarium.user_id != user_id.get("user_id"):
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise HTTPException(status_code=403, detail="У вас немає доступу переглядати цей акваріум")
 
     result = predict_nitrogen_cycle_status(db, id)
 
     return result
 
+
 @router.post("/", status_code=201)
-async def create(
+async def create_new_aquarium(
   db:db_dependency,
   aquarium:AquariumCreate,
   user:user_dependency
@@ -78,7 +84,9 @@ def add_inhabitant_to_aquarium(
         db: db_dependency,
         user_id: user_dependency
 ):
-    aquarium = get_aquarium(db=db, aquarium_id=id)
+    aquarium = get_aquarium(db, id)
+    if aquarium.user_id != user_id.get("user_id"):
+        raise HTTPException(status_code=403, detail="У вас немає доступу додавати в цей акваріум")
 
     new_fish = db.query(Catalog_Inhabitants).filter(Catalog_Inhabitants.id == body.inhabitant_id).first()
     if not new_fish:
@@ -137,6 +145,7 @@ async def update_my_aquarium(
   user:user_dependency
 ):
   return update_aquarium(db=db, aquarium_id=aquarium_id, aquarium_data=aquarium_data, user_id=user.get("user_id"))
+
 
 @router.delete("/{aquarium_id}")
 async def delete_my_aquarium(

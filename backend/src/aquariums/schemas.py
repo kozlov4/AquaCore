@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime, date
+from pydantic import BaseModel, Field
+from datetime import date
 from typing import Optional, List
 
 from src.aquariums.models import WaterType

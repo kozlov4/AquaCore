@@ -15,11 +15,11 @@ db_dependency = Annotated[Session, Depends(get_db)]
 def check_admin(db:db_dependency, admin_id):
     admin = db.query(Users).filter(Users.id == admin_id).first()
     if admin is None:
-        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
+        raise  HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Адміна не знайдено")
     if admin.role.value != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Only admin can access this resource',
+            detail='Тільки Адмін має право це зробити',
         )
     return admin
 

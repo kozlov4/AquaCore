@@ -9,7 +9,6 @@ from src.auth.service import create_user, get_current_user, authenticate_user
 from src.auth.schemas import UserRegistration
 
 
-
 router = APIRouter(tags=['Auth 🔐'], prefix=  "/auth")
 
 db_dependency = Annotated[Session, Depends(get_db)]
