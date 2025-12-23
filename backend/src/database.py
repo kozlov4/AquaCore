@@ -13,19 +13,16 @@ class TableNameMixin:
     def __tablename__(cls) -> str:
         return cls.__name__.lower()
 
-
 DATABASE_URL = (
     f"postgresql+psycopg2://{os.getenv('DB_USER')}:"
     f"{os.getenv('DB_PASS')}@"
-    f"{os.getenv('DB_HOST')}:"
-    f"{os.getenv('DB_PORT')}/"
-    f"{os.getenv('DB_NAME')}"
+    f"{os.getenv('DB_HOST')}/"
+    f"{os.getenv('DB_NAME')}?sslmode=require&channel_binding=require"
 )
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 
 def get_db():
     db = SessionLocal()

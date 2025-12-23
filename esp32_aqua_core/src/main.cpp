@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <Wire.h>               
-#include <LiquidCrystal_I2C.h>  
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP32Servo.h>
@@ -8,36 +8,31 @@
 #include <DHT.h>
 #include <IRremote.hpp>
 #include <RtcDS1302.h>
-#include <FastLED.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <time.h>
 
-const int RELAY_1 = 26;
-const int RELAY_2 = 25;
-const int RELAY_3 = 14;
-const int RELAY_4 = 2;
+#define GMT_OFFSET_SEC  2 * 3600 
+#define DAYLIGHT_OFFSET_SEC 0
 
 
-#define LED_PIN 27        
-#define NUM_LEDS 120       
-CRGB leds[NUM_LEDS];
+const char* ssid = "Internet";
+const char* password = "0950854548";
+const char* serverUrl = "http://192.168.0.113:8000/measurements/sensor";
+const char* apiKey = "aq_dev_12345";
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+const int RELAY_LIGHT = 26; 
+const int RELAY_HEATER = 25; 
+const int RELAY_AUX = 33;    
 
-#define RTC_DAT_PIN 17
 #define RTC_CLK_PIN 16
-#define RTC_RST_PIN 5  
-ThreeWire myWire(RTC_DAT_PIN, RTC_CLK_PIN, RTC_RST_PIN);
-RtcDS1302<ThreeWire> Rtc(myWire);
-
+#define RTC_DAT_PIN 17  
+#define RTC_RST_PIN 18 
 #define IR_RECEIVE_PIN 15
-
 #define DHT_PIN 23
 #define DHT_TYPE DHT11
-DHT dht(DHT_PIN, DHT_TYPE);
-
 #define ONE_WIRE_BUS 4
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
 #define FLOAT_SWITCH_PIN 13
 #define TDS_PIN 35
 #define TURBIDITY_PIN 32
@@ -45,24 +40,47 @@ DallasTemperature sensors(&oneWire);
 #define SERVO_PIN 12
 #define BUZZER_PIN 19
 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+ThreeWire myWire(RTC_DAT_PIN, RTC_CLK_PIN, RTC_RST_PIN);
+RtcDS1302<ThreeWire> Rtc(myWire);
+DHT dht(DHT_PIN, DHT_TYPE);
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 Servo myServo;
+
+byte iconThermometer[8] = {B00100, B01010, B01010, B01110, B01110, B11111, B11111, B01110};
+byte iconDrop[8]        = {B00100, B00100, B01010, B01010, B10001, B10001, B10001, B01110};
+byte iconWifi[8]        = {B00000, B01110, B10001, B00100, B01010, B00000, B00100, B00000};
+byte iconWarning[8]     = {B00100, B01110, B01110, B11111, B11011, B11011, B11111, B00000};
+byte iconPause[8]       = {B11011, B11011, B11011, B11011, B11011, B11011, B11011, B00000};
 
 #define VREF 3.3
 #define SCOUNT 30
 int analogBuffer[SCOUNT];
 int analogBufferIndex = 0;
 
-int loopCounter = 0;
-unsigned long lastScreenUpdate = 0; 
-int currentScreen = 0;              
+unsigned long lastSensorRead = 0;
+unsigned long lastScreenUpdate = 0;
+unsigned long lastTelemetrySend = 0;
+const unsigned long SENSOR_INTERVAL = 1000; 
+const unsigned long SEND_INTERVAL = 60000;
 
-float currentWaterTemp = 25.0; 
+int currentScreen = 0;              
+const int MAX_SCREENS = 4; 
+
+bool fedToday = false; 
+bool manualLight = false;
+bool autoScreen = true;
+
+float AIR_TEMP_OFFSET = 2.5;
+
+float currentWaterTemp = 0.0; 
 float currentAirTemp = 0.0;
 float currentRoomHum = 0.0;
 float currentTDS = 0.0;
 float currentPH = 0.0;
 float currentTurbidityV = 0.0;
-int currentTurbidityRaw = 0;
+int waterLevel = 1; 
 
 int getMedianNum(int bArray[], int iFilterLen) {
   int bTab[iFilterLen];
@@ -82,26 +100,64 @@ int getMedianNum(int bArray[], int iFilterLen) {
   return bTemp;
 }
 
+bool syncTimeFromNTP() {
+    configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC,
+               "pool.ntp.org", "time.nist.gov");
+
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo, 10000)) {
+        Serial.println("NTP FAILED");
+        return false;
+    }
+
+    Serial.println("NTP OK → RTC UPDATED");
+
+    RtcDateTime ntpTime(
+        timeinfo.tm_year + 1900,
+        timeinfo.tm_mon + 1,
+        timeinfo.tm_mday,
+        timeinfo.tm_hour,
+        timeinfo.tm_min,
+        timeinfo.tm_sec
+    );
+
+    Rtc.SetDateTime(ntpTime);
+    Rtc.SetIsRunning(true);
+    return true;
+}
+
 void setup() {
-
-  pinMode(RELAY_1, OUTPUT);
-
-
-
-  Serial.println("Подаю сигнал LOW... Реле має клацнути!");
-  
-  digitalWrite(RELAY_1, LOW);
-
-
- 
-
   Serial.begin(115200);
-  Serial.println(">>> СТАРТ СИСТЕМИ (LCD + SERIAL) <<<");
+  Serial.println(">>> START AQUACORE<<<");
 
+  pinMode(RELAY_LIGHT, OUTPUT);
+  pinMode(RELAY_HEATER, OUTPUT);
+  pinMode(RELAY_AUX, OUTPUT);
+  
+  digitalWrite(RELAY_LIGHT, HIGH); 
+  digitalWrite(RELAY_HEATER, HIGH);
+  digitalWrite(RELAY_AUX, LOW); 
+
+  WiFi.begin(ssid, password);
+  
   Wire.begin(21, 22); 
   lcd.init();         
-  lcd.backlight();    
-  lcd.setCursor(0, 0); lcd.print("System Start...");
+  lcd.backlight();
+  
+  lcd.createChar(0, iconThermometer);
+  lcd.createChar(1, iconDrop);
+  lcd.createChar(2, iconWifi);
+  lcd.createChar(3, iconWarning);
+  lcd.createChar(4, iconPause);
+
+  lcd.setCursor(0, 0); lcd.print("AquaCore System");
+  lcd.setCursor(0, 1); lcd.print("Connecting...");
+
+  int wifi_timeout = 0;
+  while(WiFi.status() != WL_CONNECTED && wifi_timeout < 10) {
+    delay(500);
+    wifi_timeout++;
+  }
 
   sensors.begin();
   dht.begin();
@@ -110,146 +166,257 @@ void setup() {
   pinMode(TDS_PIN, INPUT);
   pinMode(TURBIDITY_PIN, INPUT);
   pinMode(PH_PIN, INPUT);
+  
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
-  myServo.attach(SERVO_PIN);
-  myServo.write(0);
+  myServo.attach(SERVO_PIN, 500, 2400);
+  myServo.write(0); 
 
   IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
   
   Rtc.Begin();
-  Rtc.SetIsWriteProtected(false);
-  Rtc.SetIsRunning(true);
 
-  FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(50); 
+bool timeOk = false;
 
-  delay(1000);
-  lcd.clear();
+if (WiFi.status() == WL_CONNECTED) {
+    timeOk = syncTimeFromNTP();
+}
+
+if (!timeOk) {
+    Serial.println("⚠️ USING RTC TIME");
+    if (!Rtc.GetIsRunning()) {
+        Serial.println("⚠️ RTC WAS STOPPED");
+        Rtc.SetIsRunning(true);
+    }
+}
+
+RtcDateTime now = Rtc.GetDateTime();
+Serial.printf("TIME: %02u:%02u:%02u %02u-%02u-%04u\n",
+    now.Hour(), now.Minute(), now.Second(),
+    now.Day(), now.Month(), now.Year());
+
+  delay(500);
+  lcd.clear(); 
+}
+
+void sendTelemetry() {
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    StaticJsonDocument<300> doc;
+    doc["api_key"] = apiKey;
+    
+    JsonObject measurements = doc.createNestedObject("measurements");
+    measurements["temperature"] = currentWaterTemp;
+    measurements["ph"] = currentPH;
+    measurements["tds"] = currentTDS;
+    measurements["turbidity"] = currentTurbidityV;
+    measurements["water_level"] = waterLevel; 
+    measurements["room_temperature"] = currentAirTemp;
+    measurements["room_humidity"] = currentRoomHum;
+
+    String jsonString;
+    serializeJson(doc, jsonString);
+
+    http.POST(jsonString);
+    http.end();
+  }
+}
+
+String getTurbidityStatus(float voltage) {
+  if (voltage > 3.9) return "Crystal"; 
+  if (voltage > 3.0) return "Ok";      
+  return "Dirty!";                     
+}
+
+String getTdsStatus(float tds) {
+  if (tds < 50) return "Low";      
+  if (tds > 400) return "Hard";    
+  return "Good";
+}
+
+void updateDisplay() {
+    RtcDateTime now = Rtc.GetDateTime();
+    
+    switch (currentScreen) {
+        case 0: 
+            lcd.setCursor(0, 0); 
+            lcd.write(0); lcd.print(currentWaterTemp, 1); 
+            lcd.print((char)223); lcd.print("C  ");
+            
+            lcd.write(1); lcd.print(currentPH, 1); lcd.print("pH ");
+
+            lcd.setCursor(0, 1); 
+            if(now.Hour() < 10) lcd.print("0");
+            lcd.print(now.Hour()); lcd.print(":");
+            if(now.Minute() < 10) lcd.print("0");
+            lcd.print(now.Minute());
+            
+            lcd.print(" ");
+            if(manualLight) lcd.print("M"); else lcd.print(" ");
+            if(!autoScreen) lcd.write(4); else lcd.print(" ");
+            break;
+
+        case 1:
+            lcd.setCursor(0, 0); 
+            lcd.print("TDS:"); lcd.print((int)currentTDS); 
+            lcd.print(" "); lcd.print(getTdsStatus(currentTDS)); lcd.print("   ");
+            
+            lcd.setCursor(0, 1);
+            lcd.print("Water: "); 
+            lcd.print(getTurbidityStatus(currentTurbidityV)); 
+            lcd.print("      "); 
+            
+            if(!autoScreen) { lcd.setCursor(15,1); lcd.write(4); }
+            break;
+
+        case 2: 
+            lcd.setCursor(0, 0); 
+            lcd.print("Air: "); lcd.print(currentAirTemp, 1); 
+            lcd.print((char)223); lcd.print("C    ");
+            
+            lcd.setCursor(0, 1);
+            lcd.print("Hum: "); lcd.print(currentRoomHum, 0); lcd.print("%      ");
+            if(!autoScreen) { lcd.setCursor(15,1); lcd.write(4); }
+            break;
+
+        case 3: 
+            lcd.setCursor(0, 0);
+            lcd.write(2); 
+            if(WiFi.status() == WL_CONNECTED) {
+                 lcd.print(" "); lcd.print(WiFi.localIP().toString().substring(10)); 
+            } else {
+                 lcd.print(" No Signal   ");
+            }
+
+            lcd.setCursor(0, 1);
+            lcd.print("H:"); lcd.print(digitalRead(RELAY_HEATER) == LOW ? "ON" : "off");
+            lcd.print(" A:"); lcd.print(digitalRead(RELAY_AUX) == LOW ? "ON" : "off");
+            break;
+    }
 }
 
 void loop() {
-  loopCounter++;
-  
-  
+  unsigned long currentMillis = millis();
+
   if (IrReceiver.decode()) {
-    Serial.print("IR Code: ");
-    Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-    IrReceiver.resume();
+    uint32_t code = IrReceiver.decodedIRData.decodedRawData;
+
+    if (code != 0) {
+        Serial.print("IR: "); Serial.println(code, HEX);
+        
+        switch (code) {
+            case 0xBA45FF00:
+                manualLight = true;
+                digitalWrite(RELAY_LIGHT, !digitalRead(RELAY_LIGHT));
+                break;
+            
+            case 0xE916FF00: 
+                Serial.println("Auto Mode ON");
+                manualLight = false;
+                autoScreen = true;
+                break;
+
+            case 0xB946FF00:
+                digitalWrite(RELAY_AUX, !digitalRead(RELAY_AUX));
+                break;
+            case 0xBC43FF00:
+                myServo.write(90); delay(1000); myServo.write(0);
+                break;
+
+            case 0xF30CFF00:
+                currentScreen = 0; autoScreen = false; lcd.clear(); updateDisplay();
+                break;
+            case 0xE718FF00:
+                currentScreen = 1; autoScreen = false; lcd.clear(); updateDisplay();
+                break;
+            case 0xA15EFF00: 
+                currentScreen = 2; autoScreen = false; lcd.clear(); updateDisplay();
+                break;
+            case 0xF708FF00: 
+                currentScreen = 3; autoScreen = false; lcd.clear(); updateDisplay();
+                break;
+            case 0xBF40FF00: 
+                currentScreen++; if(currentScreen >= MAX_SCREENS) currentScreen = 0;
+                autoScreen = false; lcd.clear(); updateDisplay();
+                break;
+            case 0xBB44FF00: 
+                currentScreen--; if(currentScreen < 0) currentScreen = MAX_SCREENS - 1;
+                autoScreen = false; lcd.clear(); updateDisplay();
+                break;
+
+            case 0xF609FF00: 
+                digitalWrite(BUZZER_PIN, LOW);
+                break;
+        }
+    }
+    IrReceiver.resume(); 
   }
 
-  sensors.requestTemperatures();
-  float tempReading = sensors.getTempCByIndex(0);
-  if(tempReading != DEVICE_DISCONNECTED_C && tempReading > -100) {
-    currentWaterTemp = tempReading;
-  }
+  if (currentMillis - lastSensorRead >= SENSOR_INTERVAL) {
+    lastSensorRead = currentMillis;
 
-  int waterLevel = digitalRead(FLOAT_SWITCH_PIN);
-  if(waterLevel == HIGH) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    lcd.setCursor(0, 0); lcd.print("!! WARNING !!   ");
-    lcd.setCursor(0, 1); lcd.print("WATER LEVEL LOW ");
-    Serial.println("!!! ALARM: LOW WATER LEVEL !!!"); 
-  } else {
-    digitalWrite(BUZZER_PIN, LOW);
-  }
+    sensors.requestTemperatures();
+    float tRead = sensors.getTempCByIndex(0);
+    if(tRead > -50 && tRead < 100) currentWaterTemp = tRead;
 
-  if (loopCounter >= 10000) { 
-    Serial.println(">>> FEEDING TIME <<<");
-    myServo.write(90);
-    delay(1000);
-    myServo.write(0);
-    loopCounter = 0;
-  }
+    waterLevel = digitalRead(FLOAT_SWITCH_PIN); 
+    if(waterLevel == LOW) digitalWrite(BUZZER_PIN, HIGH);
+    else digitalWrite(BUZZER_PIN, LOW);
 
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-  if (!isnan(h) && !isnan(t)) {
-    currentRoomHum = h;
-    currentAirTemp = t;
-  }
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+    if (!isnan(h) && !isnan(t)) {
+      currentRoomHum = h; currentAirTemp = t - AIR_TEMP_OFFSET;
+    }
 
-  static unsigned long analogSampleTimepoint = millis();
-  if (millis() - analogSampleTimepoint > 40U) {
-    analogSampleTimepoint = millis();
     analogBuffer[analogBufferIndex] = analogRead(TDS_PIN);
-    analogBufferIndex++;
-    if (analogBufferIndex == SCOUNT) analogBufferIndex = 0;
+    analogBufferIndex++; if(analogBufferIndex >= SCOUNT) analogBufferIndex = 0;
+    int analogTds = getMedianNum(analogBuffer, SCOUNT);
+    float voltTds = analogTds * VREF / 4095.0;
+    currentTDS = (133.42 * voltTds * voltTds * voltTds - 255.86 * voltTds * voltTds + 857.39 * voltTds) * 0.5;
+
+    int phRaw = analogRead(PH_PIN);
+    currentPH = (-5.70 * (phRaw * VREF / 4095.0)) + 21.34;
+    currentTurbidityV = analogRead(TURBIDITY_PIN) * (VREF / 4095.0);
+    
+    updateDisplay(); 
   }
-  int analogValue = getMedianNum(analogBuffer, SCOUNT);
-  float averageVoltage = analogValue * VREF / 4095.0;
-  float compensationCoefficient = 1.0 + 0.02 * (currentWaterTemp - 25.0);
-  float compensationVoltage = averageVoltage / compensationCoefficient;
-  currentTDS = (133.42 * compensationVoltage * compensationVoltage * compensationVoltage
-             - 255.86 * compensationVoltage * compensationVoltage
-             + 857.39 * compensationVoltage) * 0.5;
 
-  currentTurbidityRaw = analogRead(TURBIDITY_PIN);
-  currentTurbidityV = currentTurbidityRaw * (VREF / 4095.0);
-
-  int phRaw = analogRead(PH_PIN);
-  float phVoltage = phRaw * (VREF / 4095.0);
-  currentPH = (-5.70 * phVoltage) + 21.34;
+  if (autoScreen && (currentMillis - lastScreenUpdate >= 3000)) {
+      lastScreenUpdate = currentMillis;
+      currentScreen++;
+      if (currentScreen >= MAX_SCREENS) currentScreen = 0;
+      lcd.clear();
+      updateDisplay();
+  }
 
   RtcDateTime now = Rtc.GetDateTime();
 
-  Serial.print("Час: ");
-  Serial.print(now.Hour()); Serial.print(":");
-  Serial.print(now.Minute()); Serial.print(":");
-  Serial.println(now.Second());
+  if (!manualLight) {
+      if (now.Hour() >= 8 && now.Hour() < 23) digitalWrite(RELAY_LIGHT, LOW);
+      else digitalWrite(RELAY_LIGHT, HIGH);
+  }
 
-  Serial.print("Вода Temp: "); Serial.print(currentWaterTemp); Serial.println(" C");
-  
-  if (waterLevel == HIGH) Serial.println("Рівень води: НЕБЕЗПЕКА!");
-  else Serial.println("Рівень води: ОК");
+  if (now.Hour() == 9 && now.Minute() == 0) {
+    if (!fedToday) {
+      myServo.write(90); delay(1000); myServo.write(0);
+      fedToday = true;
+    }
+  } else fedToday = false;
 
-  Serial.print("Кімната Temp: "); Serial.print(currentAirTemp); Serial.println(" C");
-  Serial.print("Кімната Hum:  "); Serial.print(currentRoomHum); Serial.println(" %");
-
-  Serial.print("TDS: "); Serial.print(currentTDS, 0); Serial.println(" ppm");
-  
-  Serial.print("Turbidity: "); Serial.print(currentTurbidityRaw); 
-  Serial.print(" ("); Serial.print(currentTurbidityV); Serial.println(" V)");
-
-  Serial.print("pH: "); Serial.print(currentPH, 2); 
-  Serial.print(" (Calc)");
-  Serial.println();
-  Serial.println("---------------------------------");
-
-  if (waterLevel == LOW && millis() - lastScreenUpdate > 3000) {
-    lastScreenUpdate = millis();
-    lcd.clear();
-    
-    if (currentScreen == 0) {
-      lcd.setCursor(0, 0); lcd.print("W:"); lcd.print(currentWaterTemp, 1); lcd.print("C ");
-      lcd.print("A:"); lcd.print(currentAirTemp, 0); lcd.print("C");
-      lcd.setCursor(0, 1); lcd.print("Hum: "); lcd.print(currentRoomHum, 0); lcd.print("%");
-      currentScreen = 1;
+  if (currentWaterTemp < 24.8) {          
+      digitalWrite(RELAY_HEATER, LOW);
     } 
-    else if (currentScreen == 1) {
-      lcd.setCursor(0, 0); lcd.print("TDS:"); lcd.print(currentTDS, 0); 
-      lcd.print(" pH:"); lcd.print(currentPH, 1);
-      lcd.setCursor(0, 1); lcd.print("Turb:"); lcd.print(currentTurbidityV, 1); lcd.print("V");
-      currentScreen = 2;
+    else if (currentWaterTemp > 25.2) {   
+      digitalWrite(RELAY_HEATER, HIGH); 
     }
-    else if (currentScreen == 2) {
-      lcd.setCursor(0, 0);
-      lcd.print("Time: ");
-      if (now.Hour() < 10) lcd.print("0"); lcd.print(now.Hour()); lcd.print(":");
-      if (now.Minute() < 10) lcd.print("0"); lcd.print(now.Minute()); lcd.print(":");
-      if (now.Second() < 10) lcd.print("0"); lcd.print(now.Second());
-      lcd.setCursor(0, 1);
-      lcd.print("System OK");
-      currentScreen = 0;
-    }
-  }
 
-for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB::Blue; 
+  if (currentMillis - lastTelemetrySend >= SEND_INTERVAL) {
+    lastTelemetrySend = currentMillis;
+    sendTelemetry();
   }
-  
-  FastLED.show();
-
-  delay(3000);
 }
