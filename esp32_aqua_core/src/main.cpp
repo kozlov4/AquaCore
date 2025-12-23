@@ -19,7 +19,7 @@
 
 const char* ssid = "Internet";
 const char* password = "0950854548";
-const char* serverUrl = "http://192.168.0.113:8000/measurements/sensor";
+const char* serverUrl = "https://aquacore.onrender.com/measurements/sensor";
 const char* apiKey = "aq_dev_12345";
 
 const int RELAY_LIGHT = 26; 
@@ -184,9 +184,9 @@ if (WiFi.status() == WL_CONNECTED) {
 }
 
 if (!timeOk) {
-    Serial.println("⚠️ USING RTC TIME");
+    Serial.println("USING RTC TIME");
     if (!Rtc.GetIsRunning()) {
-        Serial.println("⚠️ RTC WAS STOPPED");
+        Serial.println(" RTC WAS STOPPED");
         Rtc.SetIsRunning(true);
     }
 }
@@ -201,29 +201,40 @@ Serial.printf("TIME: %02u:%02u:%02u %02u-%02u-%04u\n",
 }
 
 void sendTelemetry() {
-  if(WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
+  if (WiFi.status() != WL_CONNECTED) return;
 
-    StaticJsonDocument<300> doc;
-    doc["api_key"] = apiKey;
-    
-    JsonObject measurements = doc.createNestedObject("measurements");
-    measurements["temperature"] = currentWaterTemp;
-    measurements["ph"] = currentPH;
-    measurements["tds"] = currentTDS;
-    measurements["turbidity"] = currentTurbidityV;
-    measurements["water_level"] = waterLevel; 
-    measurements["room_temperature"] = currentAirTemp;
-    measurements["room_humidity"] = currentRoomHum;
+  WiFiClientSecure client;
+  client.setInsecure(); 
 
-    String jsonString;
-    serializeJson(doc, jsonString);
+  HTTPClient http;
+  http.begin(client, serverUrl);
+  http.addHeader("Content-Type", "application/json");
 
-    http.POST(jsonString);
-    http.end();
+  StaticJsonDocument<300> doc;
+  doc["api_key"] = apiKey;
+
+  JsonObject measurements = doc.createNestedObject("measurements");
+  measurements["temperature"] = currentWaterTemp;
+  measurements["ph"] = currentPH;
+  measurements["tds"] = currentTDS;
+  measurements["turbidity"] = currentTurbidityV;
+  measurements["water_level"] = waterLevel;
+  measurements["room_temperature"] = currentAirTemp;
+  measurements["room_humidity"] = currentRoomHum;
+
+  String jsonString;
+  serializeJson(doc, jsonString);
+
+  int httpCode = http.POST(jsonString);
+
+  Serial.print("HTTP POST → ");
+  Serial.println(httpCode);
+
+  if (httpCode > 0) {
+    Serial.println(http.getString());
   }
+
+  http.end();
 }
 
 String getTurbidityStatus(float voltage) {
