@@ -1,13 +1,50 @@
+"use client";
+
 import Image from "next/image";
 import { Gooogle } from "../layouts/icons/google";
+import { motion } from "framer-motion";
 
-export function Authorization({type}) {
-const isLogin = type === "login"
+export function Authorization({ type }) {
+  const isLogin = type === "login";
+
+  const container = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+      },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4 },
+    },
+  };
 
   return (
-    <header className="w-screen h-full flex">
-      <div className="w-1/2 h-[90%]">
-        <div id="logo" className="w-full h-[10%] mt-3 pl-3">
+    <motion.header
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="w-screen h-full flex"
+    >
+      {/* LEFT */}
+      <motion.div
+        initial={{ x: -80, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-1/2 h-[90%]"
+      >
+        {/* LOGO */}
+        <motion.div
+          id="logo"
+          className="w-full h-[10%] mt-3 pl-3"
+          whileHover={{ scale: 1.05 }}
+        >
           <Image
             src="/images/Logo.svg"
             alt="fish"
@@ -15,57 +52,142 @@ const isLogin = type === "login"
             height={0}
             className="w-20 h-auto"
           />
+        </motion.div>
 
-        </div>
-        <div className="w-full h-[90%] px-[20%] py-[10%]">
-            <h1 className="text-black font-medium text-3xl">{isLogin? "З поверненням!" : "Почніть зараз"}</h1>
-            <h3 className={`text-black font-inter text-base font-normal leading-normal ${isLogin? "visible" : "hidden"}`}>Введіть свої облікові дані, щоб увійти</h3>
-            <form action="" className={`w-full h-full ${isLogin? "pt-[10%]" : "pt-[15%]"} `}>
-                <div className={`${isLogin? "hidden" : "visible"}`}>
-                <label htmlFor="" className="name text-black font-medium text-lg">Ім'я</label>
-                <input type="text" name="name" placeholder="Введіть своє ім'я" className="w-full h-[10%] mb-[5%] flex pt-2.5 pr-0 pb-2.5 pl-2.5 items-start  shrink-0 rounded-[10px] border border-[#D9D9D9]" />
-                </div>
-                 <div>
-                <label htmlFor="" className="text-black font-medium text-lg">Адреса електронної пошти</label>
-                <input type="text" name="email" placeholder="Введіть свою електронну адресу" className="w-full h-[10%] mb-[5%] flex pt-2.5 pr-0 pb-2.5 pl-2.5 items-start  shrink-0 rounded-[10px] border border-[#D9D9D9]" />
-                </div>
-                 <div>
-                <div className="w-full flex justify-between items-baseline">
-                <label htmlFor="" className="text-black font-medium text-lg">Пароль</label>
-                <a href="" className={`text-(--action-sec,#0C2A92) font-inter text-xs font-medium leading-normal ${isLogin? "visible" : "hidden"}`}>Забули пароль</a>
-                </div>
-                <input type="text" name="password" placeholder="Введіть свій пароль" className="w-full h-[10%] mb-[5%] flex pt-2.5 pr-0 pb-2.5 pl-2.5 items-start  shrink-0 rounded-[10px] border border-[#D9D9D9]" />
-                </div>
-                <div className="w-full h-auto flex gap-[3%] items-center">
-                    <input type="checkbox" name="checker" className="w-6 h-6 rounded-lg border-2 border-gray-400 appearance-none "/>
-                    <span className="text-black text-xs font-medium underline">{isLogin? "Запам'ятайте на 30 днів" : "Я погоджуюся з умовами & використання"}</span>
-                </div>
-                <button id="authorization" className="w-full h-auto mt-[5%] flex justify-center py-2.5 pl-2.5 items-center gap-2.5 rounded-[10px] border border-[#D688B7] bg-[#D688B7] text-white text-center text-lg font-bold">{isLogin?"Увійти" : "Реєстрація"}</button>
-                <div className="w-full h-auto flex justify-center items-center mt-[10%] mb-[10%]">
-                    <div className="w-[40%] h-1 bg-[#F5F5F5]"></div>
-                    <span className="text-black text-xs font-medium">Або</span>
-                    <div className="w-[40%] h-1 bg-[#F5F5F5]"></div>
-                </div>
-                <div className="w-full flex justify-center">
-                <button id="google-register" className="w-[45%] h-auto inline-flex items-start gap-2.5 px-5 py-1 rounded-[10px] border border-[#D9D9D9] text-black text-sm font-medium leading-normal justify-center">
-                    <Gooogle/>
-                    Увійти через гугл
-                </button>
-                </div>
-                <div className="w-full h-auto flex justify-center mt-[5%]">
-                    <p className="text-black font-poppins text-sm font-medium leading-normal">{isLogin?"Ще не маєте облікового запису?" : "У вас є обліковий запис?"} <a href="" id="signIn-link" className="text-[#0F3DDE]">{isLogin? "Зареєструватися" : "Увійти"}</a></p>
-                </div>
-            </form>
-        </div>
-      </div>
+        {/* FORM */}
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="visible"
+          className="w-full h-[90%] px-[20%] py-[10%]"
+        >
+          <motion.h1 variants={item} className="text-black font-medium text-3xl">
+            {isLogin ? "З поверненням!" : "Почніть зараз"}
+          </motion.h1>
 
-      <div
-        className="w-1/2 h-screen
-        bg-[url('/images/fish.png')] 
-        bg-size-[100%_100%]
-        bg-center 
-        bg-no-repeat"
-      ></div>
-    </header>
+          <motion.h3
+            variants={item}
+            className={`text-black text-base ${
+              isLogin ? "block" : "hidden"
+            }`}
+          >
+            Введіть свої облікові дані, щоб увійти
+          </motion.h3>
+
+          <motion.form
+            variants={container}
+            className={`w-full h-full ${
+              isLogin ? "pt-[10%]" : "pt-[15%]"
+            }`}
+          >
+            {/* NAME */}
+            {!isLogin && (
+              <motion.div variants={item}>
+                <label className="text-black font-medium text-lg">
+                  Ім'я
+                </label>
+                <motion.input
+                  whileFocus={{ scale: 1.02 }}
+                  type="text"
+                  placeholder="Введіть своє ім'я"
+                  className="w-full mb-[5%] p-2 rounded-[10px] border"
+                />
+              </motion.div>
+            )}
+
+            {/* EMAIL */}
+            <motion.div variants={item}>
+              <label className="text-black font-medium text-lg">
+                Email
+              </label>
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
+                type="text"
+                placeholder="Введіть email"
+                className="w-full mb-[5%] p-2 rounded-[10px] border"
+              />
+            </motion.div>
+
+            {/* PASSWORD */}
+            <motion.div variants={item}>
+              <div className="flex justify-between">
+                <label className="text-black font-medium text-lg">
+                  Пароль
+                </label>
+                {isLogin && (
+                  <motion.a
+                    whileHover={{ scale: 1.05 }}
+                    className="text-xs text-blue-600 cursor-pointer"
+                  >
+                    Забули пароль
+                  </motion.a>
+                )}
+              </div>
+
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
+                type="password"
+                placeholder="Пароль"
+                className="w-full mb-[5%] p-2 rounded-[10px] border"
+              />
+            </motion.div>
+
+            {/* CHECKBOX */}
+            <motion.div
+              variants={item}
+              className="flex gap-2 items-center"
+            >
+              <motion.input
+                whileTap={{ scale: 0.9 }}
+                type="checkbox"
+                className="w-5 h-5"
+              />
+              <span className="text-xs underline">
+                {isLogin
+                  ? "Запам'ятати на 30 днів"
+                  : "Я погоджуюся з умовами"}
+              </span>
+            </motion.div>
+
+            {/* BUTTON */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-full mt-[5%] py-2 rounded-[10px] cursor-pointer bg-[#D688B7] text-white font-bold"
+            >
+              {isLogin ? "Увійти" : "Реєстрація"}
+            </motion.button>
+
+            {/* DIVIDER */}
+            <motion.div
+              variants={item}
+              className="flex items-center my-[10%]"
+            >
+              <div className="flex-1 h-[1px] bg-gray-200" />
+              <span className="px-2 text-xs">Або</span>
+              <div className="flex-1 h-[1px] bg-gray-200" />
+            </motion.div>
+
+            {/* GOOGLE */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-full flex justify-center gap-2 p-2 border rounded-[10px] cursor-pointer"
+            >
+              <Gooogle />
+              Google
+            </motion.button>
+          </motion.form>
+        </motion.div>
+      </motion.div>
+
+      {/* RIGHT IMAGE */}
+      <motion.div
+        initial={{ x: 80, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-1/2 h-screen bg-[url('/images/fish.png')] bg-cover bg-center"
+      />
+    </motion.header>
   );
 }
