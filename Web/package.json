@@ -18,7 +18,7 @@
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4.0.16",
     "@tailwindcss/vite": "^4.0.16",
-    "framer-motion": "^12.6.3",
+    "framer-motion": "^12.38.0",
     "leaflet": "^1.9.4",
     "next": "^15.2.4",
     "react": "^19.0.0",
