@@ -1,5 +1,5 @@
 import "leaflet/dist/leaflet.css";
-import { Authorization } from "../components/authorization";
+import { Authorization } from "../components/Authorization/Authorization";
 
 export default function Main() {
   return (<Authorization type="register" />  )
