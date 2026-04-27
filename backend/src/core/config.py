@@ -7,10 +7,11 @@ BASE_DIR = Path(__file__).parent.parent
 
 
 class DbSettings(BaseSettings):
-    url: str
+    database_url: str
+    cloudinary_url: str
     echo: bool = True
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 class AuthJWT(BaseModel):

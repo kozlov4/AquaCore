@@ -3,7 +3,6 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from src.database import get_db
 from src.auth.service import create_access_token
 from src.auth.service import create_user, get_current_user, authenticate_user
 from src.auth.schemas import UserRegistration
