@@ -5,6 +5,7 @@ description = ""
 authors = [
     {name = "Serge Kozlov",email = "serge.kozlov.dev@gmail.com"}
 ]
+
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -17,9 +18,13 @@ dependencies = [
     "passlib (>=1.7.4,<2.0.0)",
     "python-jose[cryptography] (>=3.5.0,<4.0.0)",
     "bcrypt (==4.2.0)",
-    "python-multipart (>=0.0.20,<0.0.21)"
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "pydantic-settings (>=2.14.0,<3.0.0)",
+    "asyncpg (>=0.31.0,<0.32.0)"
 ]
 
+[tool.poetry]
+package-mode = false
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
