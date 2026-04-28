@@ -1,104 +1,169 @@
-import os
-from datetime import timedelta, datetime, timezone
-from typing import Annotated
-from fastapi import Depends, HTTPException, status
-from passlib.context import CryptContext
-from jose import jwt, JWTError
-from starlette import status
-from fastapi.security import OAuth2PasswordBearer
-from src.database import get_db
-from sqlalchemy.orm import Session
-from src.auth.schemas import UserRegistration
-from src.users.models import Users, User_Settings, User_Profiles
+import random
+import string
+import jwt
+from fastapi import HTTPException, status
+from .schemas import UserRegistration, UserLogin
+from .utils import validate_password, decode_jwt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from models import User
+from .schemas import TokenInfo
+from .utils import hash_password, encode_jwt
 
 
-bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login/")
-db_dependency = Annotated[Session, Depends(get_db)]
+async def generate_unique_nickname(session: AsyncSession, base_name: str) -> str:
+    clean_name = "".join(base_name.split()).lower() if base_name else "aquarist"
 
-def create_access_token(subject: str, id: int, role:str, expires_delta: timedelta):
-    encode = {'sub': subject, 'id': id, 'role': role}
-    expires = datetime.now(timezone.utc) + expires_delta
-    encode.update({'exp': expires})
-    return jwt.encode(encode, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM"))
+    while True:
+        random_suffix = "".join(random.choices(string.digits, k=4))
+        candidate_nickname = f"{clean_name}_{random_suffix}"
+
+        query = select(User).where(User.nickname == candidate_nickname).limit(1)
+        result = await session.execute(query)
+
+        if not result.scalar_one_or_none():
+            return candidate_nickname
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+async def register_user(
+    session: AsyncSession,
+    user_in: UserRegistration,
+) -> User:
+    query = select(User).where(User.email == user_in.email).limit(1)
+    result = await session.execute(query)
+
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Помилка при реєстрації",
+        )
+
+    hashed_pwd = hash_password(user_in.password)
+
+    unique_nickname = await generate_unique_nickname(session, user_in.name)
+
+    new_user = User(
+        email=user_in.email,
+        name=user_in.name,
+        nickname=unique_nickname,
+        password_hash=hashed_pwd.decode("utf-8"),
+    )
+
+    session.add(new_user)
+    await session.commit()
+
+    await session.refresh(new_user)
+
+    return new_user
+
+
+async def user_login(
+    session: AsyncSession,
+    user_in: UserLogin,
+) -> TokenInfo:
+    stmt = select(User).where(User.email == user_in.email).limit(1)
+    result = await session.execute(stmt)
+    user: User | None = result.scalar_one_or_none()
+
+    if not user or not validate_password(
+        user_in.password,
+        user.password_hash.encode("utf-8"),
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль"
+        )
+
+    access_token = encode_jwt(
+        payload={"sub": str(user.id), "type": "access"}, expire_minutes=15
+    )
+    refresh_token = encode_jwt(
+        payload={"sub": str(user.id), "type": "refresh"}, expire_minutes=60 * 24 * 30
+    )
+
+    return TokenInfo(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="Bearer",
+    )
+
+
+async def refresh_access_token(session: AsyncSession, refresh_token: str) -> TokenInfo:
     try:
-        payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-        username: str = payload.get('sub')
-        user_id: int = payload.get('id')
-        role: str = payload.get('role')
-        if username is None or user_id is None or role is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
-        return {'username': username, 'user_id': user_id, 'role': role}
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+        payload = decode_jwt(refresh_token)
 
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type"
+            )
 
-async def create_user(db:db_dependency, new_user: UserRegistration):
-    get_user_by_email(db=db, email = new_user.email)
-    
-    create_user_model = Users(
-        email = new_user.email,
-        hashed_password = bcrypt_context.hash(new_user.password) 
-    )
+        user_id = payload.get("sub")
 
-    db.add(create_user_model)
-    db.commit()
-    db.refresh(create_user_model)
-
-
-    user_settings = User_Settings(
-        user_id=create_user_model.id 
-    )
-    db.add(user_settings)
-
-
-    user_profile = User_Profiles(
-        user_id=create_user_model.id,
-        nickname=None,
-        first_name=None,
-        last_name=None
-    )
-    db.add(user_profile)
-
-    db.commit()
-
-    token = create_access_token(
-        subject=create_user_model.email,
-        id=create_user_model.id,
-        role=create_user_model.role.value,
-        expires_delta=timedelta(minutes=30)
-    )
-
-    return {
-        "access_token": token, 
-        "token_type": "bearer", 
-        "user_name": create_user_model.email
-    }
-
-
-def get_user_by_email(db:db_dependency, email:str):
-    existing_user = db.query(Users).filter(Users.email == email).first()
-    if existing_user:
-         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Користувач з таким email вже існує")
-
-
-def authenticate_user(db: Session, email: str, password: str):
-    user = db.query(Users).filter(Users.email == email).first()
-    if not user:
+    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неправильный email, спробуйте ще раз"
+            detail="Сесія закінчилася.",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Недійсний токен"
         )
 
-    if not user.is_active:
+    stmt = select(User).where(User.id == int(user_id)).limit(1)
+    result = await session.execute(stmt)
+    user: User | None = result.scalar_one_or_none()
+
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Ви заблоковані"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
-    if not bcrypt_context.verify(password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неправильний пароль, спробуйте ще раз")
-    
-    return user
+
+    new_access_token = encode_jwt(
+        payload={"sub": str(user.id), "type": "access"}, expire_minutes=15
+    )
+    new_refresh_token = encode_jwt(
+        payload={"sub": str(user.id), "type": "refresh"}, expire_minutes=60 * 24 * 30
+    )
+
+    return TokenInfo(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token,
+        token_type="Bearer",
+    )
+
+
+async def process_google_user(session: AsyncSession, user_info: dict) -> TokenInfo:
+    email = user_info.get("email")
+    name = user_info.get("name")
+
+    stmt = select(User).where(User.email == email).limit(1)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        unique_nickname = await generate_unique_nickname(session, name)
+
+        random_pwd = "".join(random.choices(string.ascii_letters + string.digits, k=20))
+        hashed_pwd = hash_password(random_pwd)
+
+        user = User(
+            email=email,
+            name=name,
+            nickname=unique_nickname,
+            password_hash=hashed_pwd.decode("utf-8"),
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    access_token = encode_jwt(
+        payload={"sub": str(user.id), "type": "access"}, expire_minutes=15
+    )
+    refresh_token = encode_jwt(
+        payload={"sub": str(user.id), "type": "refresh"}, expire_minutes=60 * 24 * 30
+    )
+
+    return TokenInfo(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="Bearer",
+    )
