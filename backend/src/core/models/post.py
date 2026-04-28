@@ -20,7 +20,6 @@ class Post(Base):
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
     category: Mapped[str] = mapped_column(String(50))
 
-    # Связи
     author: Mapped["User"] = relationship(back_populates="posts")
     aquarium: Mapped["Aquarium"] = relationship(back_populates="posts")
     image: Mapped["Image"] = relationship()

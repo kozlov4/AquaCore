@@ -1,8 +1,19 @@
-# models/system.py
+from typing import TYPE_CHECKING
 from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean
+from sqlalchemy import (
+    String,
+    Text,
+    ForeignKey,
+    DateTime,
+    Boolean,
+    Integer,
+    CheckConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 class Chat(Base):
@@ -29,9 +40,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))  # Кому
-    actor_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id")
-    )  # Хто тригернув
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     type: Mapped[str] = mapped_column(String(50))  # like, comment, system_alert
     post_id: Mapped[int | None] = mapped_column(ForeignKey("posts.id"))
     comment_id: Mapped[int | None] = mapped_column(ForeignKey("comments.id"))
@@ -63,7 +72,23 @@ class VerificationCode(Base):
 
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     code: Mapped[str] = mapped_column(String(6))
-    action_type: Mapped[str] = mapped_column(String(50))  # register, reset_password
-    payload: Mapped[str | None] = mapped_column(String(255))  # Наприклад, email
+    action_type: Mapped[str] = mapped_column(String(50))
+    payload: Mapped[str | None] = mapped_column(String(255))
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     is_used: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Feedback(Base):
+    __tablename__ = "feedbacks"
+
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    rate: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    user: Mapped["User"] = relationship(back_populates="feedbacks")
+
+    __table_args__ = (
+        CheckConstraint("rate >= 1 AND rate <= 5", name="check_valid_rate"),
+    )
