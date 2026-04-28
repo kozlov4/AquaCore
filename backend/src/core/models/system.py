@@ -87,7 +87,7 @@ class Feedback(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    user: Mapped["User"] = relationship(back_populates="feedbacks")
+    user: Mapped["User"] = relationship(back_populates="feedback")
 
     __table_args__ = (
         CheckConstraint("rate >= 1 AND rate <= 5", name="check_valid_rate"),
