@@ -23,3 +23,11 @@ class ReadFeedback(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CreateFeedback(BaseModel):
+    rate: int
+    description: str
+
+    class Config:
+        from_attributes = True

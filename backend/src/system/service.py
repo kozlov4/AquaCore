@@ -1,12 +1,9 @@
-from sqlalchemy import select, Result
-from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from models import Feedback, User
-
-
+from datetime import datetime
 from sqlalchemy import select, Result
 from sqlalchemy.orm import joinedload
 from models import Feedback, User
+from .schemas import CreateFeedback
 
 
 async def get_feedbacks(
@@ -16,7 +13,11 @@ async def get_feedbacks(
     min_rate: int,
     sort_by: str,
 ):
-    stmt = select(Feedback).options(joinedload(Feedback.user).joinedload(User.avatar))
+    stmt = (
+        select(Feedback)
+        .where(Feedback.is_published == True)
+        .options(joinedload(Feedback.user).joinedload(User.avatar))
+    )
 
     if min_rate > 0:
         stmt = stmt.where(Feedback.rate >= min_rate)
@@ -36,3 +37,30 @@ async def get_feedbacks(
     feedbacks = result.scalars().all()
 
     return list(feedbacks)
+
+
+async def upsert_feedback(
+    session: AsyncSession, user_id: int, feedback_in: CreateFeedback
+):
+    stmt = select(Feedback).where(Feedback.user_id == user_id)
+    result = await session.execute(stmt)
+    existing_feedback = result.scalar_one_or_none()
+
+    if existing_feedback:
+        existing_feedback.rate = feedback_in.rate
+        existing_feedback.description = feedback_in.description
+        existing_feedback.created_at = datetime.utcnow()
+        feedback = existing_feedback
+    else:
+        feedback = Feedback(
+            user_id=user_id,
+            rate=feedback_in.rate,
+            description=feedback_in.description,
+            created_at=datetime.utcnow(),
+            is_published=False,
+        )
+        session.add(feedback)
+
+    await session.commit()
+    await session.refresh(feedback)
+    return feedback

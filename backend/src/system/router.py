@@ -1,8 +1,10 @@
 from enum import Enum
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
+from users import get_current_user
 from . import service
-from .schemas import ReadFeedback
+from .schemas import ReadFeedback, CreateFeedback
 
 from core.models.db_helper import db_helper
 
@@ -17,14 +19,6 @@ router = APIRouter(
     tags=["Feedback"],
 )
 
-upper_than_4: bool = True
-upper_than_3: bool = False
-upper_than_2: bool = False
-
-new_ones_first: bool = True
-highest_rating: bool = False
-low_rating: bool = False
-
 
 @router.get("/feedbacks/", response_model=list[ReadFeedback])
 async def get_feedbacks(
@@ -38,4 +32,15 @@ async def get_feedbacks(
 ):
     return await service.get_feedbacks(
         session=session, limit=limit, offset=offset, min_rate=min_rate, sort_by=sort_by
+    )
+
+
+@router.post("/feedbacks/post/", status_code=status.HTTP_201_CREATED)
+async def create_or_update_feedback(
+    feedback_in: CreateFeedback,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.upsert_feedback(
+        session=session, user_id=user_id, feedback_in=feedback_in
     )
