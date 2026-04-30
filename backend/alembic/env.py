@@ -9,17 +9,13 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 
-# Добавляем папку src в пути поиска модулей
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from core.models import Base
 from core.config import settings
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -27,9 +23,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    # Берем URL напрямую из настроек
-    url = settings.db.database_url
+    url = settings.database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -49,9 +43,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """Run migrations using the async engine."""
-    # Берем URL напрямую из настроек, игнорируем alembic.ini
-    url = settings.db.database_url
+    url = settings.database_url
 
     connectable = create_async_engine(
         url,
@@ -65,7 +57,6 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
     asyncio.run(run_async_migrations())
 
 

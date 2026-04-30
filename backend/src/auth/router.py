@@ -1,5 +1,8 @@
 import httpx
 import urllib.parse
+
+from fastapi.security import OAuth2PasswordRequestForm
+
 from .schemas import UserRegistration, TokenInfo
 from .service import register_user, user_login, refresh_access_token
 from .schemas import UserLogin, RefreshTokenRequest
@@ -8,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
 from core.models.db_helper import db_helper
-from .service import process_google_user
+from . import service
 
 router = APIRouter(tags=["Authentication"])
 
@@ -62,7 +65,7 @@ async def google_callback(
 
         user_info = user_response.json()
 
-    return await process_google_user(session, user_info)
+    return await service.process_google_user(session, user_info)
 
 
 @router.post("/register/", status_code=status.HTTP_201_CREATED)
@@ -73,12 +76,13 @@ async def user_registration(
     return await register_user(session=session, user_in=user_data)
 
 
-@router.post("/login/", response_model=TokenInfo)
-async def login_user(
-    user_data: UserLogin,
+@router.post("/login/")
+async def login_for_swagger(
+    form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-    return await user_login(session=session, user_in=user_data)
+    user_data = UserLogin(email=form_data.username, password=form_data.password)
+    return await service.user_login(session=session, user_in=user_data)
 
 
 @router.post("/refresh/", response_model=TokenInfo)

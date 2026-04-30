@@ -4,4 +4,4 @@ from .aquarium import Aquarium
 from .post import Post, Comment, SavedPost
 from .article import Article, ArticleCategory
 from .encyclopedia import Disease, TreatmentStep
-from .system import Chat, Message, Notification
+from .system import Chat, Message, Notification, Feedback
