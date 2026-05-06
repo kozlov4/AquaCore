@@ -6,6 +6,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from .user import User
+    from .base import Image
 
 
 class ArticleCategory(Base):
@@ -14,7 +15,14 @@ class ArticleCategory(Base):
     name: Mapped[str] = mapped_column(String(100))
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
 
+    @property
+    def cover_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
+
     articles: Mapped[list["Article"]] = relationship(back_populates="category")
+    image: Mapped["Image"] = relationship()
 
 
 class Article(Base):
@@ -25,13 +33,20 @@ class Article(Base):
     title: Mapped[str] = mapped_column(String(200))
     excerpt: Mapped[str] = mapped_column(Text)
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
-    content: Mapped[str] = mapped_column(Text)  # Сюда пойдет HTML из редактора
-    status: Mapped[str] = mapped_column(String(50))  # draft, published
+    content: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(50))
     is_official: Mapped[bool] = mapped_column(Boolean, default=False)
     reading_time_minutes: Mapped[int] = mapped_column(Integer, default=1)
 
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     published_at: Mapped[datetime | None] = mapped_column(DateTime)
 
+    @property
+    def cover_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
+
     category: Mapped["ArticleCategory"] = relationship(back_populates="articles")
     author: Mapped["User"] = relationship()
+    image: Mapped["Image"] = relationship()

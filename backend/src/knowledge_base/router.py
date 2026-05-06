@@ -1,0 +1,80 @@
+from fastapi import APIRouter, Query, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
+
+from models import Disease, DiagnosticStep
+from core.models.db_helper import db_helper
+from . import service
+from users import get_current_user
+from .schemas import (
+    SortByArticleType,
+    ArticleCardResponse,
+    ArticleDetailResponse,
+    ArticleCreate,
+    ArticleCategoriesResponse,
+)
+
+router = APIRouter(prefix="/articles", tags=["Articles"])
+
+
+@router.get(
+    "/",
+    response_model=list[ArticleCardResponse],
+    dependencies=[Depends(get_current_user)],
+)
+async def get_articles_route(
+    target_type: SortByArticleType = SortByArticleType.all,
+    search_text: str | None = None,
+    category: list[str] = Query(default=[]),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_articles(
+        target_type=target_type,
+        search_text=search_text,
+        category_names=category,
+        session=session,
+    )
+
+
+@router.get(
+    "/categories/",
+    response_model=list[ArticleCategoriesResponse],
+    dependencies=[Depends(get_current_user)],
+)
+async def get_article_categories_route(
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_article_categories(session=session)
+
+
+@router.get(
+    "/{article_id}/",
+    response_model=ArticleDetailResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def read_article_route(
+    article_id: int,
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    article = await service.get_article_by_id(article_id=article_id, session=session)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Статтю не знайдено"
+        )
+    return article
+
+
+@router.post(
+    "/articles/",
+    response_model=ArticleDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_article_route(
+    article_in: ArticleCreate,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+
+    return await service.create_article(
+        session=session, user_id=user_id, article_in=article_in
+    )

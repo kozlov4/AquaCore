@@ -22,6 +22,10 @@ class User(Base):
 
     avatar_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
 
+    @property
+    def aquariums_count(self) -> int:
+        return len(self.aquariums) if self.aquariums else 0
+
     avatar: Mapped["Image"] = relationship()
     aquariums: Mapped[list["Aquarium"]] = relationship(back_populates="owner")
     posts: Mapped[list["Post"]] = relationship(back_populates="author")
