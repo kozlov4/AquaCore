@@ -1,3 +1,5 @@
+import os
+import cloudinary
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,3 +26,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+os.environ["CLOUDINARY_URL"] = settings.cloudinary_url
