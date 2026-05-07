@@ -29,11 +29,11 @@ class Article(Base):
     __tablename__ = "articles"
 
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
-    category_id: Mapped[int] = mapped_column(ForeignKey("article_categories.id"))
+    category_id: Mapped[int | None] = mapped_column(ForeignKey("article_categories.id"))
     title: Mapped[str] = mapped_column(String(200))
-    excerpt: Mapped[str] = mapped_column(Text)
+    excerpt: Mapped[str | None] = mapped_column(Text)
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
-    content: Mapped[str] = mapped_column(Text)
+    content: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(50))
     is_official: Mapped[bool] = mapped_column(Boolean, default=False)
     reading_time_minutes: Mapped[int] = mapped_column(Integer, default=1)

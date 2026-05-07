@@ -65,7 +65,7 @@ async def read_article_route(
 
 
 @router.post(
-    "/articles/",
+    "/",
     response_model=ArticleDetailResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -76,5 +76,27 @@ async def create_article_route(
 ):
 
     return await service.create_article(
-        session=session, user_id=user_id, article_in=article_in
+        session=session,
+        user_id=user_id,
+        article_in=article_in,
+        is_draft=False,
+    )
+
+
+@router.post(
+    "/draft/",
+    response_model=ArticleDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_article_route(
+    article_in: ArticleCreate,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+
+    return await service.create_article(
+        session=session,
+        user_id=user_id,
+        article_in=article_in,
+        is_draft=True,
     )

@@ -33,7 +33,7 @@ class ArticleCardResponse(BaseModel):
 
     author: Optional[AuthorResponse] = None
 
-    category: CategoryResponse
+    category: Optional[CategoryResponse] = None
     cover_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -47,9 +47,9 @@ class ArticleDetailResponse(ArticleCardResponse):
 
 class ArticleCreate(BaseModel):
     title: str = Field(..., max_length=200)
-    category_id: int
-    excerpt: str
-    content: str
+    category_id: Optional[int] = None
+    excerpt: str = ""
+    content: str = ""
     image_id: Optional[int] = None
 
 

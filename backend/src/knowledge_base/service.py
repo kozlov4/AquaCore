@@ -65,13 +65,19 @@ async def get_article_by_id(article_id: int, session: AsyncSession):
 
 
 async def create_article(
-    session: AsyncSession, user_id: int, article_in: ArticleCreate
+    session: AsyncSession,
+    user_id: int,
+    article_in: ArticleCreate,
+    is_draft: bool,
 ):
+    status = "PUBLISHED"
+    if is_draft:
+        status = "DRAFT"
     new_article = Article(
         **article_in.model_dump(),
         author_id=user_id,
         is_official=False,
-        status="PUBLISHED",
+        status=status,
     )
 
     session.add(new_article)
