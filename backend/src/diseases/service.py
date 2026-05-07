@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy import select, or_, Result
 from sqlalchemy.ext.asyncio import AsyncSession
-from models import Disease, DiagnosticStep, TreatmentStep
+from core.models import Disease, DiagnosticStep, TreatmentStep
 from sqlalchemy.orm import joinedload, selectinload
 from .schemas import SortByTargetType
 
