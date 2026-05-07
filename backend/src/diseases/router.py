@@ -1,8 +1,5 @@
 from fastapi import APIRouter, Query, Depends
-from sqlalchemy import select, or_
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from models import Disease, DiagnosticStep
 from core.models.db_helper import db_helper
 from . import service
 from .schemas import SortByTargetType, DiseasesCardResponse, DiseaseDetailResponse
