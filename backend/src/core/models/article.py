@@ -36,6 +36,9 @@ class Article(Base):
     content: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(50))
     is_official: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_approved: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     reading_time_minutes: Mapped[int] = mapped_column(Integer, default=1)
 
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)

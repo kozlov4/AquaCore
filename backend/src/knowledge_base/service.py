@@ -47,7 +47,9 @@ async def get_articles(
     user_id: int = None,
     category_names: list[str] | None = None,
 ):
-    stmt = select(Article).where(Article.status == "PUBLISHED")
+    stmt = select(Article).where(
+        Article.status == "PUBLISHED", Article.is_approved == True
+    )
 
     if target_type == SortByArticleType.community:
         stmt = stmt.where(Article.is_official == False)
