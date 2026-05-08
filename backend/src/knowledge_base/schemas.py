@@ -9,6 +9,7 @@ class SortByArticleType(str, Enum):
     all = "Всі статті"
     official = "Офіційні"
     community = "Спіьнота"
+    my_article = "Мої статті"
 
 
 class AuthorResponse(BaseModel):
@@ -57,5 +58,13 @@ class ArticleCategoriesResponse(BaseModel):
     id: int
     name: str
     cover_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ArticleDraftCardResponse(BaseModel):
+    id: int
+    title: str = None
+    category: Optional[CategoryResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

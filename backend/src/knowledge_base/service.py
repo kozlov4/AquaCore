@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +12,39 @@ async def get_article_categories(session: AsyncSession):
     return result.scalars().all()
 
 
+async def get_draft_articles(
+    session: AsyncSession,
+    user_id: int = None,
+):
+    stmt = select(Article).where(
+        Article.author_id == user_id, Article.status == "DRAFT"
+    )
+
+    stmt = stmt.order_by(Article.created_at.desc())
+
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
+async def delete_article(
+    session: AsyncSession,
+    user_id: int = None,
+    article_id: int = None,
+):
+    article = await session.get(Article, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    await session.delete(article)
+    await session.commit()
+
+    return {"message": f"{article.title} успішно видалена"}
+
+
 async def get_articles(
     session: AsyncSession,
     target_type: SortByArticleType,
     search_text: str | None = None,
+    user_id: int = None,
     category_names: list[str] | None = None,
 ):
     stmt = select(Article).where(Article.status == "PUBLISHED")
@@ -23,6 +53,8 @@ async def get_articles(
         stmt = stmt.where(Article.is_official == False)
     elif target_type == SortByArticleType.official:
         stmt = stmt.where(Article.is_official == True)
+    elif target_type == SortByArticleType.my_article:
+        stmt = stmt.where(Article.author_id == user_id)
 
     if search_text:
         search_pattern = f"%{search_text}%"

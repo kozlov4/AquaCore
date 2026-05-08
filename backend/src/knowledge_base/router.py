@@ -11,6 +11,7 @@ from .schemas import (
     ArticleDetailResponse,
     ArticleCreate,
     ArticleCategoriesResponse,
+    ArticleDraftCardResponse,
 )
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
@@ -19,18 +20,19 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 @router.get(
     "/",
     response_model=list[ArticleCardResponse],
-    dependencies=[Depends(get_current_user)],
 )
 async def get_articles_route(
     target_type: SortByArticleType = SortByArticleType.all,
     search_text: str | None = None,
     category: list[str] = Query(default=[]),
+    user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     return await service.get_articles(
         target_type=target_type,
         search_text=search_text,
         category_names=category,
+        user_id=user_id,
         session=session,
     )
 
@@ -44,6 +46,17 @@ async def get_article_categories_route(
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     return await service.get_article_categories(session=session)
+
+
+@router.get(
+    "/draft/",
+    response_model=list[ArticleDraftCardResponse],
+)
+async def get_draft_articles_route(
+    session: AsyncSession = Depends(db_helper.session_dependency),
+    user_id: int = Depends(get_current_user),
+):
+    return await service.get_draft_articles(session=session, user_id=user_id)
 
 
 @router.get(
@@ -98,4 +111,17 @@ async def create_article_route(
         user_id=user_id,
         article_in=article_in,
         is_draft=True,
+    )
+
+
+@router.delete("/{article_id}/")
+async def delete_article_route(
+    article_id: int,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.delete_article(
+        session=session,
+        article_id=article_id,
+        user_id=user_id,
     )
