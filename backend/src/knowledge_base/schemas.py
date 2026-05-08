@@ -68,3 +68,13 @@ class ArticleDraftCardResponse(BaseModel):
     category: Optional[CategoryResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ArticleUpdate(BaseModel):
+    title: Optional[str] = Field(None, max_length=200)
+    category_id: Optional[int] = None
+    excerpt: Optional[str] = None
+    content: Optional[str] = None
+    image_id: Optional[int] = None
+
+    is_draft: Optional[bool] = None

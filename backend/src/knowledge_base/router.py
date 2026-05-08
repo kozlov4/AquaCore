@@ -12,6 +12,7 @@ from .schemas import (
     ArticleCreate,
     ArticleCategoriesResponse,
     ArticleDraftCardResponse,
+    ArticleUpdate,
 )
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
@@ -62,17 +63,24 @@ async def get_draft_articles_route(
 @router.get(
     "/{article_id}/",
     response_model=ArticleDetailResponse,
-    dependencies=[Depends(get_current_user)],
 )
 async def read_article_route(
     article_id: int,
+    user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     article = await service.get_article_by_id(article_id=article_id, session=session)
     if not article:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Статтю не знайдено"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Статья не найдена"
         )
+
+    if article.status != "PUBLISHED" and article.author_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="У вас немає прав дивитися цієї чернетки",
+        )
+
     return article
 
 
@@ -86,7 +94,6 @@ async def create_article_route(
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-
     return await service.create_article(
         session=session,
         user_id=user_id,
@@ -100,12 +107,11 @@ async def create_article_route(
     response_model=ArticleDetailResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_article_route(
+async def create_draft_article_route(
     article_in: ArticleCreate,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-
     return await service.create_article(
         session=session,
         user_id=user_id,
@@ -124,4 +130,22 @@ async def delete_article_route(
         session=session,
         article_id=article_id,
         user_id=user_id,
+    )
+
+
+@router.put(
+    "/{article_id}/",
+    response_model=ArticleDetailResponse,
+)
+async def update_article_route(
+    article_id: int,
+    article_in: ArticleUpdate,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_article(
+        session=session,
+        article_id=article_id,
+        user_id=user_id,
+        article_in=article_in,
     )
