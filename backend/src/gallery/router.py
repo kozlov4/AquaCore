@@ -1,25 +1,25 @@
 from fastapi import APIRouter, Query, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
-from .schemas import CreateAquarium
 from core.models.db_helper import db_helper
 from . import service
 from users import get_current_user
+from .schemas import PostIn
 
-router = APIRouter(prefix="/aquariums", tags=["Aquariums"])
+router = APIRouter(prefix="/gallery", tags=["Gallery"])
 
 
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
 )
-async def create_aquarium_route(
-    aquarium_in: CreateAquarium,
+async def create_post_to_gallery_route(
+    post_in: PostIn,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-    return await service.create_aquarium(
+    return await service.create_gallery_post(
         session=session,
         user_id=user_id,
-        aquarium_in=aquarium_in,
+        post_in=post_in,
     )
