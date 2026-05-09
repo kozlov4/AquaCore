@@ -6,7 +6,7 @@ from core.models.db_helper import db_helper
 from . import service
 from users import get_current_user
 
-router = APIRouter(tags=["Aquariums"])
+router = APIRouter(prefix="/aquariums", tags=["Aquariums"])
 
 
 @router.post(
