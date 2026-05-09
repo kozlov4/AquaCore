@@ -26,6 +26,21 @@ class Post(Base):
     comments: Mapped[list["Comment"]] = relationship(back_populates="post")
 
 
+class UserGallery(Base):
+    __tablename__ = "user_gallery"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    aquarium_id: Mapped[int] = mapped_column(ForeignKey("aquariums.id"))
+    image_id: Mapped[int] = mapped_column(ForeignKey("images.id"))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    category: Mapped[str] = mapped_column(String(50))
+    signature: Mapped[str | None] = mapped_column(Text)
+
+    image: Mapped["Image"] = relationship()
+    aquarium: Mapped["Aquarium"] = relationship(back_populates="gallery")
+    author: Mapped["User"] = relationship(back_populates="gallery")
+
+
 class SavedPost(Base):
     __tablename__ = "saved_posts"
 

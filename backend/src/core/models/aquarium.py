@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .base import Image
     from .user import User
     from .post import Post
+    from .post import UserGallery
 
 
 class Aquarium(Base):
@@ -25,3 +26,4 @@ class Aquarium(Base):
     owner: Mapped["User"] = relationship(back_populates="aquariums")
     image: Mapped["Image"] = relationship()
     posts: Mapped[list["Post"]] = relationship(back_populates="aquarium")
+    gallery: Mapped[list["UserGallery"]] = relationship(back_populates="aquarium")
