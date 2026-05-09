@@ -9,7 +9,10 @@ function highlightText(text, query) {
 
   return parts.map((part, index) =>
     part.toLowerCase() === query.toLowerCase() ? (
-      <span key={index} className="rounded bg-yellow-200 px-1">
+      <span
+        key={index}
+        className="rounded-md bg-[#FFE8A3] px-1.5 py-0.5 text-[#7A4E00]"
+      >
         {part}
       </span>
     ) : (
@@ -21,11 +24,17 @@ function highlightText(text, query) {
 const dangerStyles = {
   high: {
     label: "Висока небезпека",
-    className: "bg-red-50 text-red-600 border-red-100",
+    className:
+      "border-red-200/80 bg-red-50/90 text-red-600 shadow-red-100/60",
+    glow: "from-red-400/25 via-orange-300/20 to-transparent",
+    iconBg: "from-red-100 via-orange-50 to-white",
   },
   medium: {
     label: "Помірна небезпека",
-    className: "bg-yellow-50 text-yellow-700 border-yellow-100",
+    className:
+      "border-amber-200/80 bg-amber-50/90 text-amber-700 shadow-amber-100/60",
+    glow: "from-amber-300/30 via-yellow-200/20 to-transparent",
+    iconBg: "from-amber-100 via-yellow-50 to-white",
   },
 };
 
@@ -34,30 +43,63 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
 
   return (
     <motion.article
-      whileHover={{ y: -8, scale: 1.015 }}
-      whileTap={{ scale: 0.99 }}
-      className="group overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.05)] transition hover:shadow-[0_24px_60px_rgba(15,23,42,0.12)]"
+      whileHover={{ y: -10, scale: 1.018 }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      className="group relative overflow-hidden rounded-[30px] border border-white/80 bg-white/85 shadow-[0_20px_55px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-500 hover:border-[#5B4CF6]/20 hover:shadow-[0_30px_85px_rgba(91,76,246,0.18)]"
     >
-      <div className="relative flex h-[120px] items-center justify-center overflow-hidden bg-gradient-to-br from-[#FFF2DC] to-[#FFE7BC]">
+      <div
+        className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-to-br ${danger.glow} blur-2xl transition duration-500 group-hover:scale-125`}
+      />
+
+      <div
+        className={`relative flex h-[130px] items-center justify-center overflow-hidden bg-gradient-to-br ${danger.iconBg}`}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.95),transparent_36%)]" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+
         <motion.div
-          whileHover={{ rotate: 8, scale: 1.14 }}
-          transition={{ type: "spring", stiffness: 260, damping: 16 }}
-          className="text-5xl"
+          whileHover={{ rotate: 10, scale: 1.18 }}
+          transition={{ type: "spring", stiffness: 280, damping: 15 }}
+          className="relative z-10 text-6xl drop-shadow-sm"
         >
           🐟
         </motion.div>
 
-        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/30 blur-xl transition group-hover:scale-125" />
+        <motion.div
+          animate={{
+            y: [0, -8, 0],
+            opacity: [0.45, 0.9, 0.45],
+          }}
+          transition={{
+            duration: 3.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute left-6 top-5 h-3 w-3 rounded-full bg-white/80"
+        />
+        <motion.div
+          animate={{
+            y: [0, -10, 0],
+            opacity: [0.35, 0.75, 0.35],
+          }}
+          transition={{
+            duration: 4.2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute right-10 bottom-8 h-2 w-2 rounded-full bg-white/80"
+        />
       </div>
 
-      <div className="p-5">
+      <div className="relative p-5">
         <div
-          className={`mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${danger.className}`}
+          className={`mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-bold shadow-sm ${danger.className}`}
         >
           {danger.label}
         </div>
 
-        <h3 className="text-lg font-bold tracking-tight text-gray-900 transition group-hover:text-[#5B4CF6]">
+        <h3 className="min-h-[56px] text-lg font-black leading-snug tracking-tight text-slate-950 transition-colors duration-300 group-hover:text-[#5B4CF6]">
           {highlightText(disease.title, searchValue)}
         </h3>
 
@@ -65,7 +107,7 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
           {disease.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 transition group-hover:bg-[#5B4CF6]/10 group-hover:text-[#5B4CF6]"
+              className="rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 transition-all duration-300 group-hover:border-[#5B4CF6]/15 group-hover:bg-[#5B4CF6]/10 group-hover:text-[#5B4CF6]"
             >
               #{tag}
             </span>
@@ -76,8 +118,8 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
           type="button"
           onClick={() => onOpen(disease)}
           whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.97 }}
-          className="mt-6 w-full rounded-xl cursor-pointer bg-gray-50 py-3 text-sm font-semibold text-gray-700 transition hover:bg-[#5B4CF6] hover:text-white hover:shadow-[0_12px_28px_rgba(91,76,246,0.24)]"
+          whileTap={{ scale: 0.96 }}
+          className="mt-6 w-full cursor-pointer rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)] transition-all duration-300 hover:bg-[#5B4CF6] hover:shadow-[0_18px_40px_rgba(91,76,246,0.32)]"
         >
           Детальніше
         </motion.button>

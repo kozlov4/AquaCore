@@ -1,31 +1,31 @@
 "use client";
 
-import { useState } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAddEquipmentForm } from "../../hooks/useAddEquipmentForm";
+import { EquipmentSelectField } from "./AddEquipment/EquipmentSelectField";
+import { EquipmentTextField } from "./AddEquipment/EquipmentTextField";
+import { EquipmentModalActions } from "./AddEquipment/EquipmentModalActions";
+
+const categoryOptions = [
+  "Обігрів / Охолодження",
+  "Фільтрація",
+  "Освітлення",
+  "CO₂ система",
+  "Аерація",
+  "Інше",
+];
+
+const serviceOptions = [
+  "Не потребує",
+  "Раз на тиждень",
+  "Раз на місяць",
+  "Раз на 3 місяці",
+  "Раз на 6 місяців",
+];
 
 export function AddEquipmentModal({ isOpen, onClose, onSave }) {
-  const [category, setCategory] = useState("Обігрів / Охолодження");
-  const [model, setModel] = useState("");
-  const [installedDate, setInstalledDate] = useState("2026-04-23");
-  const [serviceInterval, setServiceInterval] = useState("Не потребує");
-
-  const handleSave = () => {
-    if (!model.trim()) {
-      alert("Введіть модель пристрою");
-      return;
-    }
-
-    onSave?.({
-      category,
-      model,
-      installedDate,
-      serviceInterval,
-    });
-
-    setModel("");
-    onClose();
-  };
+  const form = useAddEquipmentForm({ onClose, onSave });
 
   return (
     <AnimatePresence>
@@ -33,7 +33,7 @@ export function AddEquipmentModal({ isOpen, onClose, onSave }) {
         <>
           <motion.div
             className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px]"
-            onClick={onClose}
+            onClick={form.handleClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -53,7 +53,7 @@ export function AddEquipmentModal({ isOpen, onClose, onSave }) {
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={form.handleClose}
                 className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-800"
               >
                 <X size={22} />
@@ -61,69 +61,34 @@ export function AddEquipmentModal({ isOpen, onClose, onSave }) {
             </div>
 
             <div className="space-y-6 px-7 py-6">
-              <div>
-                <label className="mb-2 block text-base font-semibold text-gray-700">
-                  Категорія
-                </label>
+              <EquipmentSelectField
+                label="Категорія"
+                value={form.category}
+                onChange={form.setCategory}
+                options={categoryOptions}
+              />
 
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base outline-none transition focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10"
-                >
-                  <option>Обігрів / Охолодження</option>
-                  <option>Фільтрація</option>
-                  <option>Освітлення</option>
-                  <option>CO₂ система</option>
-                  <option>Аерація</option>
-                  <option>Інше</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-base font-semibold text-gray-700">
-                  Модель пристрою
-                </label>
-
-                <input
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="Напр: Aquael Ultra Heater 100W"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base outline-none transition placeholder:text-gray-400 focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10"
-                />
-              </div>
+              <EquipmentTextField
+                label="Модель пристрою"
+                value={form.model}
+                onChange={form.setModel}
+                placeholder="Напр: Aquael Ultra Heater 100W"
+              />
 
               <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="mb-2 block text-base font-semibold text-gray-700">
-                    Встановлено
-                  </label>
+                <EquipmentTextField
+                  label="Встановлено"
+                  type="date"
+                  value={form.installedDate}
+                  onChange={form.setInstalledDate}
+                />
 
-                  <input
-                    type="date"
-                    value={installedDate}
-                    onChange={(e) => setInstalledDate(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base outline-none transition focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-base font-semibold text-gray-700">
-                    Обслуговування
-                  </label>
-
-                  <select
-                    value={serviceInterval}
-                    onChange={(e) => setServiceInterval(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base outline-none transition focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10"
-                  >
-                    <option>Не потребує</option>
-                    <option>Раз на тиждень</option>
-                    <option>Раз на місяць</option>
-                    <option>Раз на 3 місяці</option>
-                    <option>Раз на 6 місяців</option>
-                  </select>
-                </div>
+                <EquipmentSelectField
+                  label="Обслуговування"
+                  value={form.serviceInterval}
+                  onChange={form.setServiceInterval}
+                  options={serviceOptions}
+                />
               </div>
 
               <p className="text-sm leading-6 text-gray-400">
@@ -132,28 +97,10 @@ export function AddEquipmentModal({ isOpen, onClose, onSave }) {
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-4 bg-gray-50 px-7 py-5">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl px-5 py-3 font-semibold text-gray-700 transition hover:bg-gray-100"
-              >
-                Скасувати
-              </button>
-
-              <motion.button
-                type="button"
-                onClick={handleSave}
-                whileHover={{
-                  y: -2,
-                  boxShadow: "0 14px 30px rgba(91,76,246,.28)",
-                }}
-                whileTap={{ scale: 0.97 }}
-                className="rounded-xl bg-[#5B4CF6] px-6 py-3 font-semibold text-white transition hover:bg-[#4d3feb]"
-              >
-                Додати пристрій
-              </motion.button>
-            </div>
+            <EquipmentModalActions
+              onClose={form.handleClose}
+              onSave={form.handleSave}
+            />
           </motion.div>
         </>
       )}
