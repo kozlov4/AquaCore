@@ -3,6 +3,8 @@ from datetime import datetime
 from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+from datetime import datetime, UTC
+from sqlalchemy import DateTime
 
 if TYPE_CHECKING:
     from .base import Image
@@ -59,7 +61,9 @@ class UserDairy(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     aquarium_id: Mapped[int] = mapped_column(ForeignKey("aquariums.id"))
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     tag: Mapped[str] = mapped_column(String(50))
     title: Mapped[str] = mapped_column(String(100))
     observation: Mapped[str] = mapped_column(Text)

@@ -34,7 +34,7 @@ class Article(Base):
     excerpt: Mapped[str | None] = mapped_column(Text)
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
     content: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(60))
     is_official: Mapped[bool] = mapped_column(Boolean, default=False)
     reading_time_minutes: Mapped[int] = mapped_column(Integer, default=1)
 
