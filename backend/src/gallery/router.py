@@ -4,9 +4,45 @@ from starlette import status
 from core.models.db_helper import db_helper
 from . import service
 from users import get_current_user
-from .schemas import PostIn
+from .schemas import (
+    PostIn,
+    SortOrder,
+    ImageResponseList,
+    ImageResponse,
+    UserGalleryUpdate,
+)
 
 router = APIRouter(prefix="/gallery", tags=["Gallery"])
+
+
+@router.get("/", response_model=list[ImageResponseList])
+async def get_gallery_photos(
+    session: AsyncSession = Depends(db_helper.session_dependency),
+    user_id: int = Depends(get_current_user),
+    category: str | None = Query(default=None),
+    aquarium_name: str | None = Query(default=None),
+    sort_order: SortOrder = Query(default=SortOrder.newest),
+):
+    return await service.get_gallery_photos(
+        session=session,
+        user_id=user_id,
+        category=category,
+        aquarium_name=aquarium_name,
+        sort_order=sort_order,
+    )
+
+
+@router.get("/{photo_id}", response_model=ImageResponse)
+async def get_gallery_photo(
+    photo_id: int,
+    session: AsyncSession = Depends(db_helper.session_dependency),
+    user_id: int = Depends(get_current_user),
+):
+    return await service.get_gallery_photo(
+        photo_id=photo_id,
+        session=session,
+        user_id=user_id,
+    )
 
 
 @router.post(
@@ -22,4 +58,32 @@ async def create_post_to_gallery_route(
         session=session,
         user_id=user_id,
         post_in=post_in,
+    )
+
+
+@router.put("/{photo_id}/", response_model=ImageResponse)
+async def update_photo_route(
+    photo_id: int,
+    photo_in: UserGalleryUpdate,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_photo(
+        session=session,
+        photo_id=photo_id,
+        user_id=user_id,
+        photo_in=photo_in,
+    )
+
+
+@router.delete("/{photo_id}/")
+async def delete_photo_route(
+    photo_id: int,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.delete_photo(
+        session=session,
+        photo_id=photo_id,
+        user_id=user_id,
     )
