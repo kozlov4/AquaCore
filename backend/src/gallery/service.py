@@ -80,3 +80,21 @@ async def get_gallery_photo(session: AsyncSession, user_id: int, photo_id: int):
         )
 
     return gallery_photo
+
+
+async def delete_photo(
+    session: AsyncSession,
+    user_id: int,
+    photo_id: int,
+):
+    photo = await session.get(UserGallery, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail="фото не знайдено")
+
+    if photo.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Ви не можете видалити чуже фото")
+
+    await session.delete(photo)
+    await session.commit()
+
+    return {"message": f"Фото успішно видалено"}

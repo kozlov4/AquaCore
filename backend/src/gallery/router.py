@@ -53,3 +53,16 @@ async def create_post_to_gallery_route(
         user_id=user_id,
         post_in=post_in,
     )
+
+
+@router.delete("/{photo_id}/")
+async def delete_photo_route(
+    photo_id: int,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.delete_photo(
+        session=session,
+        photo_id=photo_id,
+        user_id=user_id,
+    )
