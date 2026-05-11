@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class AquariumType(str, Enum):
@@ -16,3 +16,10 @@ class CreateAquarium(BaseModel):
     type: AquariumType
     created_at: datetime
     image_id: Optional[int] = None
+
+
+class AquariumNameResponse(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)

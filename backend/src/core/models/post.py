@@ -40,6 +40,18 @@ class UserGallery(Base):
     aquarium: Mapped["Aquarium"] = relationship(back_populates="gallery")
     author: Mapped["User"] = relationship(back_populates="gallery")
 
+    @property
+    def cover_image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
+
+    @property
+    def aquarium_name(self) -> str | None:
+        if self.aquarium:
+            return self.aquarium.name
+        return None
+
 
 class SavedPost(Base):
     __tablename__ = "saved_posts"

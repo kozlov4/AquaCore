@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, Result, func
+from sqlalchemy import select, or_, Result, func, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import Aquarium, UserGallery
 from sqlalchemy.orm import joinedload, selectinload
-from .schemas import PostIn
+from .schemas import PostIn, SortOrder, UserGalleryUpdate
 
 
 async def create_gallery_post(
@@ -13,7 +13,7 @@ async def create_gallery_post(
 ):
     aquarium = await session.get(Aquarium, post_in.aquarium_id)
     if not aquarium:
-        raise HTTPException(status_code=404, detail="Акваріум не знайдена")
+        raise HTTPException(status_code=404, detail="Акваріум не знайден")
 
     if aquarium.user_id != user_id:
         raise HTTPException(
@@ -32,3 +32,102 @@ async def create_gallery_post(
     await session.commit()
     await session.refresh(new_gallery_post)
     return new_gallery_post
+
+
+async def get_gallery_photos(
+    session: AsyncSession,
+    user_id: int,
+    category: str | None = None,
+    aquarium_name: str | None = None,
+    sort_order: SortOrder = SortOrder.newest,
+):
+    query = (
+        select(UserGallery)
+        .options(selectinload(UserGallery.image))
+        .where(UserGallery.user_id == user_id)
+    )
+
+    if category and category != "Всі фотографії":
+        query = query.where(UserGallery.category == category)
+
+    if aquarium_name:
+        query = query.join(Aquarium).where(Aquarium.name == aquarium_name)
+
+    if sort_order == SortOrder.newest:
+        query = query.order_by(desc(UserGallery.created_at))
+    else:
+        query = query.order_by(asc(UserGallery.created_at))
+
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def get_gallery_photo(session: AsyncSession, user_id: int, photo_id: int):
+    stmt = (
+        select(UserGallery)
+        .where(UserGallery.id == photo_id)
+        .options(selectinload(UserGallery.aquarium), selectinload(UserGallery.image))
+    )
+    result = await session.execute(stmt)
+    gallery_photo = result.scalar_one_or_none()
+
+    if not gallery_photo:
+        raise HTTPException(status_code=404, detail="Фото не знайдено")
+
+    if gallery_photo.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Ви не можете переглядати чуже фото"
+        )
+
+    return gallery_photo
+
+
+async def delete_photo(
+    session: AsyncSession,
+    user_id: int,
+    photo_id: int,
+):
+    photo = await session.get(UserGallery, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail="фото не знайдено")
+
+    if photo.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Ви не можете видалити чуже фото")
+
+    await session.delete(photo)
+    await session.commit()
+
+    return {"message": f"Фото успішно видалено"}
+
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from fastapi import HTTPException, status
+
+
+async def update_photo(
+    session: AsyncSession,
+    photo_id: int,
+    user_id: int,
+    photo_in: UserGalleryUpdate,
+):
+    stmt = (
+        select(UserGallery)
+        .where(UserGallery.id == photo_id)
+        .options(selectinload(UserGallery.aquarium), selectinload(UserGallery.image))
+    )
+    result = await session.execute(stmt)
+    gallery_photo = result.scalar_one_or_none()
+
+    if not gallery_photo:
+        raise HTTPException(status_code=404, detail="Фото не знайдено")
+
+    if gallery_photo.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Ви не можете редагувати чуже фото")
+
+    gallery_photo.signature = photo_in.signature
+
+    await session.commit()
+    await session.refresh(gallery_photo)
+
+    return gallery_photo
