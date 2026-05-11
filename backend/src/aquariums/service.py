@@ -14,8 +14,7 @@ async def create_aquarium(
     normalized_name = aquarium_in.name.lower().strip()
 
     stmt = select(Aquarium).where(
-        Aquarium.user_id == user_id,
-        func.lower(Aquarium.name) == normalized_name
+        Aquarium.user_id == user_id, func.lower(Aquarium.name) == normalized_name
     )
 
     result = await session.execute(stmt)
@@ -39,3 +38,12 @@ async def create_aquarium(
     await session.commit()
     await session.refresh(new_aquarium)
     return new_aquarium
+
+
+async def get_aquariums(session: AsyncSession, user_id: int):
+
+    stmt = select(Aquarium).where(Aquarium.user_id == user_id)
+    result = await session.execute(stmt)
+    aquarium = result.scalars()
+
+    return aquarium
