@@ -1,8 +1,10 @@
 from typing import TYPE_CHECKING
 from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, DateTime
+from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+from datetime import datetime, UTC
+from sqlalchemy import DateTime
 
 if TYPE_CHECKING:
     from .base import Image
@@ -39,6 +41,36 @@ class UserGallery(Base):
     image: Mapped["Image"] = relationship()
     aquarium: Mapped["Aquarium"] = relationship(back_populates="gallery")
     author: Mapped["User"] = relationship(back_populates="gallery")
+
+    @property
+    def cover_image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
+
+    @property
+    def aquarium_name(self) -> str | None:
+        if self.aquarium:
+            return self.aquarium.name
+        return None
+
+
+class UserDairy(Base):
+    __tablename__ = "user_diary"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    aquarium_id: Mapped[int] = mapped_column(ForeignKey("aquariums.id"))
+    image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    tag: Mapped[str] = mapped_column(String(50))
+    title: Mapped[str] = mapped_column(String(100))
+    observation: Mapped[str] = mapped_column(Text)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    image: Mapped["Image"] = relationship()
+    aquarium: Mapped["Aquarium"] = relationship(back_populates="diary")
+    author: Mapped["User"] = relationship(back_populates="diary")
 
     @property
     def cover_image_url(self) -> str | None:
