@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from .aquarium import Aquarium
     from .post import Post
     from .system import Feedback
-    from .post import UserGallery
+    from .post import UserGallery, UserDairy
 
 
 class User(Base):
@@ -32,6 +32,7 @@ class User(Base):
     posts: Mapped[list["Post"]] = relationship(back_populates="author")
     feedback: Mapped["Feedback"] = relationship(back_populates="user")
     gallery: Mapped[list["UserGallery"]] = relationship(back_populates="author")
+    diary: Mapped[list["UserDairy"]] = relationship(back_populates="author")
 
 
 class Follower(Base):
