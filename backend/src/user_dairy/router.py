@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.models.db_helper import db_helper
 from . import service
 from users import get_current_user
-from .schemas import DiaryListResponse, DiaryCreate
+from .schemas import DiaryListResponse, DiaryCreate, DiaryResponse
 from core.models import UserDairy
 
 router = APIRouter(prefix="/diary", tags=["Diary"])
@@ -21,6 +21,15 @@ async def list_entries(
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     return await service.get_diary_entries(session, user_id, aquarium_id, tag, search)
+
+
+@router.get("/{entry_id}/", response_model=DiaryResponse)
+async def get_entry(
+    entry_id: int,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_diary_entry(session, user_id, entry_id)
 
 
 @router.post("/", response_model=DiaryCreate)

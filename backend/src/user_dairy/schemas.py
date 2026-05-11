@@ -20,20 +20,18 @@ class DiaryTag(str, Enum):
     equipment = "equipment"
 
 
-class DiaryUpdate(BaseModel):
-    title: Optional[str] = None
-    observation: Optional[str] = None
-    tag: Optional[str] = None
-    is_pinned: Optional[bool] = None
-    image_id: Optional[int] = None
-
-
 class DiaryListResponse(DiaryBase):
     id: int
     aquarium_name: Optional[str] = None
     tag: str
     cover_image_url: Optional[str] = None
     is_pinned: Optional[bool]
+
+
+class DiaryResponse(DiaryBase):
+    cover_image_url: Optional[str] = None
+    tag: str
+    aquarium_name: Optional[str] = None
 
 
 class DiaryCreate(DiaryBase):
