@@ -1,3 +1,4 @@
+from collections import UserDict
 from typing import TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import String, Float, ForeignKey, DateTime
@@ -9,6 +10,7 @@ if TYPE_CHECKING:
     from .user import User
     from .post import Post
     from .post import UserGallery
+    from .post import UserDairy
 
 
 class Aquarium(Base):
@@ -27,3 +29,4 @@ class Aquarium(Base):
     image: Mapped["Image"] = relationship()
     posts: Mapped[list["Post"]] = relationship(back_populates="aquarium")
     gallery: Mapped[list["UserGallery"]] = relationship(back_populates="aquarium")
+    diary: Mapped[list["UserDairy"]] = relationship(back_populates="aquarium")
