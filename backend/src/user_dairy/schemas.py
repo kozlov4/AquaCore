@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
 
@@ -39,3 +39,17 @@ class DiaryCreate(DiaryBase):
     tag: DiaryTag
     image_id: Optional[int] = None
     is_pinned: Optional[bool] = False
+
+
+class DiaryUpdate(BaseModel):
+    created_at: datetime
+    aquarium_id: int
+    tag: DiaryTag
+
+    title: str = Field(..., min_length=1, description="Заголовок не може бути порожнім")
+    observation: str = Field(
+        ..., min_length=1, description="Спостереження не може бути порожнім"
+    )
+
+    image_id: Optional[int] = None
+    is_pinned: bool = False

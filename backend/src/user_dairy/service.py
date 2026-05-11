@@ -5,7 +5,7 @@ from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from core.models import UserDairy, User
-from .schemas import DiaryCreate
+from .schemas import DiaryCreate, DiaryUpdate
 
 
 async def get_diary_entries(
@@ -66,3 +66,36 @@ async def get_diary_entry(session: AsyncSession, user_id: int, entry_id: int):
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def update_entry(
+    session: AsyncSession,
+    entry_id: int,
+    user_id: int,
+    entry_in: DiaryUpdate,
+):
+    stmt = (
+        select(UserDairy)
+        .where(UserDairy.id == entry_id)
+        .options(selectinload(UserDairy.aquarium), selectinload(UserDairy.image))
+    )
+    result = await session.execute(stmt)
+    entry = result.scalar_one_or_none()
+
+    if not entry:
+        raise HTTPException(status_code=404, detail="Запис не знайдено")
+
+    if entry.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Ви не можете редагувати чужий запис"
+        )
+
+    update_data = entry_in.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(entry, key, value)
+
+    await session.commit()
+    await session.refresh(entry)
+
+    return entry

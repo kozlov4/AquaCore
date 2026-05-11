@@ -41,6 +41,24 @@ async def create_entry(
     return await service.create_diary_entry(session, user_id, diary_in)
 
 
+from .schemas import DiaryUpdate, DiaryResponse
+
+
+@router.put("/{entry_id}/", response_model=DiaryResponse)
+async def update_entry_route(
+    entry_id: int,
+    entry_in: DiaryUpdate,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_entry(
+        session=session,
+        entry_id=entry_id,
+        user_id=user_id,
+        entry_in=entry_in,
+    )
+
+
 @router.delete("/{entry_id}/", status_code=204)
 async def delete_entry(
     entry_id: int,
