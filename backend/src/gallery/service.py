@@ -3,7 +3,7 @@ from sqlalchemy import select, or_, Result, func, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import Aquarium, UserGallery
 from sqlalchemy.orm import joinedload, selectinload
-from .schemas import PostIn, SortOrder
+from .schemas import PostIn, SortOrder, UserGalleryUpdate
 
 
 async def create_gallery_post(
@@ -98,3 +98,36 @@ async def delete_photo(
     await session.commit()
 
     return {"message": f"Фото успішно видалено"}
+
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from fastapi import HTTPException, status
+
+
+async def update_photo(
+    session: AsyncSession,
+    photo_id: int,
+    user_id: int,
+    photo_in: UserGalleryUpdate,
+):
+    stmt = (
+        select(UserGallery)
+        .where(UserGallery.id == photo_id)
+        .options(selectinload(UserGallery.aquarium), selectinload(UserGallery.image))
+    )
+    result = await session.execute(stmt)
+    gallery_photo = result.scalar_one_or_none()
+
+    if not gallery_photo:
+        raise HTTPException(status_code=404, detail="Фото не знайдено")
+
+    if gallery_photo.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Ви не можете редагувати чуже фото")
+
+    gallery_photo.signature = photo_in.signature
+
+    await session.commit()
+    await session.refresh(gallery_photo)
+
+    return gallery_photo

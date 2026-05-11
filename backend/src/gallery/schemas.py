@@ -35,3 +35,7 @@ class ImageResponseList(BaseModel):
 class ImageResponse(ImageResponseList):
     aquarium_name: str
     signature: Optional[str] = None
+
+
+class UserGalleryUpdate(BaseModel):
+    signature: Optional[str] = None

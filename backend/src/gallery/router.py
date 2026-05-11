@@ -4,7 +4,13 @@ from starlette import status
 from core.models.db_helper import db_helper
 from . import service
 from users import get_current_user
-from .schemas import PostIn, SortOrder, ImageResponseList, ImageResponse
+from .schemas import (
+    PostIn,
+    SortOrder,
+    ImageResponseList,
+    ImageResponse,
+    UserGalleryUpdate,
+)
 
 router = APIRouter(prefix="/gallery", tags=["Gallery"])
 
@@ -52,6 +58,21 @@ async def create_post_to_gallery_route(
         session=session,
         user_id=user_id,
         post_in=post_in,
+    )
+
+
+@router.put("/{photo_id}/", response_model=ImageResponse)
+async def update_photo_route(
+    photo_id: int,
+    photo_in: UserGalleryUpdate,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_photo(
+        session=session,
+        photo_id=photo_id,
+        user_id=user_id,
+        photo_in=photo_in,
     )
 
 
