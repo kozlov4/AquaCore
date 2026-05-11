@@ -25,8 +25,13 @@ class SortOrder(str, Enum):
     oldest = "oldest"
 
 
-class ImageResponse(BaseModel):
+class ImageResponseList(BaseModel):
     id: int
     cover_image_url: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ImageResponse(ImageResponseList):
+    aquarium_name: str
+    signature: Optional[str] = None

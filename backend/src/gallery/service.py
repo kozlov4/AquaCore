@@ -60,3 +60,23 @@ async def get_gallery_photos(
 
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def get_gallery_photo(session: AsyncSession, user_id: int, photo_id: int):
+    stmt = (
+        select(UserGallery)
+        .where(UserGallery.id == photo_id)
+        .options(selectinload(UserGallery.aquarium), selectinload(UserGallery.image))
+    )
+    result = await session.execute(stmt)
+    gallery_photo = result.scalar_one_or_none()
+
+    if not gallery_photo:
+        raise HTTPException(status_code=404, detail="Фото не знайдено")
+
+    if gallery_photo.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Ви не можете переглядати чуже фото"
+        )
+
+    return gallery_photo

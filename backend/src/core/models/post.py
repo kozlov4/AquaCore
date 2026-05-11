@@ -46,6 +46,12 @@ class UserGallery(Base):
             return self.image.image_url
         return None
 
+    @property
+    def aquarium_name(self) -> str | None:
+        if self.aquarium:
+            return self.aquarium.name
+        return None
+
 
 class SavedPost(Base):
     __tablename__ = "saved_posts"

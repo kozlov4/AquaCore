@@ -4,12 +4,12 @@ from starlette import status
 from core.models.db_helper import db_helper
 from . import service
 from users import get_current_user
-from .schemas import PostIn, SortOrder, ImageResponse
+from .schemas import PostIn, SortOrder, ImageResponseList, ImageResponse
 
 router = APIRouter(prefix="/gallery", tags=["Gallery"])
 
 
-@router.get("/", response_model=list[ImageResponse])
+@router.get("/", response_model=list[ImageResponseList])
 async def get_gallery_photos(
     session: AsyncSession = Depends(db_helper.session_dependency),
     user_id: int = Depends(get_current_user),
@@ -23,6 +23,19 @@ async def get_gallery_photos(
         category=category,
         aquarium_name=aquarium_name,
         sort_order=sort_order,
+    )
+
+
+@router.get("/{photo_id}", response_model=ImageResponse)
+async def get_gallery_photo(
+    photo_id: int,
+    session: AsyncSession = Depends(db_helper.session_dependency),
+    user_id: int = Depends(get_current_user),
+):
+    return await service.get_gallery_photo(
+        photo_id=photo_id,
+        session=session,
+        user_id=user_id,
     )
 
 
