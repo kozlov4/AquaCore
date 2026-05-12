@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import (
@@ -12,8 +13,22 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
+from datetime import date, datetime
+from sqlalchemy import (
+    String,
+    Text,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Enum as SQLEnum,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from core.models.base import Base
+
 if TYPE_CHECKING:
     from .user import User
+    from .aquarium import Aquarium
 
 
 class Chat(Base):
@@ -92,3 +107,54 @@ class Feedback(Base):
     __table_args__ = (
         CheckConstraint("rate >= 1 AND rate <= 5", name="check_valid_rate"),
     )
+
+
+class TaskType(str, Enum):
+    WATER_CHANGE = "Підміна води"
+    MAINTENANCE = "Обслуговування"
+    TESTS = "Тести води"
+    PLANTS = "Рослини"
+    CUSTOM = "Власне завдання"
+
+
+class RepeatType(str, Enum):
+    NONE = "Не повторювати"
+    DAILY = "Щодня"
+    WEEKLY = "Щотижня"
+    MONTHLY = "Щомісяця"
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    aquarium_id: Mapped[int | None] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE"), nullable=True
+    )
+
+    task_type: Mapped[TaskType] = mapped_column(SQLEnum(TaskType))
+    title: Mapped[str] = mapped_column(String(200))
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    due_date: Mapped[date] = mapped_column(Date)
+
+    repeat_type: Mapped[RepeatType] = mapped_column(
+        SQLEnum(RepeatType), default=RepeatType.NONE
+    )
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    aquarium: Mapped["Aquarium"] = relationship()
+
+
+class Equipment(Base):
+    __tablename__ = "equipment"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    aquarium_id: Mapped[int] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE")
+    )
+
+    category: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(200))
+    installation_date: Mapped[date] = mapped_column(Date)
