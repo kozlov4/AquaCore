@@ -90,3 +90,12 @@ async def add_inhabitant_to_aquarium(
 ):
     """Фронтенд викликає це, коли юзер натиснув 'Заселити' (можливо поставивши галочку ризику)"""
     return await service.add_inhabitant(session, aquarium_id, data, user_id=user_id)
+
+
+@router.delete("/{aquarium_id}/")
+async def delete_aquarium(
+    aquarium_id: int,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.delete_aquarium(session, aquarium_id, user_id=user_id)

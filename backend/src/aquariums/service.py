@@ -273,3 +273,16 @@ async def get_aquarium_population(
         overall_compatibility_text=overall_text,
         inhabitants=inhabitants,
     )
+
+
+async def delete_aquarium(session: AsyncSession, aquarium_id: int, user_id: int):
+    aquarium = await session.get(Aquarium, aquarium_id)
+    if not aquarium or aquarium.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Aquarium not found"
+        )
+
+    await session.delete(aquarium)
+    await session.commit()
+
+    return {"message": f"Акваріум успішно видалено"}
