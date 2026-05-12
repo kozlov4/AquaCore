@@ -11,6 +11,8 @@ from .schemas import (
     PopulationResponse,
     CheckCompatibilityResponse,
     InhabitantCreate,
+    AquariumCardResponse,
+    UpdateAquarium,
 )
 from core.models.db_helper import db_helper
 from . import service
@@ -19,12 +21,20 @@ from users import get_current_user
 router = APIRouter(prefix="/aquariums", tags=["Aquariums"])
 
 
-@router.get("/", response_model=List[AquariumNameResponse])
-async def get_aquariums_route(
+@router.get("/my-aquariums/", response_model=list[AquariumCardResponse])
+async def list_aquariums(
+    session: AsyncSession = Depends(db_helper.session_dependency),
+    user_id: int = Depends(get_current_user),
+):
+    return await service.get_user_aquariums_cards(session=session, user_id=user_id)
+
+
+@router.get("/names/", response_model=List[AquariumNameResponse])
+async def get_aquarium_names_route(
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-    return await service.get_aquariums(
+    return await service.get_aquarium_names(
         session=session,
         user_id=user_id,
     )
@@ -81,3 +91,24 @@ async def add_inhabitant_to_aquarium(
 ):
     """Фронтенд викликає це, коли юзер натиснув 'Заселити' (можливо поставивши галочку ризику)"""
     return await service.add_inhabitant(session, aquarium_id, data, user_id=user_id)
+
+
+@router.put("/{aquarium_id}/")
+async def update_aquarium(
+    aquarium_id: int,
+    aquarium_in: UpdateAquarium,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_aquarium(
+        session, aquarium_id, user_id=user_id, aquarium_in=aquarium_in
+    )
+
+
+@router.delete("/{aquarium_id}/")
+async def delete_aquarium(
+    aquarium_id: int,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.delete_aquarium(session, aquarium_id, user_id=user_id)

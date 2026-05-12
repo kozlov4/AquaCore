@@ -1,5 +1,7 @@
+from datetime import date, datetime
+
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, Result, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import Aquarium, AquariumInhabitant, Species
 from sqlalchemy.orm import joinedload, selectinload
@@ -9,6 +11,10 @@ from .schemas import (
     CheckCompatibilityResponse,
     InhabitantCreate,
     PopulationResponse,
+    PopulationDTO,
+    LastWaterTestDTO,
+    AquariumCardResponse,
+    UpdateAquarium,
 )
 
 
@@ -46,13 +52,72 @@ async def create_aquarium(
     return new_aquarium
 
 
-async def get_aquariums(session: AsyncSession, user_id: int):
+async def get_aquarium_names(session: AsyncSession, user_id: int):
 
     stmt = select(Aquarium).where(Aquarium.user_id == user_id)
     result = await session.execute(stmt)
     aquarium = result.scalars()
 
     return aquarium
+
+
+async def get_user_aquariums_cards(session: AsyncSession, user_id: int):
+    stmt = (
+        select(Aquarium)
+        .where(Aquarium.user_id == user_id)
+        .options(
+            joinedload(Aquarium.image),
+            selectinload(Aquarium.inhabitants).joinedload(AquariumInhabitant.species),
+            selectinload(Aquarium.water_tests),
+        )
+    )
+
+    result = await session.execute(stmt)
+    aquariums = result.scalars().all()
+
+    response_cards = []
+
+    for aq in aquariums:
+        species_names_list = []
+        total_qty = 0
+
+        for inh in aq.inhabitants:
+            if inh.species:
+                species_names_list.append(inh.species.name)
+            total_qty += inh.quantity
+
+        population_dto = None
+        if total_qty > 0:
+            population_dto = PopulationDTO(
+                species_names=", ".join(species_names_list), total_quantity=total_qty
+            )
+
+        last_test_dto = None
+        if aq.water_tests:
+            latest_test = sorted(
+                aq.water_tests, key=lambda t: t.test_date, reverse=True
+            )[0]
+            days_ago = (date.today() - latest_test.test_date).days
+
+            last_test_dto = LastWaterTestDTO(
+                days_ago=days_ago,
+                ph=latest_test.ph,
+                gh=latest_test.gh,
+                kh=latest_test.kh,
+            )
+
+        card = AquariumCardResponse(
+            id=aq.id,
+            name=aq.name,
+            volume=aq.volume,
+            status=aq.status,
+            image_url=aq.image_url,
+            population=population_dto,
+            last_test=last_test_dto,
+        )
+        response_cards.append(card)
+
+    return response_cards
 
 
 async def check_new_inhabitant(
@@ -209,3 +274,45 @@ async def get_aquarium_population(
         overall_compatibility_text=overall_text,
         inhabitants=inhabitants,
     )
+
+
+async def delete_aquarium(session: AsyncSession, aquarium_id: int, user_id: int):
+    aquarium = await session.get(Aquarium, aquarium_id)
+    if not aquarium or aquarium.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Aquarium not found"
+        )
+
+    await session.delete(aquarium)
+    await session.commit()
+
+    return {"message": f"Акваріум успішно видалено"}
+
+
+async def update_aquarium(
+    session: AsyncSession,
+    aquarium_id: int,
+    user_id: int,
+    aquarium_in: UpdateAquarium,
+):
+    aquarium = await session.get(Aquarium, aquarium_id)
+    if not aquarium:
+        raise HTTPException(status_code=404, detail="Aquarium not found")
+
+    if aquarium.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Ви не можете редагувати цей акваріум"
+        )
+
+    update_data = aquarium_in.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if isinstance(value, datetime):
+            value = value.replace(tzinfo=None)
+
+        setattr(aquarium, key, value)
+
+    await session.commit()
+    await session.refresh(aquarium)
+
+    return aquarium
