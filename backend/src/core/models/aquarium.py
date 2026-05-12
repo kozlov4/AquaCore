@@ -30,15 +30,27 @@ class Aquarium(Base):
 
     owner: Mapped["User"] = relationship(back_populates="aquariums")
     image: Mapped["Image"] = relationship()
-    posts: Mapped[list["Post"]] = relationship(back_populates="aquarium")
-    gallery: Mapped[list["UserGallery"]] = relationship(back_populates="aquarium")
-    diary: Mapped[list["UserDairy"]] = relationship(back_populates="aquarium")
+    posts: Mapped[list["Post"]] = relationship(
+        back_populates="aquarium", cascade="all, delete-orphan"
+    )
+    gallery: Mapped[list["UserGallery"]] = relationship(
+        back_populates="aquarium", cascade="all, delete-orphan"
+    )
+    diary: Mapped[list["UserDairy"]] = relationship(
+        back_populates="aquarium", cascade="all, delete-orphan"
+    )
     inhabitants: Mapped[list["AquariumInhabitant"]] = relationship(
         back_populates="aquarium", cascade="all, delete-orphan"
     )
     water_tests: Mapped[list["WaterTest"]] = relationship(
         back_populates="aquarium", cascade="all, delete-orphan"
     )
+
+    @property
+    def image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
 
 
 class AquariumInhabitant(Base):

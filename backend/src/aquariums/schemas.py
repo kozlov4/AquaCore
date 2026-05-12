@@ -19,9 +19,40 @@ class CreateAquarium(BaseModel):
     image_id: Optional[int] = None
 
 
+class UpdateAquarium(CreateAquarium):
+    pass
+
+
 class AquariumNameResponse(BaseModel):
     id: int
     name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LastWaterTestDTO(BaseModel):
+    days_ago: int
+    ph: Optional[float] = None
+    gh: Optional[float] = None
+    kh: Optional[float] = None
+    nh3: Optional[float] = None
+    no2: Optional[float] = None
+    no3: Optional[float] = None
+
+
+class PopulationDTO(BaseModel):
+    species_names: str
+    total_quantity: int
+
+
+class AquariumCardResponse(BaseModel):
+    id: int
+    name: str
+    volume: float
+    status: str
+    image_url: Optional[str] = None
+
+    population: Optional[PopulationDTO] = None
+    last_test: Optional[LastWaterTestDTO] = None
 
     model_config = ConfigDict(from_attributes=True)
 
