@@ -2,6 +2,7 @@ from collections import UserDict
 from datetime import date
 from typing import TYPE_CHECKING
 from datetime import datetime
+from sqlalchemy import Index
 from sqlalchemy import String, Float, ForeignKey, DateTime, Integer, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
@@ -35,6 +36,9 @@ class Aquarium(Base):
     inhabitants: Mapped[list["AquariumInhabitant"]] = relationship(
         back_populates="aquarium", cascade="all, delete-orphan"
     )
+    water_tests: Mapped[list["WaterTest"]] = relationship(
+        back_populates="aquarium", cascade="all, delete-orphan"
+    )
 
 
 class AquariumInhabitant(Base):
@@ -53,3 +57,35 @@ class AquariumInhabitant(Base):
     aquarium: Mapped["Aquarium"] = relationship(back_populates="inhabitants")
 
     species: Mapped["Species"] = relationship()
+
+
+class WaterTest(Base):
+    __tablename__ = "water_tests"
+
+    __table_args__ = (
+        Index(
+            "idx_water_tests_aquarium_date",
+            "aquarium_id",
+            "test_date",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    aquarium_id: Mapped[int] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE")
+    )
+
+    test_date: Mapped[date] = mapped_column(Date)
+
+    ph: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gh: Mapped[float | None] = mapped_column(Float, nullable=True)
+    kh: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    nh3: Mapped[float | None] = mapped_column(Float, nullable=True)
+    no2: Mapped[float | None] = mapped_column(Float, nullable=True)
+    no3: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    aquarium: Mapped["Aquarium"] = relationship(back_populates="water_tests")
