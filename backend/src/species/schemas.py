@@ -22,6 +22,8 @@ class SpeciesShortResponse(SpeciesBase):
     water_type: Optional[str] = None
     diet: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class SpeciesDetailResponse(SpeciesBase):
     description: Optional[str] = None
