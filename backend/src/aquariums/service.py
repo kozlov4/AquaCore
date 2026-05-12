@@ -1,9 +1,15 @@
 from fastapi import HTTPException, status
 from sqlalchemy import select, or_, Result, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models import Aquarium
+from core.models import Aquarium, AquariumInhabitant, Species
 from sqlalchemy.orm import joinedload, selectinload
-from .schemas import CreateAquarium
+from .schemas import (
+    CreateAquarium,
+    CompatibilityIssue,
+    CheckCompatibilityResponse,
+    InhabitantCreate,
+    PopulationResponse,
+)
 
 
 async def create_aquarium(
@@ -47,3 +53,159 @@ async def get_aquariums(session: AsyncSession, user_id: int):
     aquarium = result.scalars()
 
     return aquarium
+
+
+async def check_new_inhabitant(
+    session: AsyncSession, aquarium_id: int, species_id: int, user_id: int
+):
+    stmt_aq = (
+        select(Aquarium)
+        .options(
+            selectinload(Aquarium.inhabitants).selectinload(AquariumInhabitant.species)
+        )
+        .where(Aquarium.id == aquarium_id)
+    )
+    aquarium = (await session.execute(stmt_aq)).scalar_one_or_none()
+
+    new_species = await session.get(Species, species_id)
+
+    if not aquarium or not new_species or aquarium.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Акваріум або вид не знайдено")
+
+    issues = []
+    status = "PERFECT"
+    title = "Повна сумісність"
+
+    if new_species.min_volume > aquarium.volume:
+        status = "CRITICAL"
+        title = "Критична несумісність"
+        issues.append(
+            CompatibilityIssue(
+                title="Об'єм",
+                description=f"Для цієї риби потрібен акваріум від {new_species.min_volume} Л (ваш: {aquarium.volume} Л).",
+            )
+        )
+
+    if new_species.character == "Хижак":
+        for inh in aquarium.inhabitants:
+            if inh.species.max_size and "S" in inh.species.max_size:
+                status = "CRITICAL"
+                title = "Критична несумісність"
+                issues.append(
+                    CompatibilityIssue(
+                        title="Хижак",
+                        description=f"{new_species.name} може з'їсти поточних жителів ({inh.species.name}).",
+                    )
+                )
+                break
+
+    if new_species.character == "Територіальні":
+        territorial_count = sum(
+            1
+            for inh in aquarium.inhabitants
+            if inh.species.character == "Територіальні"
+        )
+        if territorial_count > 0:
+            if status != "CRITICAL":
+                status = "RISKY"
+                title = "Можлива агресія"
+            issues.append(
+                CompatibilityIssue(
+                    title="Територіальність",
+                    description="Вид активно захищає свою територію. Можливі конфлікти з існуючими сусідами.",
+                )
+            )
+
+    if not issues:
+        issues.append(
+            CompatibilityIssue(
+                title="Ідеальний вибір",
+                description="Ці риби мають схожі вимоги до параметрів води та мирний характер.",
+            )
+        )
+
+    return CheckCompatibilityResponse(status=status, status_title=title, issues=issues)
+
+
+async def add_inhabitant(
+    session: AsyncSession, aquarium_id: int, data: InhabitantCreate, user_id: int
+):
+    aquarium = await session.get(Aquarium, aquarium_id)
+
+    if aquarium.user_id != user_id or aquarium is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    new_inhabitant = AquariumInhabitant(aquarium_id=aquarium_id, **data.model_dump())
+    session.add(new_inhabitant)
+    await session.commit()
+    return {"message": "Успішно заселено"}
+
+
+async def get_aquarium_population(
+    session: AsyncSession, aquarium_id: int, user_id: int
+):
+    aquarium = await session.get(Aquarium, aquarium_id)
+    if not aquarium or aquarium.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Акваріум не знайдено")
+
+    stmt = (
+        select(AquariumInhabitant)
+        .options(selectinload(AquariumInhabitant.species))
+        .where(AquariumInhabitant.aquarium_id == aquarium_id)
+    )
+    result = await session.execute(stmt)
+    inhabitants = result.scalars().all()
+
+    total_species = len(set(inh.species_id for inh in inhabitants))
+    total_individuals = sum(inh.quantity for inh in inhabitants)
+
+    if not inhabitants:
+        return PopulationResponse(
+            total_species=0,
+            total_individuals=0,
+            overall_compatibility_status="INFO",
+            overall_compatibility_text="Акваріум поки порожній. Додайте перших жителів!",
+            inhabitants=[],
+        )
+
+    has_predator = False
+    has_small_fish = False
+    territorial_count = 0
+    max_required_volume = 0
+
+    for inh in inhabitants:
+        sp = inh.species
+        if sp.min_volume > max_required_volume:
+            max_required_volume = sp.min_volume
+
+        if sp.character == "Хижак":
+            has_predator = True
+        if sp.character == "Територіальні":
+            territorial_count += 1
+        if sp.max_size and "S" in sp.max_size:
+            has_small_fish = True
+
+    overall_status = "PERFECT"
+    overall_text = (
+        "Сумісність відмінна. Всі види мирні та підходять для поточних параметрів води."
+    )
+
+    if max_required_volume > aquarium.volume:
+        overall_status = "CRITICAL"
+        overall_text = f"Критична проблема: об'єм акваріума ({aquarium.volume} Л) занадто малий для поточних жителів. Потрібно мінімум {max_required_volume} Л."
+
+    elif has_predator and has_small_fish:
+        overall_status = "CRITICAL"
+        overall_text = "Критична несумісність: в акваріумі є хижаки та дрібні види. Дрібні риби в небезпеці."
+
+    elif territorial_count > 1:
+        overall_status = "RISKY"
+        overall_text = "Можлива агресія: кілька територіальних видів можуть битися за укриття на дні."
+
+    return PopulationResponse(
+        total_species=total_species,
+        total_individuals=total_individuals,
+        overall_compatibility_status=overall_status,
+        overall_compatibility_text=overall_text,
+        inhabitants=inhabitants,
+    )
