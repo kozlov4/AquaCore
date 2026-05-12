@@ -1,15 +1,3 @@
-from fastapi import APIRouter, Query, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from starlette import status
-
-from core.models.db_helper import db_helper
-from . import service
-from .schemas import SpeciesDetailResponse, SpeciesShortResponse
-from users import get_current_user
-
-router = APIRouter(prefix="/species", tags=["Species"])
-
-
 from typing import Optional
 from fastapi import APIRouter, Query, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession

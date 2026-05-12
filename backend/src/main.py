@@ -12,6 +12,7 @@ from gallery.router import router as gallery_router
 from user_dairy.router import router as user_diary_router
 from species.router import router as species_router
 from compatibility.router import router as compatibility_router
+from water_test.router import router as water_test_router
 
 app = FastAPI(title="AquaCore 🐠")
 
@@ -36,6 +37,8 @@ app.include_router(user_diary_router)
 
 app.include_router(species_router)
 app.include_router(compatibility_router)
+
+app.include_router(water_test_router)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
