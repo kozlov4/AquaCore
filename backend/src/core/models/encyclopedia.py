@@ -51,3 +51,32 @@ class DiagnosticStep(Base):
     disease_id: Mapped[int] = mapped_column(ForeignKey("diseases.id"))
     order_index: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
+
+
+class Species(Base):
+    __tablename__ = "species"
+
+    category: Mapped[str] = mapped_column(String(50), index=True)
+    water_type: Mapped[str] = mapped_column(String(50), index=True)
+    name: Mapped[str] = mapped_column(String(150), index=True)
+    scientific_name: Mapped[str | None] = mapped_column(String(150))
+    description: Mapped[str | None] = mapped_column(Text)
+    image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
+    care_level: Mapped[str] = mapped_column(String(50), index=True)
+    min_volume: Mapped[int] = mapped_column(Integer, index=True)
+    max_size: Mapped[str] = mapped_column(String(50))
+    temperature: Mapped[str | None] = mapped_column(String(50))
+    ph: Mapped[str | None] = mapped_column(String(50))
+    lifespan: Mapped[str | None] = mapped_column(String(50))
+    character: Mapped[str | None] = mapped_column(String(50), index=True)
+    diet: Mapped[str | None] = mapped_column(String(50), index=True)
+    lighting: Mapped[str | None] = mapped_column(String(50))
+    co2: Mapped[str | None] = mapped_column(String(50))
+    image: Mapped["Image"] = relationship()
+    type: Mapped[str | None] = mapped_column(String(100))
+
+    @property
+    def image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
