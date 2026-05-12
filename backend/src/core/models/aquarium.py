@@ -40,6 +40,12 @@ class Aquarium(Base):
         back_populates="aquarium", cascade="all, delete-orphan"
     )
 
+    @property
+    def image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
+
 
 class AquariumInhabitant(Base):
     __tablename__ = "aquarium_inhabitants"
