@@ -12,6 +12,7 @@ from .schemas import (
     CheckCompatibilityResponse,
     InhabitantCreate,
     AquariumCardResponse,
+    UpdateAquarium,
 )
 from core.models.db_helper import db_helper
 from . import service
@@ -90,6 +91,18 @@ async def add_inhabitant_to_aquarium(
 ):
     """Фронтенд викликає це, коли юзер натиснув 'Заселити' (можливо поставивши галочку ризику)"""
     return await service.add_inhabitant(session, aquarium_id, data, user_id=user_id)
+
+
+@router.put("/{aquarium_id}/")
+async def update_aquarium(
+    aquarium_id: int,
+    aquarium_in: UpdateAquarium,
+    user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_aquarium(
+        session, aquarium_id, user_id=user_id, aquarium_in=aquarium_in
+    )
 
 
 @router.delete("/{aquarium_id}/")

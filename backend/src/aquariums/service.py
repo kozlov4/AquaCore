@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, or_, Result, func
@@ -14,6 +14,7 @@ from .schemas import (
     PopulationDTO,
     LastWaterTestDTO,
     AquariumCardResponse,
+    UpdateAquarium,
 )
 
 
@@ -286,3 +287,32 @@ async def delete_aquarium(session: AsyncSession, aquarium_id: int, user_id: int)
     await session.commit()
 
     return {"message": f"Акваріум успішно видалено"}
+
+
+async def update_aquarium(
+    session: AsyncSession,
+    aquarium_id: int,
+    user_id: int,
+    aquarium_in: UpdateAquarium,
+):
+    aquarium = await session.get(Aquarium, aquarium_id)
+    if not aquarium:
+        raise HTTPException(status_code=404, detail="Aquarium not found")
+
+    if aquarium.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Ви не можете редагувати цей акваріум"
+        )
+
+    update_data = aquarium_in.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if isinstance(value, datetime):
+            value = value.replace(tzinfo=None)
+
+        setattr(aquarium, key, value)
+
+    await session.commit()
+    await session.refresh(aquarium)
+
+    return aquarium

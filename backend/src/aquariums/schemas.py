@@ -19,6 +19,10 @@ class CreateAquarium(BaseModel):
     image_id: Optional[int] = None
 
 
+class UpdateAquarium(CreateAquarium):
+    pass
+
+
 class AquariumNameResponse(BaseModel):
     id: int
     name: str
