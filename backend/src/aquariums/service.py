@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, Result, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import Aquarium, AquariumInhabitant, Species
 from sqlalchemy.orm import joinedload, selectinload
