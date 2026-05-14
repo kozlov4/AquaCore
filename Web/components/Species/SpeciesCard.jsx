@@ -1,54 +1,72 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 export function SpeciesCard({ item, index }) {
   return (
     <motion.article
+      layout
       initial={{ opacity: 0, y: 24, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.04, duration: 0.35 }}
-      whileHover={{ y: -6, scale: 1.015 }}
-      className="group overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 shadow-sm transition hover:border-[#635BFF]/20 hover:shadow-[0_20px_55px_rgba(15,23,42,0.1)]"
+      whileHover={{
+        y: -6,
+        scale: 1.015,
+        boxShadow: "0 24px 60px rgba(15,23,42,0.12)",
+      }}
+      className="group overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition"
     >
-      <div className="relative flex h-[155px] items-center justify-center rounded-2xl bg-slate-50">
-        <span className="absolute right-3 top-3 rounded-md bg-white px-2 py-1 text-[10px] font-black uppercase text-slate-500">
-          {item.category === "Рослини" ? "Рослина" : "Прісна"}
+      <div className="relative flex h-[150px] items-center justify-center bg-gradient-to-br from-[#EEF2FF] to-[#ECFEFF]">
+        {item.imageUrl ? (
+          <Image
+            src={item.imageUrl}
+            alt={item.name}
+            fill
+            className="object-cover transition duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <span className="text-6xl">{item.icon || "🐟"}</span>
+        )}
+
+        <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#635BFF] shadow-sm">
+          {item.category}
         </span>
 
-        <motion.div
-          whileHover={{ scale: 1.16, rotate: 6 }}
-          className="text-6xl"
-        >
-          {item.icon}
-        </motion.div>
+        <span className="absolute right-4 top-4 rounded-full bg-black/50 px-3 py-1 text-xs font-bold text-white backdrop-blur">
+          {item.water}
+        </span>
       </div>
 
-      <div className="mt-4">
-        <h3 className="text-base font-black text-slate-950">{item.name}</h3>
-        <p className="mt-0.5 text-xs italic text-slate-400">{item.latin}</p>
+      <div className="p-5">
+        <h3 className="text-lg font-black text-slate-950 transition group-hover:text-[#635BFF]">
+          {item.name}
+        </h3>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <p className="mt-1 text-sm italic text-slate-400">{item.latin}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
           {item.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-md bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600"
+              className="rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500"
             >
               {tag}
             </span>
           ))}
         </div>
 
-        <Link href="/species-details">
-          <motion.button
-            type="button"
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            className="mt-4 w-full rounded-xl bg-slate-50 py-3 text-sm font-bold text-slate-700 transition hover:bg-[#635BFF] hover:text-white"
-          >
-            Детальніше
-          </motion.button>
+        <Link
+          href={`/species-details?id=${item.id}`}
+          className="
+            mt-6 inline-flex w-full items-center justify-center
+            rounded-xl bg-slate-950 px-4 py-3
+            text-sm font-black text-white transition
+            hover:bg-[#635BFF]
+          "
+        >
+          Детальніше
         </Link>
       </div>
     </motion.article>

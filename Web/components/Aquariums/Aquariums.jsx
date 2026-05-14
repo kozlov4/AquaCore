@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
 import { Sidebar } from "../Profile/Sidebar";
 import { EmptyAquariums } from "./EmptyAquariums";
 import { AquariumCard } from "./AquariumCard";
@@ -10,6 +11,7 @@ import { TaskModal } from "./TaskModal";
 import { AquariumSettingsModal } from "./AquariumSettingsModal";
 import { AddAquariumModal } from "./AddAquariumModal";
 import { DeleteAquariumModal } from "./DeleteAquariumModal";
+
 import { useAquariumsApi } from "../../hooks/useAquariumsApi";
 
 export function Aquariums() {
@@ -79,7 +81,10 @@ export function Aquariums() {
           )}
 
           {!aquariums.isLoading && aquariums.aquariums.length === 0 ? (
-            <EmptyAquariums onCreate={aquariums.openCreateModal} />
+            <EmptyAquariums
+              onCreate={aquariums.openCreateModal}
+              onAdd={aquariums.openCreateModal}
+            />
           ) : (
             <motion.section
               layout
@@ -157,6 +162,7 @@ export function Aquariums() {
         aquarium={aquariums.selectedAquarium}
         onClose={aquariums.closeSettingsModal}
         onEdit={aquariums.openEditModal}
+        onSave={aquariums.openEditModal}
         onDelete={aquariums.askDeleteAquarium}
       />
 

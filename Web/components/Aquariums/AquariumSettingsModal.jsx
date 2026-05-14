@@ -1,136 +1,125 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/router";
-import { Droplet, Pencil, Settings } from "lucide-react";
-import { motion } from "framer-motion";
+import { X, Pencil, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export function AquariumCard({
+export function AquariumSettingsModal({
+  isOpen,
   aquarium,
-  index,
-  onOpenWaterParams,
-  onOpenTask,
-  onOpenSettings,
+  onClose,
+  onEdit,
+  onDelete,
+  onSave,
 }) {
-  const router = useRouter();
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(aquarium);
+      return;
+    }
 
-  const openDetails = () => {
-    router.push(`/aquarium-details?id=${aquarium.id}`);
+    if (onSave) {
+      onSave(aquarium);
+    }
   };
 
   return (
-    <motion.article
-      layout
-      onClick={openDetails}
-      initial={{ opacity: 0, y: 24, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.05, duration: 0.35 }}
-      whileHover={{
-        y: -6,
-        scale: 1.015,
-        boxShadow: "0 24px 60px rgba(15,23,42,0.14)",
-      }}
-      whileTap={{ scale: 0.98 }}
-      className="
-        group cursor-pointer overflow-hidden rounded-3xl
-        border border-slate-100 bg-white
-        shadow-sm transition-all duration-300
-      "
-    >
-      <div className="relative h-[180px] bg-slate-100">
-        <Image
-          src={aquarium.image || "/images/fish-card.jpg"}
-          alt={aquarium.name}
-          fill
-          className="object-cover transition duration-500 group-hover:scale-105"
-        />
+    <AnimatePresence mode="wait">
+      {isOpen && aquarium && (
+        <>
+          <motion.div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-
-        <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#635BFF] shadow-sm">
-          {aquarium.volume}
-        </span>
-
-        <span className="absolute bottom-4 left-4 rounded-full bg-black/45 px-3 py-1 text-xs font-bold text-white backdrop-blur">
-          {aquarium.environment}
-        </span>
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-black text-slate-950">
-              {aquarium.name}
-            </h3>
-
-            <p className="mt-1 text-sm font-semibold text-emerald-600">
-              Стан: {aquarium.status}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenSettings?.();
-            }}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
             className="
-              rounded-xl p-2 text-slate-400 transition
-              hover:bg-slate-100 hover:text-slate-950
+              fixed left-1/2 top-1/2 z-50
+              w-[calc(100%-28px)] max-w-[460px]
+              -translate-x-1/2 -translate-y-1/2
+              overflow-hidden rounded-2xl bg-white
+              shadow-[0_28px_85px_rgba(0,0,0,0.34)]
             "
-            title="Налаштування"
           >
-            <Settings size={18} />
-          </button>
-        </div>
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <h2 className="text-xl font-black text-slate-950">
+                Налаштування акваріума
+              </h2>
 
-        <div className="mt-5 space-y-3 text-sm text-slate-500">
-          <p>➜ Населення: {aquarium.population}</p>
-          <p>✓ {aquarium.lastTest}</p>
-          <p className="font-bold text-slate-700">{aquarium.params}</p>
-        </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X size={21} />
+              </button>
+            </div>
 
-        <div className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-100">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenWaterParams?.();
-            }}
-            className="
-              flex h-12 items-center justify-center gap-2
-              text-sm font-bold text-gray-500
-              transition-all duration-300
-              hover:bg-[#5B4CF6]/10 hover:text-[#5B4CF6]
-              active:scale-95
-            "
-            title="Запис параметрів води"
-          >
-            <Droplet size={17} />
-            Вода
-          </button>
+            <div className="px-6 py-6">
+              <div className="relative h-[180px] overflow-hidden rounded-2xl bg-slate-100">
+                <Image
+                  src={aquarium.image || "/images/fish-card.jpg"}
+                  alt={aquarium.name || "Aquarium"}
+                  fill
+                  className="object-cover"
+                />
+              </div>
 
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenTask?.();
-            }}
-            className="
-              flex h-12 items-center justify-center gap-2
-              border-l border-slate-100
-              text-sm font-bold text-gray-500
-              transition-all duration-300
-              hover:bg-[#5B4CF6]/10 hover:text-[#5B4CF6]
-              active:scale-95
-            "
-            title="Нове завдання"
-          >
-            <Pencil size={17} />
-            Завдання
-          </button>
-        </div>
-      </div>
-    </motion.article>
+              <h3 className="mt-5 text-2xl font-black text-slate-950">
+                {aquarium.name}
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-500">
+                {aquarium.volume || "0 л"} •{" "}
+                {aquarium.environment || aquarium.type || "Прісноводний"}
+              </p>
+
+              {aquarium.createdDate && (
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  Запущено: {aquarium.createdDate}
+                </p>
+              )}
+
+              <div className="mt-6 grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="
+                    flex items-center justify-center gap-2
+                    rounded-xl bg-[#635BFF] px-5 py-3
+                    text-sm font-black text-white
+                    transition hover:bg-[#5147f5]
+                  "
+                >
+                  <Pencil size={17} />
+                  Редагувати акваріум
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onDelete?.(aquarium)}
+                  className="
+                    flex items-center justify-center gap-2
+                    rounded-xl border border-red-100 bg-red-50
+                    px-5 py-3 text-sm font-black text-red-500
+                    transition hover:bg-red-100
+                  "
+                >
+                  <Trash2 size={17} />
+                  Видалити акваріум
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

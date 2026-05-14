@@ -1,60 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
-export function SpeciesDropdown({ label, value, options, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-
+export function SpeciesDropdown({ value, onChange, options, className = "" }) {
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-bold text-slate-700 transition hover:border-[#635BFF]/40 hover:bg-white"
+    <label className={`relative block ${className}`}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="
+          w-full appearance-none rounded-xl border border-slate-200
+          bg-white px-4 py-3 pr-10 text-sm font-bold text-slate-700
+          outline-none transition hover:border-[#635BFF]/40
+          focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10
+        "
       >
-        <span>{value}</span>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
 
-        <ChevronDown
-          size={17}
-          className={`transition ${isOpen ? "rotate-180 text-[#635BFF]" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 12, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            className="absolute left-0 top-full z-30 w-full overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.16)]"
-          >
-            <div className="border-b border-slate-100 px-4 py-3 text-sm font-black text-[#635BFF]">
-              {label}
-            </div>
-
-            {options.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  onChange(option);
-                  setIsOpen(false);
-                }}
-                className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium transition ${
-                  value === option
-                    ? "bg-[#635BFF]/8 text-slate-950"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <span>{option}</span>
-                {value === option && <Check size={16} className="text-[#635BFF]" />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      <ChevronDown
+        size={17}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+    </label>
   );
 }

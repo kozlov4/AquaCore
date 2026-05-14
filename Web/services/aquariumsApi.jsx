@@ -59,6 +59,7 @@ export function toInputDate(value) {
 
 export function mapAquariumFromApi(item) {
   const volumeValue = item.volume ?? item.liters ?? 0;
+
   const imageUrl =
     item.image_url ||
     item.cover_image_url ||
@@ -66,6 +67,27 @@ export function mapAquariumFromApi(item) {
     item.image?.url ||
     item.image?.image_url ||
     null;
+
+  const rawPopulation = item.population;
+
+  let populationText = "Жителів ще немає";
+
+  if (rawPopulation && typeof rawPopulation === "object") {
+    const totalQuantity = rawPopulation.total_quantity ?? 0;
+    const speciesNames = Array.isArray(rawPopulation.species_names)
+      ? rawPopulation.species_names
+      : [];
+
+    if (totalQuantity > 0 && speciesNames.length > 0) {
+      populationText = `${totalQuantity} особин: ${speciesNames.join(", ")}`;
+    } else if (totalQuantity > 0) {
+      populationText = `${totalQuantity} особин`;
+    }
+  } else if (typeof rawPopulation === "string") {
+    populationText = rawPopulation;
+  } else if (typeof rawPopulation === "number") {
+    populationText = `${rawPopulation} особин`;
+  }
 
   return {
     id: item.id,
@@ -85,7 +107,10 @@ export function mapAquariumFromApi(item) {
     createdAt: item.created_at || item.createdAt || "",
     createdDate: formatAquariumDate(item.created_at || item.createdAt),
 
-    population: item.population || "Жителів ще немає",
+    population: populationText,
+
+    populationData: rawPopulation || null,
+
     lastTest: item.last_test || "Тестів ще немає",
     params: item.params || "pH — · GH — · KH —",
   };
