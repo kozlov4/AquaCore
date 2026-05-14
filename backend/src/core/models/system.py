@@ -1,18 +1,9 @@
 from enum import Enum
 from typing import TYPE_CHECKING
-from datetime import datetime
 from sqlalchemy import (
-    String,
-    Text,
-    ForeignKey,
-    DateTime,
-    Boolean,
     Integer,
     CheckConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .base import Base
-
 from datetime import date, datetime
 from sqlalchemy import (
     String,
@@ -24,7 +15,7 @@ from sqlalchemy import (
     Enum as SQLEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.models.base import Base
+from .base import Base
 
 if TYPE_CHECKING:
     from .user import User
@@ -145,6 +136,10 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     aquarium: Mapped["Aquarium"] = relationship()
+
+    @property
+    def is_overdue(self) -> bool:
+        return self.due_date < date.today() and not self.is_completed
 
 
 class Equipment(Base):
