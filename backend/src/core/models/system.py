@@ -4,7 +4,7 @@ from sqlalchemy import (
     Integer,
     CheckConstraint,
 )
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from sqlalchemy import (
     String,
     Text,
@@ -145,7 +145,6 @@ class Task(Base):
 class Equipment(Base):
     __tablename__ = "equipment"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     aquarium_id: Mapped[int] = mapped_column(
         ForeignKey("aquariums.id", ondelete="CASCADE")
     )
@@ -153,3 +152,20 @@ class Equipment(Base):
     category: Mapped[str] = mapped_column(String(100))
     name: Mapped[str] = mapped_column(String(200))
     installation_date: Mapped[date] = mapped_column(Date)
+    specifications: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    maintenance_interval_days: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+
+    @property
+    def days_until_maintenance(self) -> int | None:
+        if not self.maintenance_interval_days or not self.installation_date:
+            return None
+
+        next_maintenance = self.installation_date + timedelta(
+            days=self.maintenance_interval_days
+        )
+        today = date.today()
+
+        days_left = (next_maintenance - today).days
+        return days_left if days_left > 0 else 0

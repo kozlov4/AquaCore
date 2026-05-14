@@ -14,7 +14,8 @@ from species.router import router as species_router
 from compatibility.router import router as compatibility_router
 from water_test.router import router as water_test_router
 from tasks.router import tasks_router as task_router
-from equipments.router import equipment_router as equipment_router
+
+# from equipments.router import equipment_router as equipment_router
 from password_reset.router import router as password_reset_router
 
 app = FastAPI(title="AquaCore 🐠")
