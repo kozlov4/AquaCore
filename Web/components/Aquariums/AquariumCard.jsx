@@ -1,121 +1,326 @@
 "use client";
 
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { Droplet, Pencil, Settings } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X, Upload, CalendarDays } from "lucide-react";
 import { motion } from "framer-motion";
+import { toInputDate } from "../../services/aquariumsApi";
 
-export function AquariumCard({
-  aquarium,
-  index,
-  onOpenWaterParams,
-  onOpenTask,
-  onOpenSettings,
+const waterTypes = [
+  "Прісноводний",
+  "Морський",
+  "Креветочник",
+  "Травник",
+  "Цихлідник",
+];
+
+export function AddAquariumModal({
+  isOpen,
+  aquarium = null,
+  onClose,
+  onSave,
+  isLoading = false,
 }) {
-  const router = useRouter();
+  const isEdit = Boolean(aquarium?.id);
 
-  const openDetails = () => {
-    router.push("/aquarium-details");
+  const [name, setName] = useState("");
+  const [volume, setVolume] = useState("100");
+  const [type, setType] = useState("Прісноводний");
+  const [createdAt, setCreatedAt] = useState(toInputDate());
+  const [file, setFile] = useState(null);
+  const [localError, setLocalError] = useState("");
+
+  useEffect(() => {
+    if (!aquarium) {
+      setName("");
+      setVolume("100");
+      setType("Прісноводний");
+      setCreatedAt(toInputDate());
+      setFile(null);
+      setLocalError("");
+      return;
+    }
+
+    setName(aquarium.name || "");
+    setVolume(String(aquarium.volumeValue || "").replace(/\D/g, "") || "100");
+    setType(aquarium.type || aquarium.environment || "Прісноводний");
+    setCreatedAt(toInputDate(aquarium.createdAt));
+    setFile(null);
+    setLocalError("");
+  }, [aquarium, isOpen]);
+
+  const previewUrl = useMemo(() => {
+    if (file) return URL.createObjectURL(file);
+    return aquarium?.imageUrl || aquarium?.image || "";
+  }, [file, aquarium]);
+
+  const handleSave = async () => {
+    try {
+      setLocalError("");
+
+      if (!name.trim()) {
+        setLocalError("Введіть назву акваріума");
+        return;
+      }
+
+      if (!volume || Number(volume) <= 0) {
+        setLocalError("Введіть коректний обʼєм");
+        return;
+      }
+
+      if (!createdAt) {
+        setLocalError("Оберіть дату запуску");
+        return;
+      }
+
+      await onSave?.({
+        name: name.trim(),
+        volume: Number(volume),
+        type,
+        createdAt: new Date(createdAt).toISOString(),
+        file,
+      });
+    } catch (error) {
+      setLocalError(error.message || "Не вдалося зберегти акваріум");
+    }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <motion.article
-      onClick={openDetails}
-      initial={{ opacity: 0, y: 34, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{
-        delay: index * 0.07,
-        duration: 0.45,
-        ease: "easeOut",
-      }}
-      whileHover={{
-        y: -10,
-        scale: 1.018,
-      }}
-      whileTap={{ scale: 0.985 }}
-      className="group cursor-pointer overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:border-[#5B4CF6]/20 hover:shadow-[0_28px_80px_rgba(15,23,42,0.16)]"
-    >
-      <div className="relative h-[180px] overflow-hidden">
-        <Image
-          src={aquarium.image}
-          alt={aquarium.name}
-          fill
-          className="object-cover transition duration-700 group-hover:scale-110 group-hover:brightness-110"
-        />
+    <>
+      <motion.div
+        className="fixed inset-0 z-40 bg-black/65 backdrop-blur-sm"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition duration-500 group-hover:opacity-100" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 26 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 16 }}
+        transition={{ duration: 0.24, ease: "easeOut" }}
+        className="
+          fixed left-1/2 top-1/2 z-50
+          max-h-[92vh] w-[calc(100%-28px)]
+          max-w-[520px] -translate-x-1/2 -translate-y-1/2
+          overflow-hidden rounded-2xl bg-white
+          shadow-[0_28px_85px_rgba(0,0,0,0.34)]
+        "
+      >
+        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-black text-slate-950">
+              {isEdit ? "Редагування акваріума" : "Нова екосистема"}
+            </h2>
 
-        <motion.div
-          whileHover={{ scale: 1.08 }}
-          className="absolute right-3 top-3 rounded-full bg-white/25 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md"
-        >
-          {aquarium.volume}
-        </motion.div>
-      </div>
+            {isEdit && (
+              <p className="mt-1 text-xs font-bold text-[#635BFF]">
+                ID: #{aquarium.id}
+              </p>
+            )}
+          </div>
 
-      <div className="p-5">
-        <h3 className="text-lg font-bold text-gray-950 transition group-hover:text-[#5B4CF6]">
-          {aquarium.name}
-        </h3>
-
-        <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-emerald-600">
-          <span className="h-3 w-3 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.65)]" />
-          Стан: {aquarium.status}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+          >
+            <X size={22} />
+          </button>
         </div>
 
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "92%" }}
-            transition={{ delay: 0.2 + index * 0.05, duration: 0.8 }}
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
-          />
+        <div className="max-h-[calc(92vh-150px)] space-y-5 overflow-y-auto px-6 py-6">
+          <label
+            className="
+              relative flex h-[150px] w-full cursor-pointer flex-col items-center justify-center
+              overflow-hidden rounded-2xl border-2 border-dashed border-slate-300
+              bg-slate-50 text-slate-500 transition
+              hover:border-[#635BFF] hover:bg-[#635BFF]/5
+            "
+          >
+            {previewUrl ? (
+              <>
+                <img
+                  src={previewUrl}
+                  alt="Aquarium preview"
+                  className="h-full w-full object-cover"
+                />
+
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                  <span className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-lg">
+                    Замінити фото
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-2 rounded-full bg-white p-3 text-[#635BFF] shadow-sm">
+                  <Upload size={22} />
+                </div>
+
+                <span className="text-sm font-black">
+                  Завантажити обкладинку
+                </span>
+
+                <span className="mt-1 text-xs text-slate-400">
+                  PNG, JPG до 10 MB
+                </span>
+              </>
+            )}
+
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </label>
+
+          <div>
+            <label className="mb-2 block text-xs font-black uppercase text-slate-500">
+              Назва
+            </label>
+
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Напр. Головний Травник"
+              className="
+                w-full rounded-xl border border-slate-300
+                px-4 py-3 text-sm font-bold outline-none transition
+                placeholder:text-slate-400
+                focus:border-[#635BFF]
+                focus:ring-4 focus:ring-[#635BFF]/10
+              "
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-xs font-black uppercase text-slate-500">
+                Обʼєм
+              </label>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
+                  className="
+                    w-full rounded-xl border border-slate-300
+                    px-4 py-3 text-sm font-bold outline-none transition
+                    focus:border-[#635BFF]
+                    focus:ring-4 focus:ring-[#635BFF]/10
+                  "
+                />
+
+                <span className="text-sm font-black text-slate-500">л</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-black uppercase text-slate-500">
+                Дата запуску
+              </label>
+
+              <div className="relative">
+                <input
+                  type="date"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
+                  className="
+                    w-full rounded-xl border border-slate-300
+                    px-4 py-3 text-sm font-bold outline-none transition
+                    focus:border-[#635BFF]
+                    focus:ring-4 focus:ring-[#635BFF]/10
+                  "
+                />
+
+                <CalendarDays
+                  size={16}
+                  className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 text-slate-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-xs font-black uppercase text-slate-500">
+              Тип води / екосистема
+            </p>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {waterTypes.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setType(item)}
+                  className={`
+                    rounded-xl border px-3 py-2
+                    text-left text-sm font-black transition
+                    ${
+                      type === item
+                        ? "border-[#635BFF] bg-[#635BFF]/10 text-[#635BFF] shadow-sm"
+                        : "border-slate-200 text-slate-500 hover:border-[#635BFF]/40 hover:text-[#635BFF]"
+                    }
+                  `}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {localError && (
+            <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+              {localError}
+            </p>
+          )}
         </div>
 
-        <div className="mt-4 space-y-2 text-xs text-gray-500">
-          <p>➜ Населення: {aquarium.population}</p>
-          <p>✓ {aquarium.lastTest}</p>
-          <p>{aquarium.params}</p>
+        <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-6 py-5 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-5 py-3 text-sm font-black text-slate-500 transition hover:bg-white hover:text-slate-950"
+          >
+            Скасувати
+          </button>
+
+          <motion.button
+            type="button"
+            onClick={handleSave}
+            disabled={isLoading}
+            whileHover={
+              isLoading
+                ? {}
+                : {
+                    y: -2,
+                    boxShadow: "0 12px 24px rgba(99,91,255,0.28)",
+                  }
+            }
+            whileTap={isLoading ? {} : { scale: 0.96 }}
+            className={`
+              rounded-xl px-6 py-3 text-sm font-black text-white
+              transition
+              ${
+                isLoading
+                  ? "cursor-not-allowed bg-[#635BFF]/60"
+                  : "cursor-pointer bg-[#635BFF] hover:bg-[#5147f5]"
+              }
+            `}
+          >
+            {isLoading
+              ? "Збереження..."
+              : isEdit
+              ? "Зберегти зміни"
+              : "Створити акваріум"}
+          </motion.button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 border-t border-gray-100 bg-white/80 backdrop-blur">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenWaterParams();
-          }}
-          className="flex h-12 items-center justify-center text-gray-500 transition-all duration-300 hover:bg-[#5B4CF6]/10 hover:text-[#5B4CF6] active:scale-95"
-          title="Запис параметрів води"
-        >
-          <Droplet size={17} />
-        </button>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenTask();
-          }}
-          className="flex h-12 items-center justify-center text-gray-500 transition-all duration-300 hover:bg-[#5B4CF6]/10 hover:text-[#5B4CF6] active:scale-95"
-          title="Нове завдання"
-        >
-          <Pencil size={17} />
-        </button>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenSettings();
-          }}
-          className="flex h-12 items-center justify-center text-gray-500 transition-all duration-300 hover:bg-[#5B4CF6]/10 hover:text-[#5B4CF6] active:scale-95"
-          title="Налаштування"
-        >
-          <Settings size={17} />
-        </button>
-      </div>
-    </motion.article>
+      </motion.div>
+    </>
   );
 }

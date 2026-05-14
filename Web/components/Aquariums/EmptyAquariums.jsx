@@ -1,50 +1,51 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { motion } from "framer-motion";
 
-export function EmptyAquariums({ onAdd }) {
+export function EmptyAquariums({ onCreate, onAdd }) {
+  const handleClick = onCreate || onAdd;
+
   return (
     <motion.section
-      initial={{ opacity: 0, y: 32 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, ease: "easeOut" }}
-      className="flex min-h-[calc(100vh-80px)] flex-col items-center justify-center text-center"
+      transition={{ duration: 0.35 }}
+      className="
+        flex min-h-[420px] flex-col items-center justify-center
+        rounded-[32px] border border-dashed border-slate-200
+        bg-slate-50 px-6 py-12 text-center
+      "
     >
-      <motion.h1
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.12 }}
-        className="text-5xl font-light tracking-[0.12em] text-gray-900"
-      >
-        У вас ще немає жодної екосистеми 🐠
-      </motion.h1>
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-4xl shadow-sm">
+        🐠
+      </div>
 
-      <motion.p
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.22 }}
-        className="mt-8 max-w-[760px] text-sm leading-6 text-gray-400"
-      >
-        Створіть свій перший акваріум, щоб почати відстежувати параметри води,
-        контролювати баланс та вести щоденник спостережень.
-      </motion.p>
+      <h2 className="mt-6 text-2xl font-black text-slate-950">
+        У вас ще немає акваріумів
+      </h2>
+
+      <p className="mt-3 max-w-[420px] text-sm leading-6 text-slate-500">
+        Створіть першу екосистему, щоб вести щоденник, галерею, параметри води
+        та догляд.
+      </p>
 
       <motion.button
         type="button"
-        onClick={onAdd}
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
+        onClick={handleClick}
         whileHover={{
-          y: -3,
-          boxShadow: "0 18px 40px rgba(109,93,251,0.32)",
+          y: -2,
+          boxShadow: "0 16px 35px rgba(99,91,255,0.32)",
         }}
-        whileTap={{ scale: 0.97 }}
-        className="mt-36 flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#6D5DFB] to-[#9333EA] px-8 py-4 text-base font-semibold text-white"
+        whileTap={{ scale: 0.96 }}
+        className="
+          mt-7 flex items-center gap-2
+          rounded-xl bg-[#635BFF] px-6 py-3
+          text-sm font-black text-white transition hover:bg-[#5147f5]
+        "
       >
-        Додати перший акваріум
-        <ArrowRight size={18} />
+        <Plus size={17} />
+        Створити акваріум
       </motion.button>
     </motion.section>
   );

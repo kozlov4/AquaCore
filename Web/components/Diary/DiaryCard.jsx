@@ -52,17 +52,12 @@ export function DiaryCard({ entry, index, onOpen }) {
 
       <div className="p-5">
         <p className="text-xs font-bold text-slate-400">
-          {entry.pinned && (
-            <span className="text-red-500">Закріплено • </span>
-          )}
+          {entry.pinned && <span className="text-red-500">Закріплено • </span>}
           {entry.date}
           {entry.aquarium && (
             <>
               {" "}
-              •{" "}
-              <span className="text-[#635BFF]">
-                {entry.aquarium}
-              </span>
+              • <span className="text-[#635BFF]">{entry.aquarium}</span>
             </>
           )}
         </p>

@@ -40,8 +40,8 @@ export function DiaryDetailsModal({ entry, onClose, onEdit, onDelete }) {
                         ? "bg-red-50 text-red-500"
                         : entry.tagColor === "green"
                         ? "bg-green-50 text-green-600"
-                        : entry.tagColor === "yellow"
-                        ? "bg-yellow-50 text-yellow-600"
+                        : entry.tagColor === "blue"
+                        ? "bg-blue-50 text-blue-600"
                         : "bg-slate-100 text-slate-600"
                     }
                   `}

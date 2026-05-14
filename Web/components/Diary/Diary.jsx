@@ -124,7 +124,7 @@ export function Diary() {
         </div>
       </main>
 
-           <AnimatePresence>
+      <AnimatePresence>
         {diary.isCreateOpen && (
           <AddDiaryEntryModal
             aquariums={diary.aquariums}

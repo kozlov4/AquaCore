@@ -39,28 +39,30 @@ export default async function handler(req, res) {
 
       const data = await readResponse(response);
 
-      console.log(`GET /diary/${id} status:`, response.status);
-      console.log(`GET /diary/${id} response:`, data);
-
       return res.status(response.status).json(data);
     }
 
     if (req.method === "PUT") {
+      const body = {
+        created_at: req.body.created_at,
+        aquarium_id: Number(req.body.aquarium_id),
+        tag: req.body.tag,
+        title: req.body.title,
+        observation: req.body.observation,
+        is_pinned: Boolean(req.body.is_pinned),
+      };
+
+      if (Object.prototype.hasOwnProperty.call(req.body, "image_id")) {
+        body.image_id = req.body.image_id;
+      }
+
       const response = await fetch(`${API_URL}/diary/${id}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({
-          created_at: req.body.created_at,
-          aquarium_id: Number(req.body.aquarium_id),
-          tag: req.body.tag,
-          title: req.body.title,
-          observation: req.body.observation,
-          image_id: req.body.image_id || null,
-          is_pinned: Boolean(req.body.is_pinned),
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await readResponse(response);
@@ -79,10 +81,11 @@ export default async function handler(req, res) {
         },
       });
 
-      const data = await readResponse(response);
+      if (response.status === 204) {
+        return res.status(204).end();
+      }
 
-      console.log(`DELETE /diary/${id} status:`, response.status);
-      console.log(`DELETE /diary/${id} response:`, data);
+      const data = await readResponse(response);
 
       return res.status(response.status).json(data);
     }
@@ -91,8 +94,6 @@ export default async function handler(req, res) {
       message: "Method not allowed",
     });
   } catch (error) {
-    console.error("Diary detail proxy error:", error);
-
     return res.status(500).json({
       message: error.message || "Diary detail proxy server error",
     });

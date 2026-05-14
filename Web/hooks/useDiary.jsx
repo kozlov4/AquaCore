@@ -29,6 +29,7 @@ export function useDiary() {
   const [isLoading, setIsLoading] = useState(false);
   const [isEntryLoading, setIsEntryLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
   const [diaryError, setDiaryError] = useState("");
 
   useEffect(() => {
@@ -101,12 +102,13 @@ export function useDiary() {
 
   const openCreateModal = () => {
     setEditingEntry(null);
+    setSelectedEntry(null);
     setIsCreateOpen(true);
   };
 
   const openEditModal = (entry) => {
-    setSelectedEntry(null);
     setEditingEntry(entry);
+    setSelectedEntry(null);
     setIsCreateOpen(true);
   };
 
@@ -156,8 +158,13 @@ export function useDiary() {
 
       await deleteDiaryEntry(deletingEntry.id);
 
+      setEntries((prev) =>
+        prev.filter((entry) => entry.id !== deletingEntry.id)
+      );
+
       setDeletingEntry(null);
       setSelectedEntry(null);
+
       await loadEntries();
     } catch (error) {
       setDiaryError(error.message || "Не вдалося видалити запис");

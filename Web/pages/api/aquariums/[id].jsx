@@ -30,19 +30,21 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PUT") {
+      const body = {
+        name: req.body.name,
+        volume: Number(req.body.volume),
+        type: req.body.type,
+        created_at: req.body.created_at,
+        image_id: req.body.image_id || null,
+      };
+
       const response = await fetch(`${API_URL}/aquariums/${id}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({
-          name: req.body.name,
-          volume: Number(req.body.volume),
-          type: req.body.type,
-          created_at: req.body.created_at,
-          image_id: req.body.image_id || null,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await readResponse(response);
@@ -61,9 +63,14 @@ export default async function handler(req, res) {
         },
       });
 
+      console.log(`DELETE /aquariums/${id} status:`, response.status);
+
+      if (response.status === 204) {
+        return res.status(204).end();
+      }
+
       const data = await readResponse(response);
 
-      console.log(`DELETE /aquariums/${id} status:`, response.status);
       console.log(`DELETE /aquariums/${id} response:`, data);
 
       return res.status(response.status).json(data);

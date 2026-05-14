@@ -40,14 +40,14 @@ export const diaryTags = [
     color: "green",
   },
   {
-    label: "🩺 Хвороба",
+    label: "🏥 Хвороби",
     value: "diseases_health_issues",
     color: "red",
   },
   {
-    label: "🐟 Поведінка",
+    label: "✨ Поведінка",
     value: "behavior_spawning",
-    color: "yellow",
+    color: "blue",
   },
   {
     label: "⚙️ Обладнання",
@@ -95,19 +95,26 @@ export function mapDiaryEntryFromApi(item) {
 
   return {
     id: item.id,
+
     createdAt: item.created_at,
     date: formatDiaryDate(item.created_at),
+
     title: item.title || "",
     text: item.observation || "",
     observation: item.observation || "",
-    aquarium: item.aquarium_name || "",
-    aquariumName: item.aquarium_name || "",
+
+    aquariumId: item.aquarium_id || item.aquarium?.id || "",
+    aquarium: item.aquarium_name || item.aquarium?.name || "",
+    aquariumName: item.aquarium_name || item.aquarium?.name || "",
+
     tag: item.tag,
     tagLabel: tagMeta.label,
     tagColor: tagMeta.color,
+
     image: Boolean(item.cover_image_url),
     imageUrl: item.cover_image_url || null,
     coverImageUrl: item.cover_image_url || null,
+
     pinned: Boolean(item.is_pinned),
     isPinned: Boolean(item.is_pinned),
   };
@@ -201,7 +208,7 @@ export async function createDiaryEntry({
       created_at: createdAt,
       title,
       observation,
-      aquarium_id: aquariumId,
+      aquarium_id: Number(aquariumId),
       tag,
       image_id: imageId,
       is_pinned: Boolean(isPinned),
@@ -225,26 +232,47 @@ export async function updateDiaryEntry({
   aquariumId,
   tag,
   file,
-  imageId = null,
   isPinned,
+  removeImage = false,
 }) {
-  let finalImageId = imageId;
+  let imageId;
+  let shouldSendImageId = false;
+
+  if (removeImage) {
+    imageId = null;
+    shouldSendImageId = true;
+  }
 
   if (file) {
     const uploaded = await uploadImage(file);
 
-    finalImageId =
+    imageId =
       uploaded?.id ||
       uploaded?.image_id ||
       uploaded?.image?.id ||
       uploaded?.data?.id;
 
-    if (!finalImageId) {
+    shouldSendImageId = true;
+
+    if (!imageId) {
       throw new Error("Backend не повернув image_id після завантаження фото");
     }
   }
 
   const createdAt = new Date(date).toISOString();
+
+  const body = {
+    created_at: createdAt,
+    title,
+    observation,
+    aquarium_id: Number(aquariumId),
+    tag,
+    is_pinned: Boolean(isPinned),
+  };
+
+  if (shouldSendImageId) {
+    body.image_id = imageId;
+  }
 
   const response = await fetch(`/api/diary/${id}`, {
     method: "PUT",
@@ -252,15 +280,7 @@ export async function updateDiaryEntry({
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify({
-      created_at: createdAt,
-      title,
-      observation,
-      aquarium_id: aquariumId,
-      tag,
-      image_id: finalImageId,
-      is_pinned: Boolean(isPinned),
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json().catch(() => null);
@@ -278,9 +298,13 @@ export async function deleteDiaryEntry(id) {
     headers: authHeaders(),
   });
 
+  if (response.status === 204) {
+    return true;
+  }
+
   const data = await response.json().catch(() => null);
 
-  if (!response.ok && response.status !== 204) {
+  if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося видалити запис"));
   }
 

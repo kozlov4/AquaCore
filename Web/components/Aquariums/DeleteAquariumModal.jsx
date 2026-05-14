@@ -2,10 +2,10 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 
-export function DeleteDiaryModal({ entry, onClose, onConfirm, isLoading }) {
+export function DeleteAquariumModal({ aquarium, onClose, onConfirm, isLoading }) {
   return (
     <AnimatePresence mode="wait">
-      {entry && (
+      {aquarium && (
         <>
           <motion.div
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
@@ -22,7 +22,7 @@ export function DeleteDiaryModal({ entry, onClose, onConfirm, isLoading }) {
             transition={{ duration: 0.22 }}
             className="
               fixed left-1/2 top-1/2 z-[110]
-              w-[calc(100%-32px)] max-w-[360px]
+              w-[calc(100%-32px)] max-w-[380px]
               -translate-x-1/2 -translate-y-1/2
               rounded-2xl bg-white p-6 text-center
               shadow-[0_25px_80px_rgba(15,23,42,0.28)]
@@ -33,13 +33,15 @@ export function DeleteDiaryModal({ entry, onClose, onConfirm, isLoading }) {
             </div>
 
             <h2 className="mt-5 text-lg font-black text-slate-950">
-              Видалити цей запис?
+              Видалити акваріум?
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Ви збираєтесь видалити запис{" "}
-              <span className="font-bold text-slate-700">“{entry.title}”</span>.
-              Цю дію неможливо буде скасувати.
+              Ви збираєтесь видалити{" "}
+              <span className="font-bold text-slate-700">
+                “{aquarium.name}”
+              </span>
+              . Цю дію неможливо буде скасувати.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
@@ -47,7 +49,12 @@ export function DeleteDiaryModal({ entry, onClose, onConfirm, isLoading }) {
                 type="button"
                 onClick={onClose}
                 disabled={isLoading}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="
+                  rounded-xl border border-slate-200 px-4 py-3
+                  text-sm font-black text-slate-600
+                  transition hover:bg-slate-50
+                  disabled:cursor-not-allowed disabled:opacity-60
+                "
               >
                 Скасувати
               </button>
