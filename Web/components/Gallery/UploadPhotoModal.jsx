@@ -1,24 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { X, ChevronDown, Upload } from "lucide-react";
 import { motion } from "framer-motion";
 
-const categories = ["🖼️ Загальний план", "🐟 Жителі", "🌿 Рослини", "⚙️ Інше"];
+const categories = ["Загальний план", "Жителі", "Рослини", "Інше"];
 
-export function UploadPhotoModal({ onClose, onSave }) {
-  const [aquarium, setAquarium] = useState("Головний Травник (60 Л)");
-  const [category, setCategory] = useState("🖼️ Загальний план");
+export function UploadPhotoModal({
+  aquariums = [],
+  onClose,
+  onSave,
+  isLoading = false,
+}) {
+  const [aquariumId, setAquariumId] = useState(aquariums[0]?.id || "");
+  const [category, setCategory] = useState("Загальний план");
   const [caption, setCaption] = useState("");
+  const [file, setFile] = useState(null);
+  const [localError, setLocalError] = useState("");
 
-  const handleSave = () => {
-    onSave?.({
-      aquarium,
-      category,
-      caption,
-    });
+  const previewUrl = useMemo(() => {
+    if (!file) return "";
 
-    onClose();
+    return URL.createObjectURL(file);
+  }, [file]);
+
+  const handleSave = async () => {
+    try {
+      setLocalError("");
+
+      if (!file) {
+        setLocalError("Оберіть фото");
+        return;
+      }
+
+      if (!aquariumId) {
+        setLocalError("Оберіть акваріум");
+        return;
+      }
+
+      await onSave?.({
+        file,
+        aquariumId,
+        category,
+        caption,
+      });
+    } catch (error) {
+      setLocalError(error.message || "Не вдалося зберегти фото");
+    }
   };
 
   return (
@@ -51,12 +79,7 @@ export function UploadPhotoModal({ onClose, onSave }) {
             sm:items-center sm:px-6 sm:py-5
           "
         >
-          <h2
-            className="
-              text-xl font-black leading-tight text-slate-950
-              sm:text-2xl
-            "
-          >
+          <h2 className="text-xl font-black leading-tight text-slate-950 sm:text-2xl">
             Завантажити фотографію
           </h2>
 
@@ -79,46 +102,74 @@ export function UploadPhotoModal({ onClose, onSave }) {
             sm:px-6 sm:py-6
           "
         >
-          <button
-            type="button"
+          <label
             className="
-              flex h-[145px] w-full flex-col items-center justify-center
-              rounded-2xl border-2 border-dashed border-[#C7D2FE]
+              flex h-[145px] w-full cursor-pointer flex-col items-center justify-center
+              overflow-hidden rounded-2xl border-2 border-dashed border-[#C7D2FE]
               bg-slate-50 text-center transition
               hover:border-[#635BFF] hover:bg-[#635BFF]/5
               sm:h-[165px]
             "
           >
-            <div className="mb-4 rounded-full bg-white p-4 text-[#635BFF] shadow-sm">
-              <Upload size={24} />
-            </div>
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <>
+                <div className="mb-4 rounded-full bg-white p-4 text-[#635BFF] shadow-sm">
+                  <Upload size={24} />
+                </div>
 
-            <p className="text-sm font-black text-[#2F2A8F]">
-              Натисніть для вибору файлу
-            </p>
+                <p className="text-sm font-black text-[#2F2A8F]">
+                  Натисніть для вибору файлу
+                </p>
 
-            <p className="mt-1 max-w-[260px] text-xs leading-5 text-slate-400">
-              або перетягніть фотографію сюди &#40;до 10 MB&#41;
-            </p>
-          </button>
+                <p className="mt-1 max-w-[260px] text-xs leading-5 text-slate-400">
+                  або перетягніть фотографію сюди &#40;до 10 MB&#41;
+                </p>
+              </>
+            )}
+
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </label>
 
           <div>
             <label className="mb-2 block text-sm font-black text-slate-700">
               Для якої екосистеми?
             </label>
 
-            <button
-              type="button"
-              className="
-                flex w-full items-center justify-between
-                rounded-xl border border-slate-200
-                px-4 py-3 text-left text-sm font-bold
-                text-slate-900 transition hover:border-[#635BFF]/40
-              "
-            >
-              <span className="truncate">{aquarium}</span>
-              <ChevronDown size={18} className="shrink-0 text-slate-400" />
-            </button>
+            <div className="relative">
+              <select
+                value={aquariumId}
+                onChange={(e) => setAquariumId(e.target.value)}
+                className="
+                  w-full appearance-none rounded-xl border border-slate-200
+                  bg-white px-4 py-3 pr-10 text-left text-sm font-bold
+                  text-slate-900 outline-none transition hover:border-[#635BFF]/40
+                "
+              >
+                <option value="">Оберіть акваріум</option>
+
+                {aquariums.map((aquarium) => (
+                  <option key={aquarium.id} value={aquarium.id}>
+                    {aquarium.name}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown
+                size={18}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
           </div>
 
           <div>
@@ -166,6 +217,12 @@ export function UploadPhotoModal({ onClose, onSave }) {
               "
             />
           </div>
+
+          {localError && (
+            <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+              {localError}
+            </p>
+          )}
         </div>
 
         <div
@@ -189,19 +246,27 @@ export function UploadPhotoModal({ onClose, onSave }) {
           <motion.button
             type="button"
             onClick={handleSave}
-            whileHover={{
-              y: -2,
-              boxShadow: "0 14px 28px rgba(99,91,255,0.32)",
-            }}
-            whileTap={{ scale: 0.96 }}
-            className="
-              w-full rounded-xl bg-[#635BFF]
-              px-6 py-3 text-sm font-black text-white
-              transition hover:bg-[#5147f5]
-              sm:w-auto
-            "
+            disabled={isLoading}
+            whileHover={
+              isLoading
+                ? {}
+                : {
+                    y: -2,
+                    boxShadow: "0 14px 28px rgba(99,91,255,0.32)",
+                  }
+            }
+            whileTap={isLoading ? {} : { scale: 0.96 }}
+            className={`
+              w-full rounded-xl px-6 py-3 text-sm font-black text-white
+              transition sm:w-auto
+              ${
+                isLoading
+                  ? "cursor-not-allowed bg-[#635BFF]/60"
+                  : "cursor-pointer bg-[#635BFF] hover:bg-[#5147f5]"
+              }
+            `}
           >
-            Зберегти в галерею
+            {isLoading ? "Збереження..." : "Зберегти в галерею"}
           </motion.button>
         </div>
       </motion.div>

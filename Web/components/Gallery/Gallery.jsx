@@ -1,67 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { ImagePlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "../Profile/Sidebar";
 import { GalleryFilters } from "./GalleryFilters";
 import { GalleryCard } from "./GalleryCard";
 import { UploadPhotoModal } from "./UploadPhotoModal";
-
-const initialPhotos = [
-  {
-    id: 1,
-    icon: "🌿",
-    size: "large",
-    gradient: "from-[#A5A6FF] to-[#B883F2]",
-  },
-  {
-    id: 2,
-    icon: "🐟",
-    size: "wide",
-    gradient: "from-[#5BA9F8] to-[#56DDE2]",
-  },
-  {
-    id: 3,
-    icon: "⚙️",
-    size: "tall",
-    gradient: "from-[#2F3948] to-[#111827]",
-  },
-  {
-    id: 4,
-    icon: "🐌",
-    size: "wide",
-    gradient: "from-[#FFE17A] to-[#FF9A3D]",
-  },
-  {
-    id: 5,
-    icon: "🦐",
-    size: "medium",
-    gradient: "from-[#67E8A4] to-[#14B8A6]",
-  },
-];
+import { GalleryPhotoModal } from "./GalleryPhotoModal";
+import { useGallery } from "../../hooks/useGallery";
 
 export function Gallery() {
-  const [photos, setPhotos] = useState(initialPhotos);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-
-  const handleSavePhoto = (photo) => {
-    setPhotos((prev) => [
-      {
-        id: Date.now(),
-        icon: photo.category.includes("Рослини")
-          ? "🌿"
-          : photo.category.includes("Жителі")
-          ? "🐟"
-          : photo.category.includes("Інше")
-          ? "⚙️"
-          : "🖼️",
-        size: "wide",
-        gradient: "from-[#635BFF] to-[#22D3EE]",
-      },
-      ...prev,
-    ]);
-  };
+  const gallery = useGallery();
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-white">
@@ -97,7 +46,7 @@ export function Gallery() {
 
             <motion.button
               type="button"
-              onClick={() => setIsUploadOpen(true)}
+              onClick={() => gallery.setIsUploadOpen(true)}
               whileHover={{
                 y: -2,
                 boxShadow: "0 16px 34px rgba(99,91,255,0.32)",
@@ -116,7 +65,45 @@ export function Gallery() {
             </motion.button>
           </motion.header>
 
-          <GalleryFilters />
+          <GalleryFilters
+            aquariums={gallery.aquariums}
+            selectedAquariumName={gallery.selectedAquariumName}
+            setSelectedAquariumName={gallery.setSelectedAquariumName}
+            selectedCategory={gallery.selectedCategory}
+            setSelectedCategory={gallery.setSelectedCategory}
+            sortOrder={gallery.sortOrder}
+            setSortOrder={gallery.setSortOrder}
+          />
+
+          {gallery.galleryError && (
+            <p className="mt-6 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold text-red-500">
+              {gallery.galleryError}
+            </p>
+          )}
+
+          {gallery.isLoading && (
+            <p className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-500">
+              Завантаження галереї...
+            </p>
+          )}
+
+          {gallery.isPhotoLoading && (
+            <p className="mt-4 rounded-2xl border border-[#635BFF]/10 bg-[#635BFF]/10 px-5 py-4 text-sm font-bold text-[#635BFF]">
+              Завантаження фото...
+            </p>
+          )}
+
+          {!gallery.isLoading && gallery.photos.length === 0 && (
+            <div className="mt-8 rounded-3xl border border-slate-100 bg-slate-50 p-10 text-center">
+              <p className="text-5xl">🖼️</p>
+              <h3 className="mt-4 text-xl font-black text-slate-950">
+                Фото ще немає
+              </h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Завантажте перше фото своєї екосистеми.
+              </p>
+            </div>
+          )}
 
           <motion.section
             layout
@@ -126,21 +113,35 @@ export function Gallery() {
               xl:grid-cols-4
             "
           >
-            {photos.map((photo, index) => (
-              <GalleryCard key={photo.id} photo={photo} index={index} />
+            {gallery.photos.map((photo, index) => (
+              <GalleryCard
+                key={photo.id}
+                photo={photo}
+                index={index}
+                onOpen={() => gallery.openPhoto(photo)}
+              />
             ))}
           </motion.section>
         </div>
       </main>
 
       <AnimatePresence>
-        {isUploadOpen && (
+        {gallery.isUploadOpen && (
           <UploadPhotoModal
-            onClose={() => setIsUploadOpen(false)}
-            onSave={handleSavePhoto}
+            aquariums={gallery.aquariums}
+            onClose={() => gallery.setIsUploadOpen(false)}
+            onSave={gallery.handleSavePhoto}
+            isLoading={gallery.isUploading}
           />
         )}
       </AnimatePresence>
+
+      <GalleryPhotoModal
+        photo={gallery.selectedPhoto}
+        onClose={gallery.closePhoto}
+        onDelete={gallery.handleDeletePhoto}
+        onUpdateCaption={gallery.handleUpdatePhotoCaption}
+      />
     </div>
   );
 }

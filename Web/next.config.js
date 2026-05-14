@@ -6,12 +6,17 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "res.cloudinary.com",
         pathname: "/**",
       },
       {
         protocol: "https",
         hostname: "aquacore.onrender.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
         pathname: "/**",
       },
     ],
