@@ -3,13 +3,11 @@ from datetime import timedelta, date
 import csv
 import io
 from fastapi.responses import StreamingResponse
-from core.models import WaterTest
-from sqlalchemy import select
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import Aquarium
+from core.models import Aquarium
 from core.models import WaterTest
 
 from .schemas import (
