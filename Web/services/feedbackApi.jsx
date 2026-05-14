@@ -54,8 +54,8 @@ export async function createOrUpdateFeedback({ rate, description }) {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      rate,
-      description,
+      rate: Number(rate),
+      description: String(description),
     }),
   });
 

@@ -1,13 +1,6 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  backdropVariants,
-  modalVariants,
-  childVariants,
-  primaryButtonMotion,
-  secondaryButtonMotion,
-} from "./modalAnimations";
 
 export function ForgotPasswordModal({
   isOpen,
@@ -15,79 +8,101 @@ export function ForgotPasswordModal({
   setResetEmail,
   onClose,
   onSend,
+  isLoading,
+  error,
 }) {
   return (
     <AnimatePresence mode="wait">
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 z-40 bg-black/45"
-            variants={backdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
           />
 
           <motion.div
-            variants={modalVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="fixed top-1/2 left-1/2 z-50 w-[90%] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white px-6 py-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+            initial={{ opacity: 0, y: 35, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 25, scale: 0.96 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="
+              fixed left-1/2 top-1/2 z-50
+              w-[calc(100%-32px)] max-w-[460px]
+              -translate-x-1/2 -translate-y-1/2
+              rounded-2xl bg-white px-5 py-6
+              shadow-[0_25px_80px_rgba(15,23,42,0.25)]
+              sm:px-7 sm:py-7
+            "
           >
-            <motion.h2
-              variants={childVariants}
-              className="text-center text-2xl font-bold text-[#2C2C2C]"
-            >
+            <h2 className="text-2xl font-bold text-[#171827]">
               Відновлення пароля
-            </motion.h2>
+            </h2>
 
-            <motion.p
-              variants={childVariants}
-              className="mt-4 text-center text-sm text-gray-400"
-            >
-              Введіть email, на який зареєстрований ваш акаунт. Ми відправимо
-              код підтвердження.
-            </motion.p>
+            <p className="mt-2 text-sm leading-6 text-gray-500">
+              Введіть email, який привʼязаний до акаунта. Ми відправимо код для
+              зміни пароля.
+            </p>
 
-            <motion.div variants={childVariants} className="mt-6">
-              <label className="mb-2 block text-base font-semibold text-[#2C2C2C]">
+            <div className="mt-6">
+              <label className="mb-2 block text-sm font-semibold text-[#171827]">
                 Email
               </label>
 
-              <motion.input
-                whileFocus={{ scale: 1.01 }}
-                transition={{ type: "spring", stiffness: 280, damping: 20 }}
+              <input
                 type="email"
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition-all duration-200 focus:border-blue-500 focus:shadow-[0_0_0_4px_rgba(33,150,243,0.12)]"
+                placeholder="user@example.com"
+                className="
+                  w-full rounded-xl border border-gray-200
+                  px-4 py-3 text-sm outline-none transition
+                  placeholder:text-gray-400
+                  focus:border-[#D688B7]
+                  focus:ring-4 focus:ring-[#D688B7]/20
+                "
               />
-            </motion.div>
+            </div>
 
-            <motion.div
-              variants={childVariants}
-              className="mt-8 flex items-center justify-between"
-            >
-              <motion.button
+            {error && (
+              <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-500">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+              <button
                 type="button"
                 onClick={onClose}
-                className="cursor-pointer text-sm font-medium text-[#2196F3] hover:underline"
-                {...secondaryButtonMotion}
+                className="
+                  rounded-xl px-5 py-3 text-sm font-bold
+                  text-gray-500 transition hover:bg-gray-50 hover:text-gray-900
+                "
               >
                 Скасувати
-              </motion.button>
+              </button>
 
               <motion.button
                 type="button"
                 onClick={onSend}
-                className="cursor-pointer rounded-xl bg-[#2196F3] px-5 py-2.5 text-sm font-semibold text-white"
-                {...primaryButtonMotion}
+                disabled={isLoading}
+                whileHover={isLoading ? {} : { y: -2 }}
+                whileTap={isLoading ? {} : { scale: 0.96 }}
+                className={`
+                  rounded-xl px-6 py-3 text-sm font-bold text-white
+                  transition
+                  ${
+                    isLoading
+                      ? "cursor-not-allowed bg-[#D688B7]/60"
+                      : "cursor-pointer bg-[#D688B7] hover:bg-[#c879aa]"
+                  }
+                `}
               >
-                Надіслати
+                {isLoading ? "Надсилання..." : "Надіслати код"}
               </motion.button>
-            </motion.div>
+            </div>
           </motion.div>
         </>
       )}

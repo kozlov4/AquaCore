@@ -41,6 +41,7 @@ const dangerStyles = {
 
 export function DiseaseCard({ disease, searchValue, onOpen }) {
   const danger = dangerStyles[disease.danger] || dangerStyles.medium;
+  const label = disease.dangerLabel || danger.label;
 
   return (
     <motion.article
@@ -106,7 +107,7 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
         <div
           className={`mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-bold shadow-sm ${danger.className}`}
         >
-          {danger.label}
+          {label}
         </div>
 
         <h3

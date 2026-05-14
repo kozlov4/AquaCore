@@ -1,29 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
-const diseases = Array.from({ length: 12 }, (_, index) => ({
-  id: index + 1,
-  title: index % 3 === 0 ? "Туберкульоз риб" : "Манка / Іхтіофтіріоз",
-  type: "fish",
-  danger: index % 3 === 0 ? "high" : "medium",
-  tags: ["білі_крапки", "скребіння", "дихання_біля_дна"],
-  symptoms: ["схуднення", "виснаження", "викривлення", "інфекційна"],
-  diagnostics: [
-    "Поступове схуднення попри нормальне харчування",
-    "Викривлення хребта",
-    "Западання черевця",
-    "Млявість, самотність",
-  ],
-  reason:
-    "Мікобактерії — дуже стійкі. Передаються через канібалізм, заражену рибу, необроблений живий корм.",
-  treatment: [
-    "Підтвердіть підозру — зверніться до іхтіопатолога.",
-    "Відсадити та ізолювати хвору рибу.",
-    "Карантин нових риб мінімум 4 тижні.",
-    "При роботі з акваріумом — надягайте рукавички.",
-  ],
-}));
+import { useCallback, useEffect, useState } from "react";
+import { getDiseaseById, getDiseases } from "../services/diseasesApi";
 
 export const diseaseFilters = [
   "Всі",
@@ -35,55 +13,93 @@ export const diseaseFilters = [
 export function useDiseases() {
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const [activeFilter, setActiveFilter] = useState("Всі");
+  const [activeTargetType, setActiveTargetType] = useState("");
+
+  const [filteredDiseases, setFilteredDiseases] = useState([]);
   const [selectedDisease, setSelectedDisease] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [diseasesError, setDiseasesError] = useState("");
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      setDebouncedSearch(searchValue.trim().toLowerCase());
-    }, 300);
+      setDebouncedSearch(searchValue.trim());
+    }, 350);
 
     return () => clearTimeout(timeout);
   }, [searchValue]);
 
-  const filteredDiseases = useMemo(() => {
-    return diseases.filter((disease) => {
-      const titleMatch = disease.title.toLowerCase().includes(debouncedSearch);
+  const loadDiseases = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setDiseasesError("");
 
-      const tagsMatch = disease.tags.some((tag) =>
-        tag.toLowerCase().includes(debouncedSearch)
-      );
+      const categoryTags = activeFilter === "Всі" ? [] : [activeFilter];
 
-      const symptomsMatch = disease.symptoms.some((symptom) =>
-        symptom.toLowerCase().includes(debouncedSearch)
-      );
+      const data = await getDiseases({
+        targetType: activeTargetType,
+        searchText: debouncedSearch,
+        categoryTags,
+      });
 
-      const matchesSearch =
-        debouncedSearch === "" || titleMatch || tagsMatch || symptomsMatch;
+      setFilteredDiseases(data);
+    } catch (error) {
+      setFilteredDiseases([]);
+      setDiseasesError(error.message || "Помилка завантаження хвороб");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeFilter, activeTargetType, debouncedSearch]);
 
-      const matchesFilter =
-        activeFilter === "Всі" ||
-        disease.tags
-          .join(" ")
-          .toLowerCase()
-          .includes(activeFilter.toLowerCase()) ||
-        disease.symptoms
-          .join(" ")
-          .toLowerCase()
-          .includes(activeFilter.toLowerCase());
+  useEffect(() => {
+    loadDiseases();
+  }, [loadDiseases]);
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [debouncedSearch, activeFilter]);
+  const openDiseaseDetails = async (disease) => {
+    try {
+      setIsDetailLoading(true);
+      setDiseasesError("");
+
+      const details = await getDiseaseById(disease.id);
+
+      setSelectedDisease(details);
+    } catch (error) {
+      setDiseasesError(error.message || "Помилка завантаження деталей хвороби");
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
+
+  const closeDiseaseDetails = () => {
+    setSelectedDisease(null);
+  };
 
   return {
     searchValue,
     setSearchValue,
+
     debouncedSearch,
+
     activeFilter,
     setActiveFilter,
+
+    activeTargetType,
+    setActiveTargetType,
+
     selectedDisease,
     setSelectedDisease,
+
     filteredDiseases,
+
+    isLoading,
+    isDetailLoading,
+    diseasesError,
+
+    loadDiseases,
+    openDiseaseDetails,
+    closeDiseaseDetails,
   };
 }

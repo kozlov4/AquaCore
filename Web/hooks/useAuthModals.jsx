@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { loginUser, registerUser } from "../services/authApi";
+import { forgotPassword, resetPassword } from "../services/resetPasswordApi";
 
 export function useAuthModals() {
   const router = useRouter();
@@ -15,7 +16,6 @@ export function useAuthModals() {
   const [authError, setAuthError] = useState("");
 
   const [isForgotOpen, setIsForgotOpen] = useState(false);
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
 
   const [resetEmail, setResetEmail] = useState("");
@@ -23,21 +23,29 @@ export function useAuthModals() {
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
 
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+
   const openForgotModal = () => {
-    setResetEmail(email);
+    setResetEmail(email || "");
+    setResetError("");
+    setResetSuccess("");
     setIsForgotOpen(true);
   };
 
   const closeForgotModal = () => {
     setIsForgotOpen(false);
-  };
-
-  const closeSuccessModal = () => {
-    setIsSuccessOpen(false);
+    setResetError("");
   };
 
   const closeResetPasswordModal = () => {
     setIsResetPasswordOpen(false);
+    setResetError("");
+    setResetSuccess("");
+    setResetCode(["", "", "", "", "", ""]);
+    setNewPassword("");
+    setRepeatPassword("");
   };
 
   const handleLogin = async () => {
@@ -125,61 +133,99 @@ export function useAuthModals() {
     }
   };
 
-  const handleSendReset = () => {
-    if (!resetEmail.trim()) {
-      alert("Введіть email");
-      return;
+  const handleSendForgotPassword = async () => {
+    try {
+      setResetLoading(true);
+      setResetError("");
+      setResetSuccess("");
+
+      if (!resetEmail.trim()) {
+        setResetError("Введіть email");
+        return;
+      }
+
+      await forgotPassword(resetEmail.trim());
+
+      setIsForgotOpen(false);
+      setIsResetPasswordOpen(true);
+      setResetSuccess("Код відправлено на вашу пошту");
+    } catch (error) {
+      setResetError(error.message || "Не вдалося відправити код");
+    } finally {
+      setResetLoading(false);
     }
-
-    setIsForgotOpen(false);
-    setIsSuccessOpen(true);
-  };
-
-  const handleOpenResetPasswordModal = () => {
-    setIsSuccessOpen(false);
-    setIsResetPasswordOpen(true);
   };
 
   const handleCodeChange = (index, value) => {
-    if (!/^\d?$/.test(value)) return;
+    const onlyNumber = value.replace(/\D/g, "");
 
-    const updatedCode = [...resetCode];
-    updatedCode[index] = value;
-    setResetCode(updatedCode);
+    setResetCode((prev) => {
+      const next = [...prev];
+      next[index] = onlyNumber.slice(0, 1);
+      return next;
+    });
 
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`code-input-${index + 1}`);
-      if (nextInput) nextInput.focus();
+    if (onlyNumber && index < 5) {
+      document.getElementById(`code-input-${index + 1}`)?.focus();
     }
   };
 
-  const handleCodeKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !resetCode[index] && index > 0) {
-      const prevInput = document.getElementById(`code-input-${index - 1}`);
-      if (prevInput) prevInput.focus();
+  const handleCodeKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !resetCode[index] && index > 0) {
+      document.getElementById(`code-input-${index - 1}`)?.focus();
     }
   };
 
-  const handleSavePassword = () => {
-    const fullCode = resetCode.join("");
+  const handleSavePassword = async () => {
+    try {
+      setResetLoading(true);
+      setResetError("");
+      setResetSuccess("");
 
-    if (fullCode.length !== 6) {
-      alert("Введіть 6-значний код");
-      return;
+      const code = resetCode.join("");
+
+      if (!resetEmail.trim()) {
+        setResetError("Email відсутній. Спробуйте ще раз");
+        return;
+      }
+
+      if (code.length !== 6) {
+        setResetError("Введіть 6-значний код");
+        return;
+      }
+
+      if (!newPassword.trim()) {
+        setResetError("Введіть новий пароль");
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setResetError("Новий пароль має містити мінімум 8 символів");
+        return;
+      }
+
+      if (newPassword !== repeatPassword) {
+        setResetError("Паролі не співпадають");
+        return;
+      }
+
+      await resetPassword({
+        email: resetEmail.trim(),
+        code,
+        newPassword,
+      });
+
+      setResetSuccess("Пароль успішно змінено");
+
+      setTimeout(() => {
+        closeResetPasswordModal();
+        router.push("/signIn");
+      }, 900);
+    } catch (error) {
+      setResetError(error.message || "Не вдалося змінити пароль");
+    } finally {
+      setResetLoading(false);
     }
-
-    if (!newPassword.trim() || !repeatPassword.trim()) {
-      alert("Заповніть усі поля");
-      return;
-    }
-
-    if (newPassword !== repeatPassword) {
-      alert("Паролі не співпадають");
-      return;
-    }
-
-    alert("API для відновлення пароля ще не підключено");
-    setIsResetPasswordOpen(false);
   };
 
   return {
@@ -200,25 +246,29 @@ export function useAuthModals() {
     handleSubmitAuth,
 
     isForgotOpen,
-    isSuccessOpen,
     isResetPasswordOpen,
 
     resetEmail,
-    resetCode,
-    newPassword,
-    repeatPassword,
-
     setResetEmail,
+
+    resetCode,
+    setResetCode,
+
+    newPassword,
     setNewPassword,
+
+    repeatPassword,
     setRepeatPassword,
+
+    resetLoading,
+    resetError,
+    resetSuccess,
 
     openForgotModal,
     closeForgotModal,
-    closeSuccessModal,
     closeResetPasswordModal,
 
-    handleSendReset,
-    handleOpenResetPasswordModal,
+    handleSendForgotPassword,
     handleCodeChange,
     handleCodeKeyDown,
     handleSavePassword,

@@ -2,7 +2,24 @@
 
 import { motion } from "framer-motion";
 
-export function DiseasesCategories() {
+export function DiseasesCategories({ activeTargetType, setActiveTargetType }) {
+  const categories = [
+    {
+      label: "🐟 Риби",
+      value: "Риби",
+      className: "border-blue-100 text-blue-600",
+    },
+    {
+      label: "🦐 Безхребетні",
+      value: "Безхребетні",
+      className: "border-orange-100 text-orange-600",
+    },
+  ];
+
+  const handleClick = (value) => {
+    setActiveTargetType((prev) => (prev === value ? "" : value));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
@@ -13,27 +30,30 @@ export function DiseasesCategories() {
         sm:mt-6 sm:gap-3
       "
     >
-      <span
-        className="
-          rounded-full border border-blue-100 bg-white/80
-          px-4 py-2 text-sm font-black text-blue-600
-          shadow-sm backdrop-blur transition
-          hover:-translate-y-0.5 hover:shadow-md
-        "
-      >
-        🐟 Риби
-      </span>
+      {categories.map((category) => {
+        const isActive = activeTargetType === category.value;
 
-      <span
-        className="
-          rounded-full border border-orange-100 bg-white/80
-          px-4 py-2 text-sm font-black text-orange-600
-          shadow-sm backdrop-blur transition
-          hover:-translate-y-0.5 hover:shadow-md
-        "
-      >
-        🦐 Безхребетні
-      </span>
+        return (
+          <button
+            key={category.value}
+            type="button"
+            onClick={() => handleClick(category.value)}
+            className={`
+              rounded-full border bg-white/80 px-4 py-2
+              text-sm font-black shadow-sm backdrop-blur
+              transition hover:-translate-y-0.5 hover:shadow-md
+              ${category.className}
+              ${
+                isActive
+                  ? "ring-4 ring-[#5B4CF6]/10"
+                  : ""
+              }
+            `}
+          >
+            {category.label}
+          </button>
+        );
+      })}
     </motion.div>
   );
 }

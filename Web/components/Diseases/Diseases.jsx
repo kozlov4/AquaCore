@@ -38,7 +38,10 @@ export function Diseases() {
               setSearchValue={diseases.setSearchValue}
             />
 
-            <DiseasesCategories />
+            <DiseasesCategories
+              activeTargetType={diseases.activeTargetType}
+              setActiveTargetType={diseases.setActiveTargetType}
+            />
 
             <DiseasesFilters
               filters={diseaseFilters}
@@ -46,22 +49,42 @@ export function Diseases() {
               setActiveFilter={diseases.setActiveFilter}
             />
 
-            {diseases.filteredDiseases.length > 0 ? (
+            {diseases.isLoading && (
+              <p className="mt-8 rounded-2xl border border-white/80 bg-white/80 px-5 py-4 text-sm font-bold text-slate-500 shadow-sm backdrop-blur">
+                Завантаження хвороб...
+              </p>
+            )}
+
+            {diseases.isDetailLoading && (
+              <p className="mt-4 rounded-2xl border border-[#5B4CF6]/10 bg-[#5B4CF6]/10 px-5 py-4 text-sm font-bold text-[#5B4CF6] shadow-sm backdrop-blur">
+                Завантаження деталей хвороби...
+              </p>
+            )}
+
+            {diseases.diseasesError && (
+              <p className="mt-8 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold text-red-500 shadow-sm">
+                {diseases.diseasesError}
+              </p>
+            )}
+
+            {!diseases.isLoading && diseases.filteredDiseases.length > 0 ? (
               <DiseasesGrid
                 diseases={diseases.filteredDiseases}
                 searchValue={diseases.debouncedSearch}
-                onOpen={diseases.setSelectedDisease}
+                onOpen={diseases.openDiseaseDetails}
               />
-            ) : (
-              <DiseasesEmptyState />
-            )}
+            ) : null}
+
+            {!diseases.isLoading &&
+              !diseases.diseasesError &&
+              diseases.filteredDiseases.length === 0 && <DiseasesEmptyState />}
           </div>
         </motion.main>
       </div>
 
       <DiseaseDetailsModal
         disease={diseases.selectedDisease}
-        onClose={() => diseases.setSelectedDisease(null)}
+        onClose={diseases.closeDiseaseDetails}
       />
     </div>
   );

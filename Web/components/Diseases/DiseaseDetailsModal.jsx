@@ -74,12 +74,7 @@ export function DiseaseDetailsModal({ disease, onClose }) {
                 sm:max-h-[calc(92vh-165px)] sm:p-7
               "
             >
-              <h2
-                className="
-                  text-xl font-black tracking-tight text-slate-950
-                  sm:text-2xl
-                "
-              >
+              <h2 className="text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
                 {disease.title}
               </h2>
 
@@ -90,7 +85,7 @@ export function DiseaseDetailsModal({ disease, onClose }) {
                   text-red-600 shadow-sm
                 "
               >
-                🚨 Висока небезпека
+                🚨 {disease.dangerLabel || "Небезпека"}
               </span>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -118,14 +113,20 @@ export function DiseaseDetailsModal({ disease, onClose }) {
                   🔍 Діагностика — точні симптоми
                 </h3>
 
-                <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                  {disease.diagnostics.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <span className="shrink-0">✅</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                {disease.diagnostics.length > 0 ? (
+                  <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+                    {disease.diagnostics.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span className="shrink-0">✅</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm leading-6 text-slate-500">
+                    Діагностичні симптоми не вказані.
+                  </p>
+                )}
               </section>
 
               <section
@@ -149,25 +150,31 @@ export function DiseaseDetailsModal({ disease, onClose }) {
                   💊 Протокол лікування
                 </h3>
 
-                <ol className="mt-4 space-y-3 text-sm text-slate-700">
-                  {disease.treatment.map((item, index) => (
-                    <motion.li
-                      key={item}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="
-                        rounded-2xl border border-red-100
-                        bg-red-50/80 px-4 py-3 shadow-sm
-                      "
-                    >
-                      <span className="mr-2 font-black text-red-500">
-                        {index + 1}.
-                      </span>
-                      {item}
-                    </motion.li>
-                  ))}
-                </ol>
+                {disease.treatment.length > 0 ? (
+                  <ol className="mt-4 space-y-3 text-sm text-slate-700">
+                    {disease.treatment.map((item, index) => (
+                      <motion.li
+                        key={item}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="
+                          rounded-2xl border border-red-100
+                          bg-red-50/80 px-4 py-3 shadow-sm
+                        "
+                      >
+                        <span className="mr-2 font-black text-red-500">
+                          {index + 1}.
+                        </span>
+                        {item}
+                      </motion.li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="mt-4 rounded-2xl border border-red-100 bg-red-50/80 px-4 py-3 text-sm text-slate-600">
+                    Протокол лікування не вказаний.
+                  </p>
+                )}
               </section>
 
               <div
@@ -190,6 +197,7 @@ export function DiseaseDetailsModal({ disease, onClose }) {
                 </div>
 
                 <motion.button
+                  type="button"
                   whileHover={{ y: -2, scale: 1.03 }}
                   whileTap={{ scale: 0.96 }}
                   className="
