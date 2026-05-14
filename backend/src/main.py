@@ -44,7 +44,7 @@ app.include_router(compatibility_router)
 
 app.include_router(water_test_router)
 app.include_router(task_router)
-app.include_router(equipment_router)
+# app.include_router(equipment_router)
 app.include_router(password_reset_router)
 
 
