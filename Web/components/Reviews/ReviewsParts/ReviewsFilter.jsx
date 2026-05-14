@@ -2,13 +2,14 @@
 
 import { motion } from "framer-motion";
 
-const sortOptions = [
-  "Нові спочатку",
-  "Найкращий рейтинг",
-  "Найнижчий рейтинг",
-];
+const sortOptions = ["Нові спочатку", "Найкращий рейтинг", "Найнижчий рейтинг"];
 
-export function ReviewsFilter() {
+export function ReviewsFilter({
+  selectedRating,
+  setSelectedRating,
+  selectedSort,
+  setSelectedSort,
+}) {
   return (
     <motion.aside
       initial={{ opacity: 0, x: 40 }}
@@ -24,19 +25,13 @@ export function ReviewsFilter() {
         Фільтр
       </h3>
 
-      <div
-        className="
-          grid grid-cols-1 gap-6
-          sm:grid-cols-2
-          lg:block
-        "
-      >
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:block">
         <div className="lg:mb-8">
           <p className="mb-3 text-sm font-semibold text-[#171827]">
             Оцінка
           </p>
 
-          {[5, 4, 3, 2].map((rating, index) => (
+          {[5, 4, 3, 2].map((rating) => (
             <label
               key={rating}
               className="
@@ -47,7 +42,8 @@ export function ReviewsFilter() {
               <input
                 type="radio"
                 name="rating"
-                defaultChecked={index === 0}
+                checked={selectedRating === rating}
+                onChange={() => setSelectedRating(rating)}
                 className="accent-[#5B4CF6]"
               />
 
@@ -55,6 +51,18 @@ export function ReviewsFilter() {
               <span>і вище</span>
             </label>
           ))}
+
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#171827] transition hover:text-[#5B4CF6]">
+            <input
+              type="radio"
+              name="rating"
+              checked={selectedRating === 0}
+              onChange={() => setSelectedRating(0)}
+              className="accent-[#5B4CF6]"
+            />
+
+            <span>Усі оцінки</span>
+          </label>
         </div>
 
         <div>
@@ -62,7 +70,7 @@ export function ReviewsFilter() {
             Сортувати за
           </p>
 
-          {sortOptions.map((item, index) => (
+          {sortOptions.map((item) => (
             <label
               key={item}
               className="
@@ -73,7 +81,8 @@ export function ReviewsFilter() {
               <input
                 type="radio"
                 name="sort"
-                defaultChecked={index === 0}
+                checked={selectedSort === item}
+                onChange={() => setSelectedSort(item)}
                 className="accent-[#5B4CF6]"
               />
 

@@ -1,79 +1,114 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createOrUpdateFeedback, getFeedbacks } from "../services/feedbackApi";
 
-const baseReviews = [
-  {
-    id: 1,
-    name: "Bimosaurus",
-    avatar: "/images/Avatar.png",
-    rating: 5,
-    text: "I’ve used other kits, but this one is the best. The attention to detail and usability are truly amazing.",
-  },
-  {
-    id: 2,
-    name: "Crystal Maiden",
-    avatar: "/images/Avatar.png",
-    rating: 5,
-    text: "The quality of the design is top-notch, and I love how organized the files are. It’s easy to find what I need.",
-  },
-  {
-    id: 3,
-    name: "Dazzle Healer",
-    avatar: "/images/Avatar.png",
-    rating: 5,
-    text: "This kit exceeded my expectations! The components are versatile and make implementation much easier.",
-  },
-  {
-    id: 4,
-    name: "Roshan Pro Max",
-    avatar: "/images/Avatar.png",
-    rating: 5,
-    text: "Perfect for quick prototyping! The designs are professional and work seamlessly with my workflow.",
-  },
-  {
-    id: 5,
-    name: "Mirana Marci",
-    avatar: "/images/Avatar.png",
-    rating: 5,
-    text: "I was blown away by how complete this UI Kit is. It has everything I need, from assets to components.",
-  },
-  {
-    id: 6,
-    name: "Hearts of Taras",
-    avatar: "/images/Avatar.png",
-    rating: 5,
-    text: "Amazing work! The color schemes are vibrant, and the icons fit perfectly with all my projects.",
-  },
-];
+const sortMap = {
+  "Нові спочатку": "newest",
+  "Найкращий рейтинг": "highest",
+  "Найнижчий рейтинг": "lowest",
+};
 
-const allReviews = Array.from({ length: 5 }).flatMap((_, index) =>
-  baseReviews.map((review) => ({
-    ...review,
-    id: `${review.id}-${index}`,
-  }))
-);
+function mapApiFeedbackToReview(item, index) {
+  return {
+    id: `${item?.user?.nickname || "user"}-${index}`,
+    name: item?.user?.nickname || "Користувач",
+    avatar: item?.user?.avatar?.image_url || "/images/User.svg",
+    rating: item?.rate || 5,
+    text: item?.description || "",
+  };
+}
 
 export function useReviews() {
+  const [reviews, setReviews] = useState([]);
+
   const [showAll, setShowAll] = useState(false);
+
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
 
-  const reviews = showAll ? allReviews : baseReviews;
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [selectedSort, setSelectedSort] = useState("Нові спочатку");
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState("");
+
+  const minRate = selectedRating || 0;
+  const sortBy = sortMap[selectedSort] || "newest";
+  const limit = showAll ? 100 : 6;
+
+  const loadReviews = async () => {
+    try {
+      setIsLoading(true);
+      setReviewsError("");
+
+      const data = await getFeedbacks({
+        limit,
+        offset: 0,
+        minRate,
+        sortBy,
+      });
+
+      const mappedReviews = Array.isArray(data)
+        ? data.map(mapApiFeedbackToReview)
+        : [];
+
+      setReviews(mappedReviews);
+    } catch (error) {
+      setReviewsError(error.message || "Помилка завантаження відгуків");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReviews();
+  }, [showAll, selectedRating, selectedSort]);
+
+  const handleCreateFeedback = async ({ rating, text }) => {
+    await createOrUpdateFeedback({
+      rate: rating,
+      description: text,
+    });
+
+    setIsFeedbackOpen(false);
+    setIsSuccessOpen(true);
+
+    await loadReviews();
+  };
 
   const handleFeedbackSuccess = () => {
     setIsFeedbackOpen(false);
     setIsSuccessOpen(true);
   };
 
+  const visibleReviews = useMemo(() => {
+    return reviews;
+  }, [reviews]);
+
   return {
+    reviews: visibleReviews,
+
     showAll,
     setShowAll,
+
     isFeedbackOpen,
     setIsFeedbackOpen,
+
     isSuccessOpen,
     setIsSuccessOpen,
-    reviews,
+
+    selectedRating,
+    setSelectedRating,
+
+    selectedSort,
+    setSelectedSort,
+
+    isLoading,
+    reviewsError,
+
+    loadReviews,
+    handleCreateFeedback,
     handleFeedbackSuccess,
   };
 }

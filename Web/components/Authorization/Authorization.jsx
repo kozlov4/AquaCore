@@ -36,6 +36,11 @@ export function Authorization({ type }) {
     },
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    await auth.handleSubmitAuth(isLogin);
+  };
+
   return (
     <>
       <motion.main
@@ -47,7 +52,6 @@ export function Authorization({ type }) {
           flex flex-col lg:flex-row
         "
       >
-        {/* Mobile decorative background */}
         <div
           className="
             pointer-events-none absolute inset-x-0 top-0 h-[240px]
@@ -94,14 +98,24 @@ export function Authorization({ type }) {
 
               <motion.form
                 variants={container}
+                onSubmit={handleSubmit}
                 className={`
                   w-full
-                  ${isLogin ? "pt-7 sm:pt-8 lg:pt-[10%]" : "pt-8 sm:pt-10 lg:pt-[15%]"}
+                  ${
+                    isLogin
+                      ? "pt-7 sm:pt-8 lg:pt-[10%]"
+                      : "pt-8 sm:pt-10 lg:pt-[15%]"
+                  }
                 `}
               >
                 {!isLogin && (
                   <motion.div variants={item}>
-                    <AuthInput label="Імʼя" placeholder="Введіть своє ім'я" />
+                    <AuthInput
+                      label="Імʼя"
+                      placeholder="Введіть своє ім'я"
+                      value={auth.name}
+                      onChange={(e) => auth.setName(e.target.value)}
+                    />
                   </motion.div>
                 )}
 
@@ -120,6 +134,8 @@ export function Authorization({ type }) {
                     label="Пароль"
                     type="password"
                     placeholder="Пароль"
+                    value={auth.password}
+                    onChange={(e) => auth.setPassword(e.target.value)}
                   >
                     {isLogin && (
                       <motion.button
@@ -139,9 +155,25 @@ export function Authorization({ type }) {
                   </AuthInput>
                 </motion.div>
 
+                {auth.authError && (
+                  <motion.p
+                    variants={item}
+                    className="
+                      mb-4 rounded-xl border border-red-100
+                      bg-red-50 px-4 py-3
+                      text-sm font-semibold text-red-500
+                    "
+                  >
+                    {auth.authError}
+                  </motion.p>
+                )}
+
                 <AuthCheckbox isLogin={isLogin} item={item} />
 
-                <AuthSubmitButton isLogin={isLogin} />
+                <AuthSubmitButton
+                  isLogin={isLogin}
+                  isLoading={auth.isLoading}
+                />
 
                 <AuthDivider item={item} />
 

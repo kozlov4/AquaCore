@@ -3,24 +3,42 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function FeedbackModal({ isOpen, onClose, onSuccess }) {
+export function FeedbackModal({ isOpen, onClose, onSubmit }) {
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
 
-  const handleSubmit = () => {
-    if (!rating || !text.trim()) {
-      alert("Оцініть сервіс і напишіть відгук");
-      return;
-    }
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState("");
 
-    setRating(0);
-    setText("");
-    onSuccess();
+  const handleSubmit = async () => {
+    try {
+      setError("");
+
+      if (!rating || !text.trim()) {
+        setError("Оцініть сервіс і напишіть відгук");
+        return;
+      }
+
+      setIsSending(true);
+
+      await onSubmit({
+        rating,
+        text: text.trim(),
+      });
+
+      setRating(0);
+      setText("");
+    } catch (error) {
+      setError(error.message || "Не вдалося надіслати відгук");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleClear = () => {
     setRating(0);
     setText("");
+    setError("");
   };
 
   return (
@@ -49,12 +67,7 @@ export function FeedbackModal({ isOpen, onClose, onSuccess }) {
               sm:px-6
             "
           >
-            <h2
-              className="
-                text-xl font-bold leading-tight text-[#171827]
-                sm:text-2xl
-              "
-            >
+            <h2 className="text-xl font-bold leading-tight text-[#171827] sm:text-2xl">
               Ми будемо раді отримати ваші відгуки
             </h2>
 
@@ -109,31 +122,43 @@ export function FeedbackModal({ isOpen, onClose, onSuccess }) {
               </p>
             </div>
 
+            {error && (
+              <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-500">
+                {error}
+              </p>
+            )}
+
             <motion.button
               type="button"
               onClick={handleSubmit}
-              whileHover={{
-                y: -2,
-                boxShadow: "0 14px 30px rgba(91,76,246,.28)",
-              }}
-              whileTap={{ scale: 0.98 }}
-              className="
-                mt-5 w-full rounded-xl bg-[#5B4CF6]
-                py-3 text-sm font-semibold text-white
-                transition hover:bg-[#4d3feb]
-              "
+              disabled={isSending}
+              whileHover={
+                isSending
+                  ? {}
+                  : {
+                      y: -2,
+                      boxShadow: "0 14px 30px rgba(91,76,246,.28)",
+                    }
+              }
+              whileTap={isSending ? {} : { scale: 0.98 }}
+              className={`
+                mt-5 w-full rounded-xl py-3 text-sm font-semibold
+                text-white transition
+                ${
+                  isSending
+                    ? "cursor-not-allowed bg-[#5B4CF6]/60"
+                    : "cursor-pointer bg-[#5B4CF6] hover:bg-[#4d3feb]"
+                }
+              `}
             >
-              Надіслати відгук
+              {isSending ? "Надсилання..." : "Надіслати відгук"}
             </motion.button>
 
             <motion.button
               type="button"
               onClick={handleClear}
               whileHover={{ y: -1 }}
-              className="
-                mt-4 w-full text-sm text-gray-500
-                transition hover:text-gray-900
-              "
+              className="mt-4 w-full text-sm text-gray-500 transition hover:text-gray-900"
             >
               Очистити форму
             </motion.button>

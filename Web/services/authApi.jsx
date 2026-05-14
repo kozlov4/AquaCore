@@ -1,7 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 export async function registerUser({ name, email, password }) {
-  const response = await fetch(`${API_URL}/register/`, {
+  const response = await fetch("/api/register", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,6 +17,7 @@ export async function registerUser({ name, email, password }) {
     throw new Error(
       data?.detail?.[0]?.msg ||
         data?.detail ||
+        data?.message ||
         "Помилка реєстрації"
     );
   }
@@ -27,17 +26,15 @@ export async function registerUser({ name, email, password }) {
 }
 
 export async function loginUser({ email, password }) {
-  const formData = new URLSearchParams();
-
-  formData.append("username", email);
-  formData.append("password", password);
-
-  const response = await fetch(`${API_URL}/login/`, {
+  const response = await fetch("/api/login", {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json",
     },
-    body: formData.toString(),
+    body: JSON.stringify({
+      email,
+      password,
+    }),
   });
 
   const data = await response.json().catch(() => null);
@@ -46,6 +43,7 @@ export async function loginUser({ email, password }) {
     throw new Error(
       data?.detail?.[0]?.msg ||
         data?.detail ||
+        data?.message ||
         "Невірний email або пароль"
     );
   }
@@ -63,10 +61,4 @@ export async function loginUser({ email, password }) {
   }
 
   return data;
-}
-
-export function logoutUser() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("token_type");
 }

@@ -1,13 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { loginUser, registerUser } from "../services/authApi";
 
 export function useAuthModals() {
+  const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
 
-  const [email, setEmail] = useState("");
   const [resetEmail, setResetEmail] = useState("");
   const [resetCode, setResetCode] = useState(["", "", "", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
@@ -28,6 +38,91 @@ export function useAuthModals() {
 
   const closeResetPasswordModal = () => {
     setIsResetPasswordOpen(false);
+  };
+
+  const handleLogin = async () => {
+    try {
+      setIsLoading(true);
+      setAuthError("");
+
+      if (!email.trim()) {
+        setAuthError("Введіть email");
+        return;
+      }
+
+      if (!password.trim()) {
+        setAuthError("Введіть пароль");
+        return;
+      }
+
+      await loginUser({
+        email: email.trim(),
+        password,
+      });
+
+      router.push("/dashboard");
+    } catch (error) {
+      setAuthError(error.message || "Помилка входу");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    try {
+      setIsLoading(true);
+      setAuthError("");
+
+      if (!name.trim()) {
+        setAuthError("Введіть імʼя");
+        return;
+      }
+
+      if (!email.trim()) {
+        setAuthError("Введіть email");
+        return;
+      }
+
+      if (!password.trim()) {
+        setAuthError("Введіть пароль");
+        return;
+      }
+
+      if (name.trim().length < 3) {
+        setAuthError("Імʼя має містити мінімум 3 символи");
+        return;
+      }
+
+      if (password.length < 8) {
+        setAuthError("Пароль має містити мінімум 8 символів");
+        return;
+      }
+
+      await registerUser({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      await loginUser({
+        email: email.trim(),
+        password,
+      });
+
+      router.push("/dashboard");
+    } catch (error) {
+      setAuthError(error.message || "Помилка реєстрації");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmitAuth = async (isLogin) => {
+    if (isLogin) {
+      await handleLogin();
+    } else {
+      await handleRegister();
+    }
   };
 
   const handleSendReset = () => {
@@ -83,29 +178,45 @@ export function useAuthModals() {
       return;
     }
 
-    console.log("Код:", fullCode);
-    console.log("Новий пароль:", newPassword);
-
+    alert("API для відновлення пароля ще не підключено");
     setIsResetPasswordOpen(false);
   };
 
   return {
+    name,
+    setName,
+
+    email,
+    setEmail,
+
+    password,
+    setPassword,
+
+    isLoading,
+    authError,
+
+    handleLogin,
+    handleRegister,
+    handleSubmitAuth,
+
     isForgotOpen,
     isSuccessOpen,
     isResetPasswordOpen,
-    email,
+
     resetEmail,
     resetCode,
     newPassword,
     repeatPassword,
-    setEmail,
+
     setResetEmail,
     setNewPassword,
     setRepeatPassword,
+
     openForgotModal,
     closeForgotModal,
     closeSuccessModal,
     closeResetPasswordModal,
+
     handleSendReset,
     handleOpenResetPasswordModal,
     handleCodeChange,

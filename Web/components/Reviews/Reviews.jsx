@@ -33,15 +33,29 @@ export function Reviews() {
             onShowAll={() => reviews.setShowAll(true)}
           />
 
-          <div
-            className="
-              flex flex-col gap-8
-              lg:flex-row lg:gap-12
-            "
-          >
+          {reviews.isLoading && (
+            <p className="mb-6 rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">
+              Завантаження відгуків...
+            </p>
+          )}
+
+          {reviews.reviewsError && (
+            <p className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-500">
+              {reviews.reviewsError}
+            </p>
+          )}
+
+          <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
             <ReviewsGrid reviews={reviews.reviews} />
 
-            {reviews.showAll && <ReviewsFilter />}
+            {reviews.showAll && (
+              <ReviewsFilter
+                selectedRating={reviews.selectedRating}
+                setSelectedRating={reviews.setSelectedRating}
+                selectedSort={reviews.selectedSort}
+                setSelectedSort={reviews.setSelectedSort}
+              />
+            )}
           </div>
 
           <ReviewsFooter
@@ -55,7 +69,7 @@ export function Reviews() {
       <FeedbackModal
         isOpen={reviews.isFeedbackOpen}
         onClose={() => reviews.setIsFeedbackOpen(false)}
-        onSuccess={reviews.handleFeedbackSuccess}
+        onSubmit={reviews.handleCreateFeedback}
       />
 
       <FeedbackSuccessModal

@@ -3,10 +3,18 @@
 import { motion } from "framer-motion";
 import { Gooogle } from "../../../layouts/icons/google";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://aquacore.onrender.com";
+
 export function GoogleAuthButton() {
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/google/login/`;
+  };
+
   return (
     <motion.button
       type="button"
+      onClick={handleGoogleLogin}
       whileHover={{
         scale: 1.025,
         y: -2,
