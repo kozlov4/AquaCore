@@ -7,16 +7,22 @@ export function AuthHeader({ isLogin, item }) {
     <>
       <motion.h1
         variants={item}
-        className="text-black font-semibold text-3xl tracking-tight"
+        className="
+          text-3xl font-semibold tracking-tight text-black
+          sm:text-4xl
+          lg:text-3xl
+        "
       >
         {isLogin ? "З поверненням!" : "Почніть зараз"}
       </motion.h1>
 
       <motion.h3
         variants={item}
-        className={`text-gray-500 text-base mt-2 ${
-          isLogin ? "block" : "hidden"
-        }`}
+        className={`
+          mt-2 max-w-[330px] text-sm leading-6 text-gray-500
+          sm:text-base
+          ${isLogin ? "block" : "hidden"}
+        `}
       >
         Введіть свої облікові дані, щоб увійти
       </motion.h3>

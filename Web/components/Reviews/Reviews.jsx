@@ -14,14 +14,18 @@ export function Reviews() {
   const reviews = useReviews();
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       <Sidebar />
 
       <motion.main
         initial={{ opacity: 0, y: 35 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: "easeOut" }}
-        className="ml-[88px] px-16 py-16"
+        className="
+          px-4 pb-28 pt-6
+          sm:px-6 sm:pb-32 sm:pt-8
+          lg:ml-[88px] lg:px-16 lg:py-16
+        "
       >
         <div className="mx-auto max-w-[1120px]">
           <ReviewsHeader
@@ -29,7 +33,12 @@ export function Reviews() {
             onShowAll={() => reviews.setShowAll(true)}
           />
 
-          <div className="flex gap-12">
+          <div
+            className="
+              flex flex-col gap-8
+              lg:flex-row lg:gap-12
+            "
+          >
             <ReviewsGrid reviews={reviews.reviews} />
 
             {reviews.showAll && <ReviewsFilter />}

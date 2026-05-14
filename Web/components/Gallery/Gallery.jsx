@@ -64,23 +64,33 @@ export function Gallery() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       <Sidebar />
 
-      <main className="ml-[88px] px-16 py-10">
+      <main
+        className="
+          px-4 pb-28 pt-6
+          sm:px-6 sm:pb-32 sm:pt-8
+          lg:ml-[88px] lg:px-16 lg:py-10
+        "
+      >
         <div className="mx-auto max-w-[1120px]">
           <motion.header
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="mb-8 flex items-start justify-between"
+            className="
+              mb-6 flex flex-col gap-5
+              sm:mb-8
+              md:flex-row md:items-start md:justify-between
+            "
           >
             <div>
-              <h1 className="text-3xl font-black text-slate-950">
+              <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
                 Особиста Галерея
               </h1>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 max-w-[520px] text-sm leading-6 text-slate-500">
                 Візуальна історія еволюції ваших екосистем
               </p>
             </div>
@@ -93,7 +103,13 @@ export function Gallery() {
                 boxShadow: "0 16px 34px rgba(99,91,255,0.32)",
               }}
               whileTap={{ scale: 0.96 }}
-              className="flex items-center gap-2 rounded-xl bg-[#635BFF] px-6 py-3 text-sm font-black text-white transition hover:bg-[#5147f5]"
+              className="
+                flex w-full items-center justify-center gap-2
+                rounded-xl bg-[#635BFF] px-5 py-3
+                text-sm font-black text-white
+                transition hover:bg-[#5147f5]
+                sm:w-fit sm:px-6
+              "
             >
               <ImagePlus size={17} />
               Завантажити фото
@@ -104,7 +120,11 @@ export function Gallery() {
 
           <motion.section
             layout
-            className="mt-8 grid auto-rows-[155px] grid-cols-4 gap-5"
+            className="
+              mt-6 grid auto-rows-[145px] grid-cols-1 gap-4
+              sm:mt-8 sm:auto-rows-[155px] sm:grid-cols-2 sm:gap-5
+              xl:grid-cols-4
+            "
           >
             {photos.map((photo, index) => (
               <GalleryCard key={photo.id} photo={photo} index={index} />

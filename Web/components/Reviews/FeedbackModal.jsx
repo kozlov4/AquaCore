@@ -40,13 +40,25 @@ export function FeedbackModal({ isOpen, onClose, onSuccess }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 25, scale: 0.96 }}
             transition={{ duration: 0.28, ease: "easeOut" }}
-            className="fixed left-1/2 top-1/2 z-50 w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white px-6 py-6 shadow-[0_25px_80px_rgba(15,23,42,0.25)]"
+            className="
+              fixed left-1/2 top-1/2 z-50
+              max-h-[92vh] w-[calc(100%-28px)]
+              max-w-[500px] -translate-x-1/2 -translate-y-1/2
+              overflow-y-auto rounded-2xl bg-white
+              px-5 py-6 shadow-[0_25px_80px_rgba(15,23,42,0.25)]
+              sm:px-6
+            "
           >
-            <h2 className="text-2xl font-bold text-[#171827]">
+            <h2
+              className="
+                text-xl font-bold leading-tight text-[#171827]
+                sm:text-2xl
+              "
+            >
               Ми будемо раді отримати ваші відгуки
             </h2>
 
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm leading-6 text-gray-500">
               Допоможіть нам покращити якість наших послуг
             </p>
 
@@ -83,7 +95,13 @@ export function FeedbackModal({ isOpen, onClose, onSuccess }) {
                 value={text}
                 onChange={(e) => setText(e.target.value.slice(0, 500))}
                 placeholder="Поділіться своїми думками, пропозиціями чи зауваженнями..."
-                className="h-[120px] w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10"
+                className="
+                  h-[120px] w-full resize-none rounded-xl
+                  border border-gray-200 px-4 py-3
+                  text-sm outline-none transition
+                  focus:border-[#5B4CF6]
+                  focus:ring-4 focus:ring-[#5B4CF6]/10
+                "
               />
 
               <p className="mt-1 text-right text-xs text-gray-400">
@@ -94,9 +112,16 @@ export function FeedbackModal({ isOpen, onClose, onSuccess }) {
             <motion.button
               type="button"
               onClick={handleSubmit}
-              whileHover={{ y: -2, boxShadow: "0 14px 30px rgba(91,76,246,.28)" }}
+              whileHover={{
+                y: -2,
+                boxShadow: "0 14px 30px rgba(91,76,246,.28)",
+              }}
               whileTap={{ scale: 0.98 }}
-              className="mt-5 w-full rounded-xl bg-[#5B4CF6] py-3 text-sm font-semibold text-white transition hover:bg-[#4d3feb]"
+              className="
+                mt-5 w-full rounded-xl bg-[#5B4CF6]
+                py-3 text-sm font-semibold text-white
+                transition hover:bg-[#4d3feb]
+              "
             >
               Надіслати відгук
             </motion.button>
@@ -105,7 +130,10 @@ export function FeedbackModal({ isOpen, onClose, onSuccess }) {
               type="button"
               onClick={handleClear}
               whileHover={{ y: -1 }}
-              className="mt-4 w-full text-sm text-gray-500 transition hover:text-gray-900"
+              className="
+                mt-4 w-full text-sm text-gray-500
+                transition hover:text-gray-900
+              "
             >
               Очистити форму
             </motion.button>

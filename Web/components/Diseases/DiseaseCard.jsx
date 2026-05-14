@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 function highlightText(text, query) {
   if (!query) return text;
 
-  const parts = text.split(new RegExp(`(${query})`, "gi"));
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
 
   return parts.map((part, index) =>
     part.toLowerCase() === query.toLowerCase() ? (
@@ -43,17 +44,25 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
 
   return (
     <motion.article
-      whileHover={{ y: -10, scale: 1.018 }}
+      whileHover={{ y: -8, scale: 1.012 }}
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 260, damping: 20 }}
-      className="group relative overflow-hidden rounded-[30px] border border-white/80 bg-white/85 shadow-[0_20px_55px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-500 hover:border-[#5B4CF6]/20 hover:shadow-[0_30px_85px_rgba(91,76,246,0.18)]"
+      className="
+        group relative overflow-hidden rounded-[26px]
+        border border-white/80 bg-white/85
+        shadow-[0_20px_55px_rgba(15,23,42,0.08)]
+        backdrop-blur-xl transition-all duration-500
+        hover:border-[#5B4CF6]/20
+        hover:shadow-[0_30px_85px_rgba(91,76,246,0.18)]
+        sm:rounded-[30px]
+      "
     >
       <div
         className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-to-br ${danger.glow} blur-2xl transition duration-500 group-hover:scale-125`}
       />
 
       <div
-        className={`relative flex h-[130px] items-center justify-center overflow-hidden bg-gradient-to-br ${danger.iconBg}`}
+        className={`relative flex h-[115px] items-center justify-center overflow-hidden bg-gradient-to-br ${danger.iconBg} sm:h-[130px]`}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.95),transparent_36%)]" />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
@@ -61,7 +70,7 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
         <motion.div
           whileHover={{ rotate: 10, scale: 1.18 }}
           transition={{ type: "spring", stiffness: 280, damping: 15 }}
-          className="relative z-10 text-6xl drop-shadow-sm"
+          className="relative z-10 text-5xl drop-shadow-sm sm:text-6xl"
         >
           🐟
         </motion.div>
@@ -78,6 +87,7 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
           }}
           className="absolute left-6 top-5 h-3 w-3 rounded-full bg-white/80"
         />
+
         <motion.div
           animate={{
             y: [0, -10, 0],
@@ -88,7 +98,7 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="absolute right-10 bottom-8 h-2 w-2 rounded-full bg-white/80"
+          className="absolute bottom-8 right-10 h-2 w-2 rounded-full bg-white/80"
         />
       </div>
 
@@ -99,7 +109,15 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
           {danger.label}
         </div>
 
-        <h3 className="min-h-[56px] text-lg font-black leading-snug tracking-tight text-slate-950 transition-colors duration-300 group-hover:text-[#5B4CF6]">
+        <h3
+          className="
+            min-h-0 text-lg font-black leading-snug
+            tracking-tight text-slate-950
+            transition-colors duration-300
+            group-hover:text-[#5B4CF6]
+            xl:min-h-[56px]
+          "
+        >
           {highlightText(disease.title, searchValue)}
         </h3>
 
@@ -107,7 +125,14 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
           {disease.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 transition-all duration-300 group-hover:border-[#5B4CF6]/15 group-hover:bg-[#5B4CF6]/10 group-hover:text-[#5B4CF6]"
+              className="
+                rounded-full border border-slate-100 bg-slate-50
+                px-3 py-1 text-xs font-semibold text-slate-500
+                transition-all duration-300
+                group-hover:border-[#5B4CF6]/15
+                group-hover:bg-[#5B4CF6]/10
+                group-hover:text-[#5B4CF6]
+              "
             >
               #{tag}
             </span>
@@ -119,7 +144,14 @@ export function DiseaseCard({ disease, searchValue, onOpen }) {
           onClick={() => onOpen(disease)}
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.96 }}
-          className="mt-6 w-full cursor-pointer rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)] transition-all duration-300 hover:bg-[#5B4CF6] hover:shadow-[0_18px_40px_rgba(91,76,246,0.32)]"
+          className="
+            mt-6 w-full cursor-pointer rounded-2xl
+            bg-slate-950 py-3 text-sm font-bold text-white
+            shadow-[0_16px_35px_rgba(15,23,42,0.16)]
+            transition-all duration-300
+            hover:bg-[#5B4CF6]
+            hover:shadow-[0_18px_40px_rgba(91,76,246,0.32)]
+          "
         >
           Детальніше
         </motion.button>

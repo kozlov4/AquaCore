@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CalculatorModalLayout, CalculatorInput, ResultPanel, ResultValue } from "./calculatorModalUi";
+import { useState } from "react";
+import {
+  CalculatorModalLayout,
+  CalculatorInput,
+  ResultPanel,
+  ResultValue,
+} from "./calculatorModalUi";
 
 export function HeaterCalculatorModal({ onClose }) {
   const [volume, setVolume] = useState(100);
@@ -19,16 +24,40 @@ export function HeaterCalculatorModal({ onClose }) {
       iconBg="bg-rose-50"
       onClose={onClose}
     >
-      <div className="grid grid-cols-[1fr_220px] gap-7 px-7 py-7">
+      <div
+        className="
+          grid grid-cols-1 gap-5 px-4 py-5
+          sm:px-7 sm:py-7
+          lg:grid-cols-[1fr_220px] lg:gap-7
+        "
+      >
         <div className="space-y-5">
-          <CalculatorInput label="Обʼєм води" value={volume} onChange={setVolume} unit="л" />
-          <CalculatorInput label="Мінімальна темп. у кімнаті" value={roomTemp} onChange={setRoomTemp} unit="°C" />
-          <CalculatorInput label="Бажана темп. в акваріумі" value={targetTemp} onChange={setTargetTemp} unit="°C" />
+          <CalculatorInput
+            label="Обʼєм води"
+            value={volume}
+            onChange={setVolume}
+            unit="л"
+          />
+
+          <CalculatorInput
+            label="Мінімальна темп. у кімнаті"
+            value={roomTemp}
+            onChange={setRoomTemp}
+            unit="°C"
+          />
+
+          <CalculatorInput
+            label="Бажана темп. в акваріумі"
+            value={targetTemp}
+            onChange={setTargetTemp}
+            unit="°C"
+          />
         </div>
 
         <ResultPanel color="bg-rose-500" title="Вам потрібен обігрівач">
           <p className="text-sm text-white/80">Рекомендована потужність</p>
           <ResultValue value={watts} unit="Ватт" />
+
           <div className="mt-6 border-t border-white/20 pt-5">
             <p className="text-sm text-white/80">Різниця температур</p>
             <ResultValue small value={delta} unit="°C" />

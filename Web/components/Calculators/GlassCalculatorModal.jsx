@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalculatorModalLayout, CalculatorInput, ResultPanel, ResultValue } from "./calculatorModalUi";
+import {
+  CalculatorModalLayout,
+  CalculatorInput,
+  ResultPanel,
+  ResultValue,
+} from "./calculatorModalUi";
 
 export function GlassCalculatorModal({ onClose }) {
   const [length, setLength] = useState(100);
@@ -24,12 +29,35 @@ export function GlassCalculatorModal({ onClose }) {
       compact
       onClose={onClose}
     >
-      <div className="grid grid-cols-[1fr_220px] gap-7 px-6 py-6">
+      <div
+        className="
+          grid grid-cols-1 gap-5 px-4 py-5
+          sm:px-6 sm:py-6
+          lg:grid-cols-[1fr_220px] lg:gap-7
+        "
+      >
         <div className="space-y-5">
-          <CalculatorInput label="Довжина акваріума" value={length} onChange={setLength} unit="см" />
-          <CalculatorInput label="Висота акваріума" value={height} onChange={setHeight} unit="см" />
+          <CalculatorInput
+            label="Довжина акваріума"
+            value={length}
+            onChange={setLength}
+            unit="см"
+          />
 
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
+          <CalculatorInput
+            label="Висота акваріума"
+            value={height}
+            onChange={setHeight}
+            unit="см"
+          />
+
+          <label
+            className="
+              flex cursor-pointer items-center gap-3
+              rounded-xl border border-slate-200
+              px-4 py-3 text-sm font-bold text-slate-700
+            "
+          >
             <input
               type="checkbox"
               checked={ribs}
@@ -43,6 +71,7 @@ export function GlassCalculatorModal({ onClose }) {
         <ResultPanel color="bg-blue-600" title="Вимоги до скла">
           <p className="text-sm text-white/80">Мінімальна товщина</p>
           <ResultValue value={thickness} unit="мм" />
+
           <div className="mt-6 border-t border-white/20 pt-5">
             <p className="text-sm text-white/80">Запас міцності</p>
             <ResultValue small value={safety} unit="Безпечно" />

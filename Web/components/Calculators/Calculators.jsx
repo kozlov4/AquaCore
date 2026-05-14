@@ -102,22 +102,28 @@ export function Calculators() {
   const closeModal = () => setActiveModal(null);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       <Sidebar />
 
-      <main className="ml-[88px] px-16 py-12">
+      <main
+        className="
+    px-4 pb-28 pt-6
+    sm:px-6 sm:pb-32 sm:pt-8
+    lg:ml-[88px] lg:px-16 lg:py-12
+  "
+      >
         <div className="mx-auto max-w-[980px]">
           <motion.header
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="mb-8"
+            className="mb-6 sm:mb-8"
           >
-            <h1 className="text-3xl font-black text-slate-950">
+            <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
               Банк калькуляторів
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 max-w-[520px] text-sm leading-6 text-slate-500">
               Швидкі математичні інструменти для точних розрахунків
             </p>
           </motion.header>
@@ -126,16 +132,30 @@ export function Calculators() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
-            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+            className="
+              rounded-2xl border border-slate-100 bg-white
+              p-3 shadow-sm
+              sm:p-4
+            "
           >
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 transition focus-within:border-[#635BFF] focus-within:ring-4 focus-within:ring-[#635BFF]/10">
-              <Search size={18} className="text-slate-400" />
+            <div
+              className="
+                flex items-center gap-3 rounded-xl
+                border border-slate-200 px-4 py-3
+                transition focus-within:border-[#635BFF]
+                focus-within:ring-4 focus-within:ring-[#635BFF]/10
+              "
+            >
+              <Search size={18} className="shrink-0 text-slate-400" />
 
               <input
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder="Знайти калькулятор..."
-                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                className="
+                  w-full bg-transparent text-sm outline-none
+                  placeholder:text-slate-400
+                "
               />
             </div>
           </motion.div>
@@ -147,7 +167,11 @@ export function Calculators() {
 
           <motion.section
             layout
-            className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-3"
+            className="
+              mt-6 grid grid-cols-1 gap-4
+              sm:grid-cols-2 sm:gap-5
+              xl:grid-cols-3
+            "
           >
             {filteredCalculators.map((calculator, index) => (
               <CalculatorCard
@@ -165,11 +189,24 @@ export function Calculators() {
         {activeModal === "volume" && (
           <VolumeWeightCalculatorModal isOpen onClose={closeModal} />
         )}
-        {activeModal === "ground" && <GroundCalculatorModal onClose={closeModal} />}
-        {activeModal === "light" && <LightCalculatorModal onClose={closeModal} />}
+
+        {activeModal === "ground" && (
+          <GroundCalculatorModal onClose={closeModal} />
+        )}
+
+        {activeModal === "light" && (
+          <LightCalculatorModal onClose={closeModal} />
+        )}
+
         {activeModal === "co2" && <Co2CalculatorModal onClose={closeModal} />}
-        {activeModal === "glass" && <GlassCalculatorModal onClose={closeModal} />}
-        {activeModal === "heater" && <HeaterCalculatorModal onClose={closeModal} />}
+
+        {activeModal === "glass" && (
+          <GlassCalculatorModal onClose={closeModal} />
+        )}
+
+        {activeModal === "heater" && (
+          <HeaterCalculatorModal onClose={closeModal} />
+        )}
       </AnimatePresence>
     </div>
   );

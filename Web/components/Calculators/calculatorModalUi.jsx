@@ -27,34 +27,62 @@ export function CalculatorModalLayout({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 16 }}
         transition={{ duration: 0.24, ease: "easeOut" }}
-        className={`fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[24px] bg-white shadow-[0_28px_85px_rgba(0,0,0,0.34)] ${
-          compact ? "w-[520px]" : "w-[660px]"
-        }`}
+        className={`
+          fixed left-1/2 top-1/2 z-50
+          max-h-[92vh] w-[calc(100%-28px)]
+          -translate-x-1/2 -translate-y-1/2
+          overflow-hidden rounded-[22px] bg-white
+          shadow-[0_28px_85px_rgba(0,0,0,0.34)]
+          sm:w-[90%]
+          ${compact ? "lg:w-[520px]" : "lg:w-[660px]"}
+        `}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-5">
-          <div className="flex items-center gap-4">
+        <div
+          className="
+            flex items-start justify-between gap-4
+            border-b border-slate-100 bg-slate-50/70
+            px-4 py-4
+            sm:items-center sm:px-6 sm:py-5
+          "
+        >
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <div
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl text-2xl ${iconBg}`}
+              className={`
+                flex h-10 w-10 shrink-0 items-center justify-center
+                rounded-2xl text-xl
+                sm:h-11 sm:w-11 sm:text-2xl
+                ${iconBg}
+              `}
             >
               {icon}
             </div>
 
-            <div>
-              <h2 className="text-xl font-black text-slate-950">{title}</h2>
-              <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+            <div className="min-w-0">
+              <h2 className="text-base font-black text-slate-950 sm:text-xl">
+                {title}
+              </h2>
+
+              <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                {subtitle}
+              </p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-slate-400 transition hover:bg-white hover:text-slate-900"
+            className="
+              shrink-0 rounded-full p-2 text-slate-400
+              transition hover:bg-white hover:text-slate-900
+            "
           >
             <X size={22} />
           </button>
         </div>
 
-        {children}
+        <div className="max-h-[calc(92vh-82px)] overflow-y-auto">
+          {children}
+        </div>
       </motion.div>
     </>
   );
@@ -70,12 +98,22 @@ export function CalculatorInput({ label, value, onChange, unit = "см" }) {
       <div className="flex items-center gap-3">
         <input
           type="number"
+          inputMode="decimal"
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-base font-black text-slate-950 outline-none transition focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+          className="
+            w-full rounded-xl border border-slate-300
+            px-4 py-3 text-base font-black text-slate-950
+            outline-none transition
+            focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10
+          "
         />
 
-        {unit && <span className="text-sm font-black text-slate-500">{unit}</span>}
+        {unit && (
+          <span className="shrink-0 text-sm font-black text-slate-500">
+            {unit}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -87,40 +125,49 @@ export function ResultPanel({ color, title, children, dark = false }) {
       initial={{ opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.12 }}
-      className={`relative overflow-hidden rounded-3xl ${color} p-6 shadow-[0_22px_55px_rgba(15,23,42,0.18)] ${
-        dark ? "text-yellow-950" : "text-white"
-      }`}
+      className={`
+        relative overflow-hidden rounded-3xl
+        ${color}
+        p-5 shadow-[0_22px_55px_rgba(15,23,42,0.18)]
+        sm:p-6
+        ${dark ? "text-yellow-950" : "text-white"}
+      `}
     >
       <div className="absolute -bottom-10 -right-8 h-32 w-32 rotate-45 rounded-3xl bg-white/10" />
 
       <p
-        className={`text-xs font-black uppercase tracking-[0.14em] ${
-          dark ? "text-yellow-950/70" : "text-white/70"
-        }`}
+        className={`
+          text-xs font-black uppercase tracking-[0.14em]
+          ${dark ? "text-yellow-950/70" : "text-white/70"}
+        `}
       >
         {title}
       </p>
 
-      <div className="relative z-10 mt-6">{children}</div>
+      <div className="relative z-10 mt-5 sm:mt-6">{children}</div>
     </motion.div>
   );
 }
 
 export function ResultValue({ value, unit, small = false, dark = false }) {
   return (
-    <div className="mt-2 flex items-end gap-2">
+    <div className="mt-2 flex flex-wrap items-end gap-2">
       <span
-        className={`${small ? "text-2xl" : "text-5xl"} font-black leading-none ${
-          dark ? "text-yellow-950" : "text-white"
-        }`}
+        className={`
+          ${small ? "text-2xl" : "text-4xl sm:text-5xl"}
+          font-black leading-none
+          ${dark ? "text-yellow-950" : "text-white"}
+        `}
       >
         {value}
       </span>
 
       <span
-        className={`mb-1 font-bold ${small ? "text-base" : "text-lg"} ${
-          dark ? "text-yellow-950/80" : "text-white/80"
-        }`}
+        className={`
+          mb-1 font-bold
+          ${small ? "text-base" : "text-base sm:text-lg"}
+          ${dark ? "text-yellow-950/80" : "text-white/80"}
+        `}
       >
         {unit}
       </span>

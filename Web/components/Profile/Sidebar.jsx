@@ -25,82 +25,198 @@ const navItems = [
   { label: "Користувач", href: "/profile", icon: "/images/User.svg" },
 ];
 
+const mobileMainItems = [
+  "/dashboard",
+  "/aquariums",
+  "/calculators",
+  "/diary",
+  "/profile",
+];
+
 export function Sidebar() {
   const router = useRouter();
 
-  return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[88px] flex-col border-r border-slate-200 bg-white/95 px-3 py-5 backdrop-blur-xl">
-      
-      {/* LOGO */}
-      <div className="mb-6 flex justify-center">
-        <div className="relative h-9 w-9 transition duration-300 hover:scale-110">
-          <Image
-            src="/images/mini-logo.svg"
-            alt="logo"
-            fill
-            className="object-contain"
-          />
-        </div>
-      </div>
+  const isActiveLink = (href) => {
+    if (href === "/#") return false;
 
-      {/* NAVIGATION */}
-      <nav className="flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
-        {navItems.map(({ label, href, icon }) => {
-          const isActive =
-            href !== "/#" &&
-            (router.pathname === href ||
-              router.pathname.startsWith(href));
+    return router.pathname === href || router.pathname.startsWith(href + "/");
+  };
+
+  const desktopItems = navItems;
+  const mobileItems = navItems.filter((item) =>
+    mobileMainItems.includes(item.href)
+  );
+
+  return (
+    <>
+      {/* DESKTOP SIDEBAR */}
+      <aside
+        className="
+          fixed left-0 top-0 z-40
+          hidden h-screen w-[88px] flex-col
+          border-r border-slate-200 bg-white/95
+          px-3 py-5 backdrop-blur-xl
+          lg:flex
+        "
+      >
+        {/* LOGO */}
+        <div className="mb-6 flex justify-center">
+          <Link
+            href="/dashboard"
+            className="relative h-9 w-9 transition duration-300 hover:scale-110"
+          >
+            <Image
+              src="/images/mini-logo.svg"
+              alt="logo"
+              fill
+              className="object-contain"
+            />
+          </Link>
+        </div>
+
+        {/* NAVIGATION */}
+        <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto pr-1">
+          {desktopItems.map(({ label, href, icon }) => {
+            const isActive = isActiveLink(href);
+
+            return (
+              <Link
+                key={label + href}
+                href={href}
+                title={label}
+                className={`
+                  group relative flex h-11 w-11 shrink-0
+                  items-center justify-center rounded-2xl
+                  transition-all duration-300
+                  ${
+                    isActive
+                      ? "bg-gradient-to-br from-[#635BFF] to-[#7C72FF] shadow-[0_10px_30px_rgba(99,91,255,0.35)]"
+                      : "hover:bg-slate-100"
+                  }
+                `}
+              >
+                {isActive && (
+                  <div className="absolute inset-0 rounded-2xl bg-[#635BFF]/20 blur-xl" />
+                )}
+
+                <div className="relative z-10 transition duration-300 group-hover:scale-110">
+                  <Image
+                    src={icon}
+                    alt={label}
+                    width={20}
+                    height={20}
+                    className={`
+                      object-contain transition duration-300
+                      ${
+                        isActive
+                          ? "brightness-0 invert"
+                          : "opacity-70 group-hover:opacity-100"
+                      }
+                    `}
+                  />
+                </div>
+
+                <div
+                  className="
+                    pointer-events-none absolute left-14 hidden
+                    whitespace-nowrap rounded-xl bg-slate-950
+                    px-3 py-2 text-xs font-semibold text-white
+                    shadow-2xl group-hover:block
+                  "
+                >
+                  {label}
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* BOTTOM BUTTON */}
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            className="
+              group flex h-11 w-11 items-center justify-center
+              rounded-2xl text-slate-500
+              transition-all duration-300
+              hover:bg-slate-100 hover:text-slate-950
+            "
+          >
+            <Menu
+              size={20}
+              strokeWidth={2}
+              className="transition duration-300 group-hover:rotate-90"
+            />
+          </button>
+        </div>
+      </aside>
+
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <nav
+        className="
+          fixed bottom-0 left-0 right-0 z-50
+          flex items-center justify-around
+          border-t border-slate-200 bg-white/95
+          px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3
+          shadow-[0_-12px_35px_rgba(15,23,42,0.10)]
+          backdrop-blur-xl
+          lg:hidden
+        "
+      >
+        {mobileItems.map(({ label, href, icon }) => {
+          const isActive = isActiveLink(href);
 
           return (
             <Link
               key={label + href}
               href={href}
-              title={label}
-              className={`group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 ${
-                isActive
-                  ? "bg-gradient-to-br from-[#635BFF] to-[#7C72FF] shadow-[0_10px_30px_rgba(99,91,255,0.35)]"
-                  : "hover:bg-slate-100"
-              }`}
+              className="
+                flex min-w-[58px] flex-col items-center justify-center gap-1
+              "
             >
-              {/* ACTIVE GLOW */}
-              {isActive && (
-                <div className="absolute inset-0 rounded-2xl bg-[#635BFF]/20 blur-xl" />
-              )}
+              <div
+                className={`
+                  relative flex h-11 w-11 items-center justify-center
+                  rounded-2xl transition-all duration-300
+                  ${
+                    isActive
+                      ? "bg-gradient-to-br from-[#635BFF] to-[#7C72FF] shadow-[0_10px_24px_rgba(99,91,255,0.28)]"
+                      : "bg-transparent"
+                  }
+                `}
+              >
+                {isActive && (
+                  <div className="absolute inset-0 rounded-2xl bg-[#635BFF]/20 blur-lg" />
+                )}
 
-              {/* ICON */}
-              <div className="relative z-10 transition duration-300 group-hover:scale-110">
                 <Image
                   src={icon}
                   alt={label}
                   width={20}
                   height={20}
-                  className={`object-contain transition duration-300 ${
-                    isActive
-                      ? "brightness-0 invert"
-                      : "opacity-70 group-hover:opacity-100"
-                  }`}
+                  className={`
+                    relative z-10 object-contain transition duration-300
+                    ${isActive ? "brightness-0 invert" : "opacity-70"}
+                  `}
                 />
               </div>
 
-              {/* TOOLTIP */}
-              <div className="pointer-events-none absolute left-14 hidden whitespace-nowrap rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white shadow-2xl group-hover:block">
+              <span
+                className={`
+                  max-w-[64px] truncate text-[10px] font-bold
+                  ${
+                    isActive
+                      ? "text-[#635BFF]"
+                      : "text-slate-400"
+                  }
+                `}
+              >
                 {label}
-              </div>
+              </span>
             </Link>
           );
         })}
       </nav>
-
-      {/* BOTTOM BUTTON */}
-      <div className="mt-4 flex justify-center">
-        <button className="group flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 transition-all duration-300 hover:bg-slate-100 hover:text-slate-950">
-          <Menu
-            size={20}
-            strokeWidth={2}
-            className="transition duration-300 group-hover:rotate-90"
-          />
-        </button>
-      </div>
-    </aside>
+    </>
   );
 }

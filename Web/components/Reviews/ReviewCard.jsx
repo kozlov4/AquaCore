@@ -15,14 +15,29 @@ export function ReviewCard({ review, index }) {
       }}
       whileHover={{
         y: -8,
-        scale: 1.02,
+        scale: 1.015,
       }}
-      className="group rounded-2xl cursor-pointer border border-transparent bg-white p-5 transition-all duration-300 hover:border-gray-200 hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]"
+      className="
+        group cursor-pointer rounded-2xl border border-transparent
+        bg-white p-5 transition-all duration-300
+        hover:border-gray-200
+        hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]
+      "
     >
-      <div className="mb-6 flex items-center gap-4 border-b border-gray-100 pb-5">
+      <div
+        className="
+          mb-5 flex items-center gap-4
+          border-b border-gray-100 pb-5
+          sm:mb-6
+        "
+      >
         <motion.div
           whileHover={{ rotate: 3, scale: 1.08 }}
-          className="relative h-12 w-12 overflow-hidden rounded-full ring-4 ring-gray-100 transition group-hover:ring-[#5B4CF6]/20"
+          className="
+            relative h-12 w-12 shrink-0 overflow-hidden rounded-full
+            ring-4 ring-gray-100 transition
+            group-hover:ring-[#5B4CF6]/20
+          "
         >
           <Image
             src={review.avatar}
@@ -32,7 +47,13 @@ export function ReviewCard({ review, index }) {
           />
         </motion.div>
 
-        <h3 className="text-lg font-bold text-[#171827] transition group-hover:text-[#5B4CF6]">
+        <h3
+          className="
+            text-base font-bold text-[#171827]
+            transition group-hover:text-[#5B4CF6]
+            sm:text-lg
+          "
+        >
           {review.name}
         </h3>
       </div>
@@ -50,7 +71,13 @@ export function ReviewCard({ review, index }) {
         ))}
       </div>
 
-      <p className="max-w-[310px] text-base leading-7 text-[#171827]/80">
+      <p
+        className="
+          max-w-none text-sm leading-7 text-[#171827]/80
+          sm:text-base
+          lg:max-w-[310px]
+        "
+      >
         {review.text}
       </p>
     </motion.div>

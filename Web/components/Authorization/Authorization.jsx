@@ -22,13 +22,13 @@ export function Authorization({ type }) {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.15,
+        staggerChildren: 0.12,
       },
     },
   };
 
   const item = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 18 },
     visible: {
       opacity: 1,
       y: 0,
@@ -38,16 +38,34 @@ export function Authorization({ type }) {
 
   return (
     <>
-      <motion.header
+      <motion.main
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="w-screen h-full flex bg-gradient-to-br from-white via-[#FFF7FB] to-[#F2FAFF]"
+        className="
+          relative min-h-screen w-full overflow-x-hidden
+          bg-gradient-to-br from-white via-[#FFF7FB] to-[#F2FAFF]
+          flex flex-col lg:flex-row
+        "
       >
-        <motion.div
-          initial={{ x: -80, opacity: 0 }}
+        {/* Mobile decorative background */}
+        <div
+          className="
+            pointer-events-none absolute inset-x-0 top-0 h-[240px]
+            bg-[url('/images/fish.png')] bg-cover bg-center opacity-20
+            lg:hidden
+          "
+        />
+
+        <motion.section
+          initial={{ x: -60, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-1/2 h-[90%]"
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="
+            relative z-10 flex min-h-screen w-full flex-col
+            px-5 py-4
+            sm:px-8
+            lg:w-1/2 lg:px-0 lg:py-0
+          "
         >
           <AuthLogo />
 
@@ -55,76 +73,102 @@ export function Authorization({ type }) {
             variants={container}
             initial="hidden"
             animate="visible"
-            className="w-full h-[90%] px-[20%] py-[10%]"
+            className="
+              flex flex-1 items-center justify-center
+              py-6
+              lg:items-start lg:justify-start lg:px-[20%] lg:py-[10%]
+            "
           >
-            <AuthHeader isLogin={isLogin} item={item} />
-
-            <motion.form
-              variants={container}
-              className={`w-full h-full ${
-                isLogin ? "pt-[10%]" : "pt-[15%]"
-              }`}
+            <div
+              className="
+                w-full max-w-[430px]
+                rounded-[28px] border border-white/70
+                bg-white/80 px-5 py-7 shadow-2xl shadow-[#D688B7]/10
+                backdrop-blur-xl
+                sm:px-7 sm:py-8
+                lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent
+                lg:px-0 lg:py-0 lg:shadow-none lg:backdrop-blur-0
+              "
             >
-              {!isLogin && (
-                <motion.div variants={item}>
-                  <AuthInput label="Імʼя" placeholder="Введіть своє ім'я" />
-                </motion.div>
-              )}
+              <AuthHeader isLogin={isLogin} item={item} />
 
-              <motion.div variants={item}>
-                <AuthInput
-                  label="Email"
-                  type="email"
-                  placeholder="Введіть email"
-                  value={auth.email}
-                  onChange={(e) => auth.setEmail(e.target.value)}
-                />
-              </motion.div>
-
-              <motion.div variants={item}>
-                <AuthInput
-                  label="Пароль"
-                  type="password"
-                  placeholder="Пароль"
-                >
-                  {isLogin && (
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.05, x: 2 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={auth.openForgotModal}
-                      className="text-xs text-[#D688B7] font-semibold cursor-pointer transition-colors duration-300 hover:text-[#b85f95]"
-                    >
-                      Забули пароль
-                    </motion.button>
-                  )}
-                </AuthInput>
-              </motion.div>
-
-              <AuthCheckbox isLogin={isLogin} item={item} />
-
-              <AuthSubmitButton isLogin={isLogin} />
-
-              <AuthDivider item={item} />
-
-              <motion.div
-                variants={item}
-                className="flex flex-col items-center justify-center"
+              <motion.form
+                variants={container}
+                className={`
+                  w-full
+                  ${isLogin ? "pt-7 sm:pt-8 lg:pt-[10%]" : "pt-8 sm:pt-10 lg:pt-[15%]"}
+                `}
               >
-                <GoogleAuthButton />
-                <AuthRedirectText isLogin={isLogin} />
-              </motion.div>
-            </motion.form>
-          </motion.div>
-        </motion.div>
+                {!isLogin && (
+                  <motion.div variants={item}>
+                    <AuthInput label="Імʼя" placeholder="Введіть своє ім'я" />
+                  </motion.div>
+                )}
 
-        <motion.div
+                <motion.div variants={item}>
+                  <AuthInput
+                    label="Email"
+                    type="email"
+                    placeholder="Введіть email"
+                    value={auth.email}
+                    onChange={(e) => auth.setEmail(e.target.value)}
+                  />
+                </motion.div>
+
+                <motion.div variants={item}>
+                  <AuthInput
+                    label="Пароль"
+                    type="password"
+                    placeholder="Пароль"
+                  >
+                    {isLogin && (
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.04, x: 2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={auth.openForgotModal}
+                        className="
+                          cursor-pointer text-xs font-semibold text-[#D688B7]
+                          transition-colors duration-300 hover:text-[#b85f95]
+                          sm:text-sm
+                        "
+                      >
+                        Забули пароль
+                      </motion.button>
+                    )}
+                  </AuthInput>
+                </motion.div>
+
+                <AuthCheckbox isLogin={isLogin} item={item} />
+
+                <AuthSubmitButton isLogin={isLogin} />
+
+                <AuthDivider item={item} />
+
+                <motion.div
+                  variants={item}
+                  className="flex flex-col items-center justify-center"
+                >
+                  <GoogleAuthButton />
+                  <AuthRedirectText isLogin={isLogin} />
+                </motion.div>
+              </motion.form>
+            </div>
+          </motion.div>
+        </motion.section>
+
+        <motion.section
           initial={{ x: 80, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-1/2 h-100% bg-[url('/images/fish.png')] bg-cover bg-center transition-transform duration-700 hover:scale-[1.02]"
+          className="
+            hidden min-h-screen w-1/2 bg-[url('/images/fish.png')]
+            bg-cover bg-center transition-transform duration-700
+            hover:scale-[1.02]
+            lg:block
+          "
         />
-      </motion.header>
+      </motion.main>
 
       <AuthModals {...auth} />
     </>
