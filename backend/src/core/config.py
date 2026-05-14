@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     jwt_private_key: str
     jwt_public_key: str
 
+    mail_username: str
+    mail_password: str
+    mail_from: str
+    environment: str = "local"
+
     access_token_expire_minutes: int = 20
 
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")

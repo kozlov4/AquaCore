@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 from sqlalchemy import String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,6 +20,8 @@ class User(Base):
     nickname: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     myself: Mapped[str | None] = mapped_column(Text)
     password_hash: Mapped[str] = mapped_column(String(255))
+    reset_code: Mapped[Optional[str]] = mapped_column(String(8))
+    reset_code_expire: Mapped[datetime] = mapped_column(nullable=True)
 
     avatar_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
 

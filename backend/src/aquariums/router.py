@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from models import Aquarium
 from .schemas import (
     CreateAquarium,
     AquariumNameResponse,

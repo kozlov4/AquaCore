@@ -1,19 +1,25 @@
+from enum import Enum
 from typing import TYPE_CHECKING
-from datetime import datetime
+from sqlalchemy import (
+    Integer,
+    CheckConstraint,
+)
+from datetime import date, datetime, timedelta
 from sqlalchemy import (
     String,
     Text,
-    ForeignKey,
-    DateTime,
     Boolean,
-    Integer,
-    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Enum as SQLEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 if TYPE_CHECKING:
     from .user import User
+    from .aquarium import Aquarium
 
 
 class Chat(Base):
@@ -92,3 +98,74 @@ class Feedback(Base):
     __table_args__ = (
         CheckConstraint("rate >= 1 AND rate <= 5", name="check_valid_rate"),
     )
+
+
+class TaskType(str, Enum):
+    WATER_CHANGE = "Підміна води"
+    MAINTENANCE = "Обслуговування"
+    TESTS = "Тести води"
+    PLANTS = "Рослини"
+    CUSTOM = "Власне завдання"
+
+
+class RepeatType(str, Enum):
+    NONE = "Не повторювати"
+    DAILY = "Щодня"
+    WEEKLY = "Щотижня"
+    MONTHLY = "Щомісяця"
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    aquarium_id: Mapped[int | None] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE"), nullable=True
+    )
+
+    task_type: Mapped[TaskType] = mapped_column(SQLEnum(TaskType))
+    title: Mapped[str] = mapped_column(String(200))
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    due_date: Mapped[date] = mapped_column(Date)
+
+    repeat_type: Mapped[RepeatType] = mapped_column(
+        SQLEnum(RepeatType), default=RepeatType.NONE
+    )
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    aquarium: Mapped["Aquarium"] = relationship()
+
+    @property
+    def is_overdue(self) -> bool:
+        return self.due_date < date.today() and not self.is_completed
+
+
+class Equipment(Base):
+    __tablename__ = "equipment"
+
+    aquarium_id: Mapped[int] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE")
+    )
+
+    category: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(200))
+    installation_date: Mapped[date] = mapped_column(Date)
+    specifications: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    maintenance_interval_days: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+
+    @property
+    def days_until_maintenance(self) -> int | None:
+        if not self.maintenance_interval_days or not self.installation_date:
+            return None
+
+        next_maintenance = self.installation_date + timedelta(
+            days=self.maintenance_interval_days
+        )
+        today = date.today()
+
+        days_left = (next_maintenance - today).days
+        return days_left if days_left > 0 else 0
