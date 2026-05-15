@@ -1,6 +1,5 @@
-import "leaflet/dist/leaflet.css";
-import { Authorization } from "../components/Authorization/Authorization";
+import { Landing } from "../components/Landing/Landing";
 
-export default function Main() {
-  return (<Authorization type="register" />  )
+export default function HomePage() {
+  return <Landing />;
 }
