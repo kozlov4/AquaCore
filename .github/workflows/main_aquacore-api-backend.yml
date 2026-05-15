@@ -24,13 +24,12 @@ jobs:
         with:
           python-version: '3.13'
 
-      # 👇 ВОТ ЭТОТ БЛОК ИЗМЕНЕН ПОД POETRY И ПАПКУ BACKEND 👇
       - name: Create and Start virtual environment and Install dependencies
         run: |
           python -m venv antenv
           source antenv/bin/activate
           python -m pip install --upgrade pip
-          pip install poetry
+          pip install poetry poetry-plugin-export
           cd backend
           poetry export -f requirements.txt --output ../requirements.txt --without-hashes
           cd ..
