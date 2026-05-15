@@ -18,7 +18,7 @@ from tasks.router import tasks_router as task_router
 # from equipments.router import equipment_router as equipment_router
 from password_reset.router import router as password_reset_router
 
-app = FastAPI(title="AquaCore 🐠")
+app = FastAPI(title="AquaCore 1.1 🐠")
 
 app.add_middleware(
     CORSMiddleware,
