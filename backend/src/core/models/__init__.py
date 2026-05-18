@@ -13,4 +13,5 @@ from .system import (
     Equipment,
     TaskType,
     RepeatType,
+    EquipmentLog,
 )
