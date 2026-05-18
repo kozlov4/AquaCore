@@ -14,7 +14,7 @@ from species.router import router as species_router
 from compatibility.router import router as compatibility_router
 from water_test.router import router as water_test_router
 from tasks.router import tasks_router as task_router
-
+from water_change.router import router as water_change_router
 from equipments.router import equipment_router as equipment_router
 from password_reset.router import router as password_reset_router
 
@@ -46,6 +46,7 @@ app.include_router(water_test_router)
 app.include_router(task_router)
 app.include_router(equipment_router)
 app.include_router(password_reset_router)
+app.include_router(water_change_router)
 
 
 if __name__ == "__main__":
