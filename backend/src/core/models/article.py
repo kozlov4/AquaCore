@@ -1,7 +1,9 @@
-from typing import TYPE_CHECKING
 from datetime import datetime
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
 
 if TYPE_CHECKING:
@@ -13,16 +15,8 @@ class ArticleCategory(Base):
     __tablename__ = "article_categories"
 
     name: Mapped[str] = mapped_column(String(100))
-    image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
-
-    @property
-    def cover_url(self) -> str | None:
-        if self.image:
-            return self.image.image_url
-        return None
 
     articles: Mapped[list["Article"]] = relationship(back_populates="category")
-    image: Mapped["Image"] = relationship()
 
 
 class Article(Base):
