@@ -1,8 +1,7 @@
-from fastapi import HTTPException, status
-from sqlalchemy import select, or_, Result, func, desc, asc
+from sqlalchemy import desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.models import Aquarium, UserGallery
-from sqlalchemy.orm import joinedload, selectinload
 from .schemas import PostIn, SortOrder, UserGalleryUpdate
 
 
@@ -102,7 +101,7 @@ async def delete_photo(
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 
 async def update_photo(
