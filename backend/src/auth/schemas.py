@@ -13,7 +13,7 @@ class RefreshTokenRequest(BaseModel):
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=100)
 
 
 class UserRegistration(BaseModel):

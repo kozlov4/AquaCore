@@ -3,16 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from core.models.db_helper import db_helper
-from . import service
 from users import get_current_user
+from . import service
 from .schemas import (
     SortByArticleType,
     ArticleCardResponse,
     ArticleDetailResponse,
-    ArticleCreate,
     ArticleCategoriesResponse,
     ArticleDraftCardResponse,
     ArticleUpdate,
+    ArticleDraftCreate,
+    ArticlePublishCreate,
 )
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
@@ -25,14 +26,14 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 async def get_articles_route(
     target_type: SortByArticleType = SortByArticleType.all,
     search_text: str | None = None,
-    category: list[str] = Query(default=[]),
+    category_ids: list[int] = Query(default=[]),
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     return await service.get_articles(
         target_type=target_type,
         search_text=search_text,
-        category_names=category,
+        category_ids=category_ids,
         user_id=user_id,
         session=session,
     )
@@ -90,7 +91,7 @@ async def read_article_route(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_article_route(
-    article_in: ArticleCreate,
+    article_in: ArticlePublishCreate,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
@@ -108,7 +109,7 @@ async def create_article_route(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_draft_article_route(
-    article_in: ArticleCreate,
+    article_in: ArticleDraftCreate,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):

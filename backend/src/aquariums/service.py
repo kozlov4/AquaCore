@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import Aquarium, AquariumInhabitant, Species
+from core.models.system import TimelineEventType
 from sqlalchemy.orm import joinedload, selectinload
 from .schemas import (
     CreateAquarium,
@@ -16,6 +17,7 @@ from .schemas import (
     AquariumCardResponse,
     UpdateAquarium,
 )
+from time_line_event.service import log_ecosystem_event
 
 
 async def create_aquarium(
@@ -37,16 +39,28 @@ async def create_aquarium(
             status_code=status.HTTP_409_CONFLICT,
             detail="Aquarium with that name already exists",
         )
+
     new_aquarium = Aquarium(
         name=aquarium_in.name,
         volume=aquarium_in.volume,
         type=aquarium_in.type,
         image_id=aquarium_in.image_id,
         user_id=user_id,
-        status="Невизначений",
+        status="Відмінний",
     )
 
     session.add(new_aquarium)
+    await session.flush()
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=new_aquarium.id,
+        event_type=TimelineEventType.SYSTEM,
+        title="Екосистему засновано!",
+        description=f'Акваріум "{new_aquarium.name}" ({new_aquarium.volume} Л) успішно створено в системі.',
+        event_metadata={"volume": new_aquarium.volume, "type": new_aquarium.type},
+    )
+
     await session.commit()
     await session.refresh(new_aquarium)
     return new_aquarium
@@ -197,11 +211,27 @@ async def add_inhabitant(
 ):
     aquarium = await session.get(Aquarium, aquarium_id)
 
-    if aquarium.user_id != user_id or aquarium is None:
+    if aquarium is None or aquarium.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     new_inhabitant = AquariumInhabitant(aquarium_id=aquarium_id, **data.model_dump())
     session.add(new_inhabitant)
+
+    species = await session.get(Species, data.species_id)
+    species_name = species.name if species else "Невідомий вид"
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=aquarium_id,
+        event_type=TimelineEventType.POPULATION,
+        title="Заселення нових жителів",
+        description=f"Додано новий вид: {species_name}.",
+        event_metadata={
+            "species_name": species_name,
+            "quantity": f"+{data.quantity} шт",
+        },
+    )
+
     await session.commit()
     return {"message": "Успішно заселено"}
 

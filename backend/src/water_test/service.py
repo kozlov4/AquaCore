@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models import Aquarium
 from core.models import WaterTest
-
+from core.models.system import TimelineEventType
+from time_line_event.service import log_ecosystem_event
 from .schemas import (
     WaterMetric,
     AnalyticsPeriod,
@@ -27,7 +28,7 @@ async def create_water_test(
     aquarium = await session.get(Aquarium, aquarium_id)
 
     if not aquarium or aquarium.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Aquarim not found")
+        raise HTTPException(status_code=404, detail="Aquarium not found")
 
     values = [
         water_test_in.ph,
@@ -47,11 +48,33 @@ async def create_water_test(
         aquarium_id=aquarium_id,
         **water_test_in.model_dump(),
     )
-
     session.add(new_water_test)
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=aquarium_id,
+        event_type=TimelineEventType.WATER_PARAMETERS,
+        title="Записано нові параметри води",
+        description="Система зафіксувала нові показники.",
+        event_metadata={
+            "ph": water_test_in.ph,
+            "gh": water_test_in.gh,
+            "nh3": water_test_in.nh3,
+        },
+    )
+
+    if water_test_in.nh3 and water_test_in.nh3 > 0:
+        await log_ecosystem_event(
+            session=session,
+            aquarium_id=aquarium_id,
+            event_type=TimelineEventType.ALERT,
+            title="Критичний рівень Аміаку (NH3)",
+            description=f"Зафіксовано небезпечний рівень токсинів: {water_test_in.nh3} ppm. Ризики для жителів стрімко зростають.",
+            event_metadata={"nh3_level": water_test_in.nh3},
+        )
+
     await session.commit()
     await session.refresh(new_water_test)
-
     return new_water_test
 
 

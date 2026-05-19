@@ -1,9 +1,15 @@
 from fastapi import HTTPException
 from sqlalchemy import select, or_
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from core.models import Article, ArticleCategory, User
-from .schemas import SortByArticleType, ArticleCreate, ArticleUpdate
+from .schemas import (
+    SortByArticleType,
+    ArticleUpdate,
+    ArticleDraftCreate,
+    ArticlePublishCreate,
+)
 from .utils import calculate_reading_time
 
 
@@ -50,7 +56,7 @@ async def get_articles(
     target_type: SortByArticleType,
     search_text: str | None = None,
     user_id: int = None,
-    category_names: list[str] | None = None,
+    category_ids: list[int] | None = None,
 ):
     stmt = select(Article).where(Article.status == "PUBLISHED")
 
@@ -70,14 +76,15 @@ async def get_articles(
             )
         )
 
-    if category_names:
-        stmt = stmt.join(Article.category).where(
-            ArticleCategory.name.in_(category_names)
-        )
+    if category_ids:
+        stmt = stmt.join(Article.category).where(ArticleCategory.id.in_(category_ids))
 
     stmt = stmt.options(
         selectinload(Article.category),
-        selectinload(Article.author).selectinload(User.aquariums),
+        selectinload(Article.author).options(
+            selectinload(User.aquariums),
+            selectinload(User.avatar),
+        ),
         selectinload(Article.image),
     )
 
@@ -93,7 +100,10 @@ async def get_article_by_id(article_id: int, session: AsyncSession):
         .where(Article.id == article_id)
         .options(
             selectinload(Article.category),
-            selectinload(Article.author).selectinload(User.aquariums),
+            selectinload(Article.author).options(
+                selectinload(User.aquariums),
+                selectinload(User.avatar),
+            ),
             selectinload(Article.image),
         )
     )
@@ -104,17 +114,18 @@ async def get_article_by_id(article_id: int, session: AsyncSession):
 async def create_article(
     session: AsyncSession,
     user_id: int,
-    article_in: ArticleCreate,
+    article_in: ArticlePublishCreate | ArticleDraftCreate,
     is_draft: bool,
 ):
-    status = "PENDING"
-    if is_draft:
-        status = "DRAFT"
+    status = "DRAFT" if is_draft else "PENDING"
 
-    reading_time = calculate_reading_time(article_in.content)
+    content = article_in.content or ""
+    reading_time = calculate_reading_time(content)
+
+    article_data = article_in.model_dump(exclude_none=True)
 
     new_article = Article(
-        **article_in.model_dump(),
+        **article_data,
         author_id=user_id,
         is_official=False,
         status=status,
@@ -122,6 +133,7 @@ async def create_article(
     )
 
     session.add(new_article)
+
     await session.commit()
     await session.refresh(new_article)
 
@@ -155,10 +167,16 @@ async def update_article(
         if article_in.is_draft == True:
             article.status = "DRAFT"
         elif article_in.is_draft == False:
-            if not article.title or not article.content or not article.category_id:
+            if (
+                not article.title
+                or not article.content
+                or not article.category_id
+                or not article.excerpt
+                or not article.image
+            ):
                 raise HTTPException(
                     status_code=400,
-                    detail="Щоб надіслати статтю модератору, заповніть заголовок, текст і виберіть категорію.",
+                    detail="Щоб надіслати статтю модератору, заповніть всі поля",
                 )
             article.status = "PENDING"
 

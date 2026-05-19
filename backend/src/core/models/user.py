@@ -1,7 +1,9 @@
-from typing import TYPE_CHECKING, Optional
 from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, DateTime
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import String, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
 
 if TYPE_CHECKING:
@@ -28,6 +30,12 @@ class User(Base):
     @property
     def aquariums_count(self) -> int:
         return len(self.aquariums) if self.aquariums else 0
+
+    @property
+    def avatar_url(self) -> str | None:
+        if self.avatar:
+            return self.avatar.image_url
+        return None
 
     avatar: Mapped["Image"] = relationship()
     aquariums: Mapped[list["Aquarium"]] = relationship(back_populates="owner")

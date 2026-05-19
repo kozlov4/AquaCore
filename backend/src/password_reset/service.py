@@ -1,15 +1,16 @@
-import random
 import logging
+import random
 from datetime import datetime, timedelta
+
 from fastapi import BackgroundTasks, HTTPException
 from fastapi_mail import FastMail, MessageSchema, MessageType
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
-from auth.utils import hash_password
 
-from core.models import User
+from auth.utils import hash_password
 from core.config import settings
+from core.models import User
 from .schemas import ForgotPasswordRequest, ResetPasswordRequest
 
 logging.basicConfig(level=logging.INFO)
@@ -86,7 +87,11 @@ async def reset_password(request: ResetPasswordRequest, session: AsyncSession):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Термін дії коду минув або він не запитувався. Спробуйте ще раз.",
         )
-
+    if request.new_password != request.repeat_new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ви неправильно ввели повторний пароль",
+        )
     current_time = datetime.utcnow()
 
     db_expire_time = (

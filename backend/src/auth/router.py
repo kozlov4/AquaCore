@@ -1,17 +1,17 @@
-import httpx
 import urllib.parse
 
-from fastapi.security import OAuth2PasswordRequestForm
-
-from .schemas import UserRegistration, TokenInfo
-from .service import register_user, user_login, refresh_access_token
-from .schemas import UserLogin, RefreshTokenRequest
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.config import settings
 from core.models.db_helper import db_helper
 from . import service
+from .schemas import UserLogin, RefreshTokenRequest
+from .schemas import UserRegistration, TokenInfo
+from .service import register_user, refresh_access_token
 
 router = APIRouter(tags=["Authentication"])
 

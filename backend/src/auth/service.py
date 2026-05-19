@@ -1,14 +1,16 @@
 import random
 import string
+
 import jwt
 from fastapi import HTTPException, status
-from .schemas import UserRegistration, UserLogin
-from .utils import validate_password, decode_jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.models import User
 from .schemas import TokenInfo
+from .schemas import UserRegistration, UserLogin
 from .utils import hash_password, encode_jwt
+from .utils import validate_password, decode_jwt
 
 
 async def generate_unique_nickname(session: AsyncSession, base_name: str) -> str:
@@ -46,6 +48,7 @@ async def register_user(
         email=user_in.email,
         name=user_in.name,
         nickname=unique_nickname,
+        avatar_id=11,
         password_hash=hashed_pwd.decode("utf-8"),
     )
 
@@ -149,6 +152,7 @@ async def process_google_user(session: AsyncSession, user_info: dict) -> TokenIn
             email=email,
             name=name,
             nickname=unique_nickname,
+            avatar_id=11,
             password_hash=hashed_pwd.decode("utf-8"),
         )
         session.add(user)

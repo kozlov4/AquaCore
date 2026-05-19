@@ -1,3 +1,4 @@
+import enum
 from enum import Enum
 from typing import TYPE_CHECKING
 from sqlalchemy import (
@@ -16,6 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+from sqlalchemy import ForeignKey, String, Text, DateTime, Enum as SQLEnum, JSON
 
 if TYPE_CHECKING:
     from .user import User
@@ -156,6 +158,7 @@ class Equipment(Base):
     maintenance_interval_days: Mapped[int | None] = mapped_column(
         Integer, nullable=True
     )
+    logs: Mapped[list[EquipmentLog]] = relationship(back_populates="equipment")
 
     @property
     def days_until_maintenance(self) -> int | None:
@@ -169,3 +172,43 @@ class Equipment(Base):
 
         days_left = (next_maintenance - today).days
         return days_left if days_left > 0 else 0
+
+
+class EquipmentLog(Base):
+    __tablename__ = "equipment_logs"
+
+    equipment_id: Mapped[int] = mapped_column(
+        ForeignKey("equipment.id", ondelete="CASCADE")
+    )
+
+    log_type: Mapped[str] = mapped_column(String(120))
+    log_date: Mapped[date] = mapped_column(Date)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_resolved: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    equipment: Mapped["Equipment"] = relationship(back_populates="logs")
+
+
+class TimelineEventType(str, enum.Enum):
+    WATER_PARAMETERS = "Параметри води"
+    POPULATION = "Населення"
+    EQUIPMENT = "Обладнання"
+    MAINTENANCE = "Обслуговування"
+    ALERT = "Алерти"
+    SYSTEM = "Системні"
+
+
+class TimelineEvent(Base):
+    __tablename__ = "timeline_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    aquarium_id: Mapped[int] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE")
+    )
+
+    event_type: Mapped[TimelineEventType] = mapped_column(SQLEnum(TimelineEventType))
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    aquarium: Mapped["Aquarium"] = relationship()

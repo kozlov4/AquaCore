@@ -15,6 +15,7 @@ class SortByArticleType(str, Enum):
 class AuthorResponse(BaseModel):
     id: int
     name: str
+    avatar_url: Optional[str] = None
     aquariums_count: int
     model_config = ConfigDict(from_attributes=True)
 
@@ -27,8 +28,8 @@ class CategoryResponse(BaseModel):
 
 class ArticleCardResponse(BaseModel):
     id: int
-    title: str
-    excerpt: str
+    title: Optional[str] = None
+    excerpt: Optional[str] = None
     is_official: bool
     reading_time_minutes: int
 
@@ -41,23 +42,30 @@ class ArticleCardResponse(BaseModel):
 
 
 class ArticleDetailResponse(ArticleCardResponse):
-    content: str
+    content: Optional[str] = None
     created_at: datetime
     status: str
 
 
-class ArticleCreate(BaseModel):
+class ArticlePublishCreate(BaseModel):
     title: str = Field(..., max_length=200)
-    category_id: Optional[int] = None
-    excerpt: str = ""
-    content: str = ""
-    image_id: Optional[int] = None
+    category_id: int
+    excerpt: str = Field(..., max_length=500)
+    content: str
+    image_id: int
+
+
+class ArticleDraftCreate(BaseModel):
+    title: str | None = Field(None, max_length=200)
+    category_id: int | None = None
+    excerpt: str | None = Field(None, max_length=500)
+    content: str | None = None
+    image_id: int | None = None
 
 
 class ArticleCategoriesResponse(BaseModel):
     id: int
     name: str
-    cover_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
