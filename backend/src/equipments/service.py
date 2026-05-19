@@ -10,6 +10,8 @@ from .schemas import (
     EquipmentAlertResponse,
 )
 from datetime import date
+from core.models.system import TimelineEventType
+from time_line_event.service import log_ecosystem_event
 
 
 async def get_equipment(
@@ -31,6 +33,16 @@ async def create_equipment(
 ):
     new_eq = Equipment(aquarium_id=aquarium_id, **data.model_dump())
     session.add(new_eq)
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=aquarium_id,
+        event_type=TimelineEventType.EQUIPMENT,
+        title="Нове обладнання",
+        description=f"Додано {data.category.lower()} {data.name}.",
+        event_metadata={"category": data.category, "name": data.name},
+    )
+
     await session.commit()
     await session.refresh(new_eq)
     return new_eq
@@ -62,8 +74,22 @@ async def delete_equipment(session: AsyncSession, equipment_id: int):
 async def create_equipment_log(
     session: AsyncSession, equipment_id: int, data: EquipmentLogCreate
 ):
+    eq = await session.get(Equipment, equipment_id)
+    if not eq:
+        raise HTTPException(status_code=404, detail="Обладнання не знайдено")
+
     new_log = EquipmentLog(equipment_id=equipment_id, **data.model_dump())
     session.add(new_log)
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=eq.aquarium_id,
+        event_type=TimelineEventType.MAINTENANCE,
+        title=data.log_type,
+        description=f"Пристрій: {eq.name}. Деталі: {data.description}",
+        event_metadata={"equipment_name": eq.name, "is_resolved": data.is_resolved},
+    )
+
     await session.commit()
     await session.refresh(new_log)
     return new_log
@@ -82,8 +108,16 @@ async def service_equipment(session: AsyncSession, equipment_id: int):
         is_resolved=True,
     )
     session.add(new_log)
-
     eq.installation_date = date.today()
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=eq.aquarium_id,
+        event_type=TimelineEventType.MAINTENANCE,
+        title="Планове обслуговування обладнання",
+        description=f"Обслуговано пристрій {eq.name}.",
+        event_metadata={"equipment_name": eq.name},
+    )
 
     await session.commit()
     return {"message": "Обладнання успішно обслуговано, таймер скинуто"}

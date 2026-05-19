@@ -8,6 +8,8 @@ from .schemas import (
     WaterChangeScheduleUpdate,
     WaterChangeStatusResponse,
 )
+from core.models.system import TimelineEventType
+from time_line_event.service import log_ecosystem_event
 
 
 async def record_water_change(
@@ -19,6 +21,18 @@ async def record_water_change(
 
     new_log = WaterChangeLog(aquarium_id=aquarium_id, **data.model_dump())
     session.add(new_log)
+
+    await log_ecosystem_event(
+        session=session,
+        aquarium_id=aquarium_id,
+        event_type=TimelineEventType.MAINTENANCE,
+        title=data.change_type.value,
+        description=(
+            data.comment if data.comment else f"Замінено {data.percentage}% води."
+        ),
+        event_metadata={"percentage": f"{data.percentage}%"},
+    )
+
     await session.commit()
     await session.refresh(new_log)
     return new_log

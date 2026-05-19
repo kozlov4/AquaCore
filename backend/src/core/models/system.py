@@ -1,3 +1,4 @@
+import enum
 from enum import Enum
 from typing import TYPE_CHECKING
 from sqlalchemy import (
@@ -16,6 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+from sqlalchemy import ForeignKey, String, Text, DateTime, Enum as SQLEnum, JSON
 
 if TYPE_CHECKING:
     from .user import User
@@ -185,3 +187,28 @@ class EquipmentLog(Base):
     is_resolved: Mapped[bool] = mapped_column(Boolean, default=True)
 
     equipment: Mapped["Equipment"] = relationship(back_populates="logs")
+
+
+class TimelineEventType(str, enum.Enum):
+    WATER_PARAMETERS = "Параметри води"
+    POPULATION = "Населення"
+    EQUIPMENT = "Обладнання"
+    MAINTENANCE = "Обслуговування"
+    ALERT = "Алерти"
+    SYSTEM = "Системні"
+
+
+class TimelineEvent(Base):
+    __tablename__ = "timeline_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    aquarium_id: Mapped[int] = mapped_column(
+        ForeignKey("aquariums.id", ondelete="CASCADE")
+    )
+
+    event_type: Mapped[TimelineEventType] = mapped_column(SQLEnum(TimelineEventType))
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    aquarium: Mapped["Aquarium"] = relationship()
