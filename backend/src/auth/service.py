@@ -48,6 +48,7 @@ async def register_user(
         email=user_in.email,
         name=user_in.name,
         nickname=unique_nickname,
+        avatar_id=11,
         password_hash=hashed_pwd.decode("utf-8"),
     )
 
