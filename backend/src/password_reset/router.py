@@ -1,12 +1,11 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi_mail import FastMail, ConnectionConfig
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.models.db_helper import db_helper
 from core.config import settings
-from .schemas import ForgotPasswordRequest, ResetPasswordRequest
+from core.models.db_helper import db_helper
 from . import service
+from .schemas import ForgotPasswordRequest, ResetPasswordRequest
 
 router = APIRouter(tags=["Reset Password"])
 

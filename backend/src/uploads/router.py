@@ -1,13 +1,15 @@
 import cloudinary.uploader
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models.db_helper import db_helper
+
 from core.models import Image
+from core.models.db_helper import db_helper
+from users.dependencies import get_current_user
 
 router = APIRouter(tags=["Uploads"])
 
 
-@router.post("/upload-image/")
+@router.post("/upload-image/", dependencies=[Depends(get_current_user)])
 async def upload_image(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(db_helper.session_dependency),

@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Query, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
+
 from core.models.db_helper import db_helper
-from . import service
 from users import get_current_user
+from . import service
 from .schemas import (
     PostIn,
     SortOrder,
