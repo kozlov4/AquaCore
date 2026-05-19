@@ -29,3 +29,13 @@ class PostCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UsersCardResponse(BaseModel):
+    id: int
+    name: str
+    nickname: str
+    avatar_url: str
+
+    class Config:
+        from_attributes = True
