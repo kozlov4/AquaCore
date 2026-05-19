@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING
-from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .base import Base
 from datetime import datetime, UTC
+from typing import TYPE_CHECKING
+
 from sqlalchemy import DateTime
+from sqlalchemy import String, Text, ForeignKey, Boolean
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
 
 if TYPE_CHECKING:
     from .base import Image
@@ -16,16 +17,20 @@ class Post(Base):
     __tablename__ = "posts"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    aquarium_id: Mapped[int | None] = mapped_column(ForeignKey("aquariums.id"))
     description: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
     category: Mapped[str] = mapped_column(String(50))
 
     author: Mapped["User"] = relationship(back_populates="posts")
-    aquarium: Mapped["Aquarium"] = relationship(back_populates="posts")
     image: Mapped["Image"] = relationship()
     comments: Mapped[list["Comment"]] = relationship(back_populates="post")
+
+    @property
+    def image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
 
 
 class UserGallery(Base):
