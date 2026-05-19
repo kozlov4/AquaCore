@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ImagePublic(BaseModel):
@@ -26,8 +26,8 @@ class ReadFeedback(BaseModel):
 
 
 class CreateFeedback(BaseModel):
-    rate: int
-    description: str
+    rate: int = Field(..., ge=1, le=5)
+    description: str = Field(..., min_length=30, max_length=500)
 
     class Config:
         from_attributes = True
