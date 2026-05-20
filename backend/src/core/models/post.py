@@ -170,8 +170,6 @@ class Comment(Base):
     post: Mapped["Post"] = relationship(back_populates="comments")
     author: Mapped["User"] = relationship()
 
-    likes: Mapped[list["CommentLike"]] = relationship(cascade="all, delete-orphan")
-
     @property
     def created_at_human(self) -> str:
         now = datetime.now(UTC)
@@ -205,10 +203,3 @@ class Comment(Base):
     @property
     def likes_count(self) -> int:
         return len(self.likes)
-
-
-class CommentLike(Base):
-    __tablename__ = "comment_likes"
-
-    comment_id: Mapped[int] = mapped_column(ForeignKey("comments.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))

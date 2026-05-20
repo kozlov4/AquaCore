@@ -11,6 +11,7 @@ from .schemas import (
     PostCreate,
     UsersCardResponse,
     PostResponse,
+    CommentCreate,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
@@ -87,6 +88,21 @@ async def create_like(
     )
 
 
+@router.post("/create/{post_id}/comment/", status_code=status.HTTP_201_CREATED)
+async def create_comment(
+    comment_text: CommentCreate,
+    post_id: int,
+    curr_user_id=Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.create_comment(
+        post_id=post_id,
+        session=session,
+        curr_user_id=curr_user_id,
+        comment_text=comment_text,
+    )
+
+
 @router.delete("/remove/{post_id}/like/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_like(
     post_id: int,
@@ -95,6 +111,22 @@ async def delete_like(
 ):
     return await service.delete_like(
         post_id=post_id,
+        session=session,
+        curr_user_id=curr_user_id,
+    )
+
+
+@router.delete(
+    "/remove/{post_id}/comment/{comment_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_comment(
+    post_id: int,
+    comment_id: int,
+    curr_user_id=Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.delete_comment(
+        comment_id=comment_id,
         session=session,
         curr_user_id=curr_user_id,
     )

@@ -1,13 +1,12 @@
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import select, Result, or_
+from sqlalchemy import select, Result, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from core.models import Post, User, Comment
-from models import PostLike
-from .schemas import PostCreate
+from core.models import Post, User, Comment, PostLike
+from .schemas import PostCreate, CommentCreate
 
 
 async def get_posts(
@@ -73,7 +72,7 @@ async def get_post_by_id(
             selectinload(Post.comments)
             .selectinload(Comment.author)
             .selectinload(User.avatar),
-            selectinload(Post.comments).selectinload(Comment.likes),
+            selectinload(Post.comments),
         )
     )
     result: Result = await session.execute(stmt)
@@ -133,3 +132,39 @@ async def delete_like(
 
     await session.delete(like)
     await session.refresh(like)
+
+
+async def create_comment(
+    session: AsyncSession,
+    curr_user_id: int,
+    post_id: int,
+    comment_text: CommentCreate,
+):
+    comment = Comment(user_id=curr_user_id, post_id=post_id, text=comment_text.text)
+
+    session.add(comment)
+
+    await session.commit()
+
+    await session.refresh(comment)
+
+    return comment
+
+
+async def delete_comment(
+    session: AsyncSession,
+    curr_user_id: int,
+    comment_id: int,
+):
+    stmt = delete(Comment).where(
+        Comment.user_id == curr_user_id,
+        Comment.id == comment_id,
+    )
+    result = await session.execute(stmt)
+    await session.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Комментарий не найден или у вас нет прав на его удаление",
+        )

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PostCategory(str, Enum):
@@ -36,8 +36,6 @@ class CommentResponse(BaseModel):
     id: int
     author: AuthorResponse
     text: str
-
-    likes_count: int
 
     created_at_human: str
 
@@ -83,3 +81,7 @@ class UsersCardResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CommentCreate(BaseModel):
+    text: str = Field(..., min_length=1, max_length=500)
