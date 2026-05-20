@@ -11,6 +11,7 @@ from .schemas import (
     ImageResponseList,
     ImageResponse,
     UserGalleryUpdate,
+    PostCategory,
 )
 
 router = APIRouter(prefix="/gallery", tags=["Gallery"])
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/gallery", tags=["Gallery"])
 async def get_gallery_photos(
     session: AsyncSession = Depends(db_helper.session_dependency),
     user_id: int = Depends(get_current_user),
-    category: str | None = Query(default=None),
+    category: PostCategory | None = Query(default=None),
     aquarium_name: str | None = Query(default=None),
     sort_order: SortOrder = Query(default=SortOrder.newest),
 ):
@@ -62,16 +63,16 @@ async def create_post_to_gallery_route(
     )
 
 
-@router.put("/{photo_id}/", response_model=ImageResponse)
+@router.put("/{id}/", response_model=ImageResponse)
 async def update_photo_route(
-    photo_id: int,
+    id: int,
     photo_in: UserGalleryUpdate,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     return await service.update_photo(
         session=session,
-        photo_id=photo_id,
+        id=id,
         user_id=user_id,
         photo_in=photo_in,
     )

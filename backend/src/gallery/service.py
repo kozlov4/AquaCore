@@ -106,13 +106,13 @@ from fastapi import HTTPException
 
 async def update_photo(
     session: AsyncSession,
-    photo_id: int,
+    id: int,
     user_id: int,
     photo_in: UserGalleryUpdate,
 ):
     stmt = (
         select(UserGallery)
-        .where(UserGallery.id == photo_id)
+        .where(UserGallery.id == id)
         .options(selectinload(UserGallery.aquarium), selectinload(UserGallery.image))
     )
     result = await session.execute(stmt)
