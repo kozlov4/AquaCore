@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING, Optional
+
 from sqlalchemy import String, Text, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
 
 if TYPE_CHECKING:
@@ -57,7 +59,7 @@ class Species(Base):
     __tablename__ = "species"
 
     category: Mapped[str] = mapped_column(String(50), index=True)
-    water_type: Mapped[str] = mapped_column(String(50), index=True)
+    water_type: Mapped[str] = mapped_column(String(60), index=True)
     name: Mapped[str] = mapped_column(String(150), index=True)
     scientific_name: Mapped[str | None] = mapped_column(String(150))
     description: Mapped[str | None] = mapped_column(Text)

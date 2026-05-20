@@ -1,59 +1,58 @@
 import enum
+from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    Boolean,
+    Date,
+)
+from sqlalchemy import ForeignKey, String, Text, DateTime, Enum as SQLEnum, JSON
 from sqlalchemy import (
     Integer,
     CheckConstraint,
 )
-from datetime import date, datetime, timedelta
-from sqlalchemy import (
-    String,
-    Text,
-    Boolean,
-    Date,
-    DateTime,
-    ForeignKey,
-    Enum as SQLEnum,
-)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
-from sqlalchemy import ForeignKey, String, Text, DateTime, Enum as SQLEnum, JSON
 
 if TYPE_CHECKING:
     from .user import User
     from .aquarium import Aquarium
-
-
-class Chat(Base):
-    __tablename__ = "chats"
-
-    user1_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    user2_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-
-
-class Message(Base):
-    __tablename__ = "messages"
-
-    chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id"))
-    sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    text: Mapped[str] = mapped_column(Text)
-    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    from .base import Image
 
 
 class Notification(Base):
     __tablename__ = "notifications"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))  # Кому
-    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
-    type: Mapped[str] = mapped_column(String(50))  # like, comment, system_alert
-    post_id: Mapped[int | None] = mapped_column(ForeignKey("posts.id"))
-    comment_id: Mapped[int | None] = mapped_column(ForeignKey("comments.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    actor_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    post_id: Mapped[int | None] = mapped_column(
+        ForeignKey("posts.id", ondelete="CASCADE")
+    )
+
+    image_id: Mapped[int | None] = mapped_column(
+        ForeignKey("images.id", ondelete="SET NULL")
+    )
+
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    author: Mapped["User"] = relationship(foreign_keys=[actor_id])
+
+    recipient: Mapped["User"] = relationship(
+        foreign_keys=[user_id], back_populates="notifications"
+    )
+
+    image: Mapped["Image"] = relationship()
+
+    @property
+    def image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+        return None
 
 
 class Report(Base):

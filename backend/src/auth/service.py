@@ -18,7 +18,7 @@ async def generate_unique_nickname(session: AsyncSession, base_name: str) -> str
 
     while True:
         random_suffix = "".join(random.choices(string.digits, k=4))
-        candidate_nickname = f"{clean_name}_{random_suffix}"
+        candidate_nickname = f"{clean_name}_{random_suffix}".lower()
 
         query = select(User).where(User.nickname == candidate_nickname).limit(1)
         result = await session.execute(query)
@@ -73,7 +73,7 @@ async def user_login(
         user.password_hash.encode("utf-8"),
     ):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Невірний email або пароль"
         )
 
     access_token = encode_jwt(
