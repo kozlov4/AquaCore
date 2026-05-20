@@ -5,7 +5,7 @@ from sqlalchemy import select, Result, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from core.models import Post, User, Comment, PostLike
+from core.models import Post, User, Comment, PostLike, SavedPost
 from .schemas import PostCreate, CommentCreate
 
 
@@ -167,4 +167,48 @@ async def delete_comment(
         raise HTTPException(
             status_code=404,
             detail="Комментарий не найден или у вас нет прав на его удаление",
+        )
+
+
+async def save_post(session: AsyncSession, curr_user_id: int, post_id: int):
+
+    stmt = select(SavedPost).where(
+        SavedPost.user_id == curr_user_id, SavedPost.post_id == post_id
+    )
+
+    result: Result = await session.execute(stmt)
+
+    post = result.scalar_one_or_none()
+
+    if post:
+        raise HTTPException(
+            status_code=400, detail="Ви вже додали цей поост до збережених"
+        )
+
+    saved_post = SavedPost(user_id=curr_user_id, post_id=post_id)
+    session.add(saved_post)
+
+    await session.commit()
+
+    await session.refresh(saved_post)
+
+    return saved_post
+
+
+async def delete_save_post(
+    session: AsyncSession,
+    curr_user_id: int,
+    post_id: int,
+):
+    stmt = delete(SavedPost).where(
+        SavedPost.user_id == curr_user_id,
+        SavedPost.post_id == post_id,
+    )
+    result = await session.execute(stmt)
+    await session.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Пост не знайден",
         )
