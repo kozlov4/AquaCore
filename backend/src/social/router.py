@@ -12,6 +12,7 @@ from .schemas import (
     UsersCardResponse,
     PostResponse,
     CommentCreate,
+    ReadNotificationsResponse,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
@@ -32,6 +33,17 @@ async def get_posts(
         limit=limit,
         offset=offset,
         category=category,
+        curr_user_id=curr_user_id,
+    )
+
+
+@router.get("/notifications/", response_model=list[ReadNotificationsResponse])
+async def get_notifications(
+    curr_user_id=Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_notifications(
+        session=session,
         curr_user_id=curr_user_id,
     )
 
@@ -75,7 +87,7 @@ async def create_post(
     )
 
 
-@router.post("{post_id}/like/", status_code=status.HTTP_201_CREATED)
+@router.post("/{post_id}/like/", status_code=status.HTTP_201_CREATED)
 async def create_like(
     post_id: int,
     curr_user_id=Depends(get_current_user),
@@ -88,7 +100,7 @@ async def create_like(
     )
 
 
-@router.post("{post_id}/comment/", status_code=status.HTTP_201_CREATED)
+@router.post("/{post_id}/comment/", status_code=status.HTTP_201_CREATED)
 async def create_comment(
     comment_text: CommentCreate,
     post_id: int,
@@ -103,7 +115,7 @@ async def create_comment(
     )
 
 
-@router.post("{post_id}/save/", status_code=status.HTTP_201_CREATED)
+@router.post("/{post_id}/save/", status_code=status.HTTP_201_CREATED)
 async def save_post(
     post_id: int,
     curr_user_id=Depends(get_current_user),
@@ -116,7 +128,7 @@ async def save_post(
     )
 
 
-@router.delete("{post_id}/like/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{post_id}/like/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_like(
     post_id: int,
     curr_user_id=Depends(get_current_user),

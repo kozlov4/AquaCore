@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .base import Image
     from .aquarium import Aquarium
     from .post import Post
-    from .system import Feedback
+    from .system import Feedback, Notification
     from .post import UserGallery, UserDairy
 
 
@@ -43,14 +43,11 @@ class User(Base):
     feedback: Mapped["Feedback"] = relationship(back_populates="user")
     gallery: Mapped[list["UserGallery"]] = relationship(back_populates="author")
     diary: Mapped[list["UserDairy"]] = relationship(back_populates="author")
-
-
-class Follower(Base):
-    __tablename__ = "followers"
-
-    follower_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    followed_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    notifications: Mapped[list["Notification"]] = relationship(
+        foreign_keys="[Notification.user_id]",  # Явно говорим искать по user_id
+        back_populates="recipient",
+        cascade="all, delete-orphan",
+    )
 
 
 class Block(Base):

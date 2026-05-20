@@ -85,3 +85,9 @@ class UsersCardResponse(BaseModel):
 
 class CommentCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=500)
+
+
+class ReadNotificationsResponse(BaseModel):
+    id: int
+    author: AuthorResponse
+    image_url: str | None

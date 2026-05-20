@@ -4,8 +4,6 @@ from .base import Base, Image
 from .encyclopedia import Disease, TreatmentStep, DiagnosticStep, Species
 from .post import Post, Comment, SavedPost, UserGallery, UserDairy, PostLike
 from .system import (
-    Chat,
-    Message,
     Notification,
     Feedback,
     Task,
@@ -15,4 +13,4 @@ from .system import (
     EquipmentLog,
     TimelineEvent,
 )
-from .user import User, Follower, Block
+from .user import User, Block
