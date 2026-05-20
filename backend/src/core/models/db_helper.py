@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     async_scoped_session,
 )
+
 from core.config import settings
 
 
@@ -15,6 +16,10 @@ class DatabaseHelper:
         self.engine = create_async_engine(
             url=url,
             echo=echo,
+            connect_args={
+                "prepared_statement_cache_size": 0,
+                "statement_cache_size": 0,
+            },
         )
 
         self.session_factory = async_sessionmaker(

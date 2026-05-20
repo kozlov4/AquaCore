@@ -1,10 +1,12 @@
 from typing import Optional
 
+from fastapi import HTTPException
 from sqlalchemy import select, Result, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from core.models import Post, User, Comment
+from models import PostLike
 from .schemas import PostCreate
 
 
@@ -79,3 +81,55 @@ async def get_post_by_id(
     post = result.scalars().one()
 
     return post
+
+
+async def create_like(
+    session: AsyncSession,
+    curr_user_id: int,
+    post_id: int,
+):
+    stmt = select(PostLike).where(
+        PostLike.user_id == curr_user_id,
+        PostLike.post_id == post_id,
+    )
+
+    result: Result = await session.execute(stmt)
+
+    like = result.scalar_one_or_none()
+
+    if like:
+        raise HTTPException(status_code=400, detail="already liked")
+
+    post_like = PostLike(
+        user_id=curr_user_id,
+        post_id=post_id,
+    )
+
+    session.add(post_like)
+
+    await session.commit()
+
+    await session.refresh(post_like)
+
+    return post_like
+
+
+async def delete_like(
+    session: AsyncSession,
+    curr_user_id: int,
+    post_id: int,
+):
+    stmt = select(PostLike).where(
+        PostLike.user_id == curr_user_id,
+        PostLike.post_id == post_id,
+    )
+
+    result: Result = await session.execute(stmt)
+
+    like = result.scalar_one_or_none()
+
+    if like is None:
+        raise HTTPException(status_code=400, detail="Ви вже видалили лайк")
+
+    await session.delete(like)
+    await session.refresh(like)
