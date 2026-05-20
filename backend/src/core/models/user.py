@@ -24,7 +24,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     reset_code: Mapped[Optional[str]] = mapped_column(String(8))
     reset_code_expire: Mapped[datetime] = mapped_column(nullable=True)
-
+    new_email_candidate: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email_reset_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
     avatar_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
 
     @property

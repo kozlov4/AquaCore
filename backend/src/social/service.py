@@ -1,9 +1,13 @@
-from fastapi import HTTPException, status
+import random
+
+from fastapi import HTTPException, status, BackgroundTasks, logger
+from fastapi_mail import MessageSchema, MessageType, FastMail
 from sqlalchemy import select, Result, or_, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from auth.utils import validate_password, hash_password
+from core.config import settings
 from core.models import Post, User, Comment, PostLike, SavedPost, Notification, Report
 from .schemas import (
     PostCreate,
@@ -12,6 +16,8 @@ from .schemas import (
     CreateReport,
     UserUpdateMeRequest,
     ChangePasswordRequest,
+    ChangeEmailRequest,
+    ConfirmEmailChangeRequest,
 )
 
 
@@ -403,3 +409,78 @@ async def get_my_saved_posts(session: AsyncSession, curr_user_id: int):
     saved_posts = result.scalars().all()
 
     return list(saved_posts)
+
+
+async def request_email_change(
+    request: ChangeEmailRequest,
+    curr_user_id: int,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession,
+    fm: FastMail,
+):
+    query_check = select(User).where(User.email == request.new_email)
+    existing_user = await session.scalar(query_check)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ця електронна пошта вже використовується іншим користувачем",
+        )
+
+    user = await session.get(User, curr_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+
+    verify_code = str(random.randint(100000, 999999))
+
+    user.email_reset_code = verify_code
+    user.new_email_candidate = request.new_email
+    await session.commit()
+
+    html_content = f"""
+    <h2>Зміна електронної пошти</h2>
+    <p>Ви запросили зміну електронної пошти. Ваш код підтвердження: <strong>{verify_code}</strong></p>
+    """
+
+    message = MessageSchema(
+        subject="Код підтвердження нового Email",
+        recipients=[request.new_email],
+        body=html_content,
+        subtype=MessageType.html,
+    )
+
+    if settings.environment.lower() == "production":
+        logger.info(f"Mock send change email code {verify_code} to {request.new_email}")
+    else:
+        background_tasks.add_task(fm.send_message, message)
+
+    return {"message": "Повідомлення надіслано"}
+
+
+async def confirm_email_change(
+    request: ConfirmEmailChangeRequest,
+    curr_user_id: int,
+    session: AsyncSession,
+):
+    user = await session.get(User, curr_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+
+    if not user.new_email_candidate or not user.email_reset_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Запит на зміну email не знайдено",
+        )
+
+    if user.email_reset_code != request.code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Невірний код підтвердження"
+        )
+
+    user.email = user.new_email_candidate
+
+    user.new_email_candidate = None
+    user.email_reset_code = None
+
+    await session.commit()
+
+    return {"message": "Email успішно змінено"}

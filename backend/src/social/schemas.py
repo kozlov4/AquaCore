@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, EmailStr
 
 
 class PostCategory(str, Enum):
@@ -149,3 +149,11 @@ class ReadProfileResponse(BaseModel):
 class SavedPostPhotoResponse(BaseModel):
     id: int
     image_url: Optional[str] = None
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+
+
+class ConfirmEmailChangeRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
