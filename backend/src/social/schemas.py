@@ -120,3 +120,19 @@ class UserUpdateMeRequest(BaseModel):
 
 class UserResponse(UserUpdateMeRequest):
     pass
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(min_length=8, max_length=100)
+    new_password: str = Field(min_length=8, max_length=100)
+    reply_new_password: str = Field(min_length=8, max_length=100)
+
+    @model_validator(mode="after")
+    def check_passwords_match(self) -> "ChangePasswordRequest":
+        if self.new_password != self.reply_new_password:
+            raise ValueError("Нові паролі не співпадають")
+
+        if self.old_password == self.new_password:
+            raise ValueError("Новий пароль не може бути таким самим, як старий")
+
+        return self

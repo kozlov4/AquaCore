@@ -1,9 +1,9 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import select, Result, or_, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from starlette import status
 
+from auth.utils import validate_password, hash_password
 from core.models import Post, User, Comment, PostLike, SavedPost, Notification, Report
 from .schemas import (
     PostCreate,
@@ -11,6 +11,7 @@ from .schemas import (
     PostCategory,
     CreateReport,
     UserUpdateMeRequest,
+    ChangePasswordRequest,
 )
 
 
@@ -342,3 +343,30 @@ async def update_my_profile(
     await session.refresh(user)
 
     return user
+
+
+async def change_password(
+    session: AsyncSession,
+    curr_user_id: int,
+    request: ChangePasswordRequest,
+):
+    user = await session.get(User, curr_user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Користувача не знайдено",
+        )
+
+    if not validate_password(
+        request.old_password,
+        user.password_hash.encode("utf-8"),
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Старий пароль введено неправильно",
+        )
+
+    user.password_hash = hash_password(request.new_password).decode("utf-8")
+
+    await session.commit()

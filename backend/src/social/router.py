@@ -16,6 +16,7 @@ from .schemas import (
     CreateReport,
     UserUpdateMeRequest,
     UserResponse,
+    ChangePasswordRequest,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
@@ -88,6 +89,20 @@ async def create_post(
         post_in=post_in,
         curr_user_id=curr_user_id,
     )
+
+
+@router.patch("/change_password/", status_code=status.HTTP_200_OK)
+async def change_password(
+    request: ChangePasswordRequest,
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    await service.change_password(
+        session=session,
+        request=request,
+        curr_user_id=curr_user_id,
+    )
+    return {"message": "Пароль успішно змінено"}
 
 
 @router.post("/{post_id}/like/", status_code=status.HTTP_201_CREATED)

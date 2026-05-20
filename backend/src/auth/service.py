@@ -73,7 +73,7 @@ async def user_login(
         user.password_hash.encode("utf-8"),
     ):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Невірний email або пароль"
         )
 
     access_token = encode_jwt(
