@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     formData.append("username", req.body.email);
     formData.append("password", req.body.password);
 
-    const response = await fetch("https://aquacore-api-backend-g5deexehc8a9behz.polandcentral-01.azurewebsites.net/login/", {
+    const response = await fetch("https://aquacore.onrender.com/login/", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",

@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch("https://aquacore-api-backend-g5deexehc8a9behz.polandcentral-01.azurewebsites.net/register/", {
+    const response = await fetch("https://aquacore.onrender.com/register/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
