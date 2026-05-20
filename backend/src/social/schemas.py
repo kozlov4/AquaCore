@@ -136,3 +136,11 @@ class ChangePasswordRequest(BaseModel):
             raise ValueError("Новий пароль не може бути таким самим, як старий")
 
         return self
+
+
+class ReadMyProfileResponse(BaseModel):
+    nickname: str
+    posts_count: int
+    myself: Optional[str] = None
+    avatar_url: str
+    posts: list[PostCardResponse]

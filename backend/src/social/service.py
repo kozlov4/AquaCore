@@ -370,3 +370,21 @@ async def change_password(
     user.password_hash = hash_password(request.new_password).decode("utf-8")
 
     await session.commit()
+
+
+async def get_my_profile(session: AsyncSession, curr_user_id: int):
+    stmt = (
+        select(User)
+        .where(User.id == curr_user_id)
+        .options(
+            selectinload(User.avatar), selectinload(User.posts).selectinload(Post.image)
+        )
+    )
+    result = await session.execute(stmt)
+
+    user_profile = result.scalar_one_or_none()
+
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+
+    return user_profile

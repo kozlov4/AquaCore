@@ -17,9 +17,21 @@ from .schemas import (
     UserUpdateMeRequest,
     UserResponse,
     ChangePasswordRequest,
+    ReadMyProfileResponse,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
+
+
+@router.get("/my_profile/", response_model=ReadMyProfileResponse)
+async def get_my_profile(
+    curr_user_id=Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_my_profile(
+        session=session,
+        curr_user_id=curr_user_id,
+    )
 
 
 @router.get("/posts/", response_model=list[PostCardResponse])

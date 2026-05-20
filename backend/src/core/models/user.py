@@ -37,6 +37,10 @@ class User(Base):
             return self.avatar.image_url
         return None
 
+    @property
+    def posts_count(self) -> int:
+        return len(self.posts) if self.posts else 0
+
     avatar: Mapped["Image"] = relationship()
     aquariums: Mapped[list["Aquarium"]] = relationship(back_populates="owner")
     posts: Mapped[list["Post"]] = relationship(back_populates="author")
