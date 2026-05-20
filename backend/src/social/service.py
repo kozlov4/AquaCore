@@ -4,7 +4,7 @@ from sqlalchemy import select, Result, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from core.models import Post, User
+from core.models import Post, User, Comment
 from .schemas import PostCreate
 
 
@@ -54,3 +54,28 @@ async def search_users(
     users = result.scalars().all()
 
     return list(users)
+
+
+async def get_post_by_id(
+    session: AsyncSession,
+    post_id: int,
+    curr_user_id: int,
+):
+    stmt = (
+        select(Post)
+        .where(Post.id == post_id)
+        .options(
+            selectinload(Post.author).selectinload(User.avatar),
+            selectinload(Post.image),
+            selectinload(Post.likes),
+            selectinload(Post.comments)
+            .selectinload(Comment.author)
+            .selectinload(User.avatar),
+            selectinload(Post.comments).selectinload(Comment.likes),
+        )
+    )
+    result: Result = await session.execute(stmt)
+
+    post = result.scalars().one()
+
+    return post

@@ -5,7 +5,13 @@ from starlette import status
 from core.models.db_helper import db_helper
 from users.dependencies import get_current_user
 from . import service
-from .schemas import PostCategory, PostCardResponse, PostCreate, UsersCardResponse
+from .schemas import (
+    PostCategory,
+    PostCardResponse,
+    PostCreate,
+    UsersCardResponse,
+    PostResponse,
+)
 
 router = APIRouter(prefix="/social", tags=["Social"])
 
@@ -25,6 +31,19 @@ async def get_posts(
         limit=limit,
         offset=offset,
         category=category,
+        curr_user_id=curr_user_id,
+    )
+
+
+@router.get("/posts/{post_id}/", response_model=PostResponse)
+async def get_post_by_id(
+    post_id: int,
+    curr_user_id=Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_post_by_id(
+        post_id=post_id,
+        session=session,
         curr_user_id=curr_user_id,
     )
 
