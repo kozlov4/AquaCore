@@ -1,4 +1,4 @@
-const API_URL = "https://aquacore-api-backend-g5deexehc8a9behz.polandcentral-01.azurewebsites.net";
+const API_URL = "https://aquacore.onrender.com ";
 
 async function readResponse(response) {
   const text = await response.text();
