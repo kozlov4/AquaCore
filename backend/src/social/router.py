@@ -17,18 +17,42 @@ from .schemas import (
     UserUpdateMeRequest,
     UserResponse,
     ChangePasswordRequest,
-    ReadMyProfileResponse,
+    ReadProfileResponse,
+    SavedPostPhotoResponse,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
 
 
-@router.get("/my_profile/", response_model=ReadMyProfileResponse)
+@router.get("/me/", response_model=ReadProfileResponse)
 async def get_my_profile(
-    curr_user_id=Depends(get_current_user),
+    curr_user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-    return await service.get_my_profile(
+    return await service.get_user_profile(
+        session=session,
+        target_user_id=curr_user_id,
+    )
+
+
+@router.get("/{user_id}/", response_model=ReadProfileResponse)
+async def get_other_user_profile(
+    user_id: int,
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_user_profile(
+        session=session,
+        target_user_id=user_id,
+    )
+
+
+@router.get("/me/saved/", response_model=list[SavedPostPhotoResponse])
+async def get_saved_posts(
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_my_saved_posts(
         session=session,
         curr_user_id=curr_user_id,
     )

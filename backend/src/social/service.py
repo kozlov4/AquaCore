@@ -372,10 +372,10 @@ async def change_password(
     await session.commit()
 
 
-async def get_my_profile(session: AsyncSession, curr_user_id: int):
+async def get_user_profile(session: AsyncSession, target_user_id: int):
     stmt = (
         select(User)
-        .where(User.id == curr_user_id)
+        .where(User.id == target_user_id)
         .options(
             selectinload(User.avatar), selectinload(User.posts).selectinload(Post.image)
         )
@@ -388,3 +388,18 @@ async def get_my_profile(session: AsyncSession, curr_user_id: int):
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
 
     return user_profile
+
+
+async def get_my_saved_posts(session: AsyncSession, curr_user_id: int):
+    stmt = (
+        select(Post)
+        .join(SavedPost, SavedPost.post_id == Post.id)
+        .where(SavedPost.user_id == curr_user_id)
+        .order_by(desc(SavedPost.saved_at))
+        .options(selectinload(Post.image))
+    )
+
+    result = await session.execute(stmt)
+    saved_posts = result.scalars().all()
+
+    return list(saved_posts)

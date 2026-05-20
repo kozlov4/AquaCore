@@ -138,9 +138,14 @@ class ChangePasswordRequest(BaseModel):
         return self
 
 
-class ReadMyProfileResponse(BaseModel):
+class ReadProfileResponse(BaseModel):
     nickname: str
     posts_count: int
     myself: Optional[str] = None
     avatar_url: str
     posts: list[PostCardResponse]
+
+
+class SavedPostPhotoResponse(BaseModel):
+    id: int
+    image_url: Optional[str] = None
