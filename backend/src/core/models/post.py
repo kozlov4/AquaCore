@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING
-from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .base import Base
 from datetime import datetime, UTC
+from typing import TYPE_CHECKING
+
 from sqlalchemy import DateTime
+from sqlalchemy import String, Text, ForeignKey, Boolean
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
 
 if TYPE_CHECKING:
     from .base import Image
@@ -16,16 +17,71 @@ class Post(Base):
     __tablename__ = "posts"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    aquarium_id: Mapped[int | None] = mapped_column(ForeignKey("aquariums.id"))
+
     description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
     image_id: Mapped[int | None] = mapped_column(ForeignKey("images.id"))
+
     category: Mapped[str] = mapped_column(String(50))
 
     author: Mapped["User"] = relationship(back_populates="posts")
-    aquarium: Mapped["Aquarium"] = relationship(back_populates="posts")
+
     image: Mapped["Image"] = relationship()
-    comments: Mapped[list["Comment"]] = relationship(back_populates="post")
+
+    comments: Mapped[list["Comment"]] = relationship(
+        back_populates="post", cascade="all, delete-orphan"
+    )
+
+    likes: Mapped[list["PostLike"]] = relationship(cascade="all, delete-orphan")
+
+    @property
+    def image_url(self) -> str | None:
+        if self.image:
+            return self.image.image_url
+
+        return None
+
+    @property
+    def likes_count(self) -> int:
+        return len(self.likes)
+
+    @property
+    def comments_count(self) -> int:
+        return len(self.comments)
+
+    @property
+    def created_at_human(self) -> str:
+        now = datetime.now(UTC)
+
+        created_at = self.created_at
+
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=UTC)
+
+        diff = now - created_at
+
+        seconds = int(diff.total_seconds())
+
+        if seconds < 60:
+            return "Щойно"
+
+        minutes = seconds // 60
+
+        if minutes < 60:
+            return f"{minutes} хв тому"
+
+        hours = minutes // 60
+
+        if hours < 24:
+            return f"{hours} год тому"
+
+        days = hours // 24
+
+        return f"{days} дн тому"
 
 
 class UserGallery(Base):
@@ -106,14 +162,44 @@ class Comment(Base):
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     text: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
     post: Mapped["Post"] = relationship(back_populates="comments")
     author: Mapped["User"] = relationship()
 
+    @property
+    def created_at_human(self) -> str:
+        now = datetime.now(UTC)
 
-class CommentLike(Base):
-    __tablename__ = "comment_likes"
+        created_at = self.created_at
 
-    comment_id: Mapped[int] = mapped_column(ForeignKey("comments.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=UTC)
+
+        diff = now - created_at
+
+        seconds = int(diff.total_seconds())
+
+        if seconds < 60:
+            return "Щойно"
+
+        minutes = seconds // 60
+
+        if minutes < 60:
+            return f"{minutes} хв тому"
+
+        hours = minutes // 60
+
+        if hours < 24:
+            return f"{hours} год тому"
+
+        days = hours // 24
+
+        return f"{days} дн тому"
+
+    @property
+    def likes_count(self) -> int:
+        return len(self.likes)

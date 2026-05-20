@@ -1,17 +1,18 @@
 import enum
 from datetime import date
-from sqlalchemy import Text, Enum as SQLEnum
-from typing import TYPE_CHECKING
 from datetime import datetime
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Index
 from sqlalchemy import String, Float, ForeignKey, DateTime, Integer, Date
+from sqlalchemy import Text, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
 
 if TYPE_CHECKING:
     from .base import Image
     from .user import User
-    from .post import Post
     from .post import UserGallery
     from .post import UserDairy
     from .encyclopedia import Species
@@ -38,9 +39,7 @@ class Aquarium(Base):
 
     owner: Mapped["User"] = relationship(back_populates="aquariums")
     image: Mapped["Image"] = relationship()
-    posts: Mapped[list["Post"]] = relationship(
-        back_populates="aquarium", cascade="all, delete-orphan"
-    )
+
     gallery: Mapped[list["UserGallery"]] = relationship(
         back_populates="aquarium", cascade="all, delete-orphan"
     )
