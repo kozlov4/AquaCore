@@ -1,9 +1,20 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, Result
+from sqlalchemy import or_, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from core.models import Disease, DiagnosticStep
-from sqlalchemy.orm import joinedload, selectinload
 from .schemas import SortByTargetType
+
+
+async def get_disease_tags(session: AsyncSession) -> list[str]:
+    stmt = select(func.unnest(Disease.tags)).distinct()
+
+    result = await session.execute(stmt)
+    tags = result.scalars().all()
+
+    return [tag for tag in tags if tag]
 
 
 async def get_diseases(
