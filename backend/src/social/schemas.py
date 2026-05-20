@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class PostCategory(str, Enum):
@@ -91,3 +91,21 @@ class ReadNotificationsResponse(BaseModel):
     id: int
     author: AuthorResponse
     image_url: str | None
+
+
+class CreateReport(BaseModel):
+    text: str
+    post_id: Optional[int] = None
+    reported_user_id: Optional[int] = None
+
+    @model_validator(mode="after")
+    def check_target_exists(self) -> "CreateReport":
+        if not self.post_id and not self.reported_user_id:
+            raise ValueError("Необхідно вказати або post_id, або reported_user_id")
+
+        if self.post_id and self.reported_user_id:
+            raise ValueError(
+                "Не можна поскаржитися одночасно і на пост, і на користувача"
+            )
+
+        return self

@@ -12,5 +12,6 @@ from .system import (
     RepeatType,
     EquipmentLog,
     TimelineEvent,
+    Report,
 )
 from .user import User, Block

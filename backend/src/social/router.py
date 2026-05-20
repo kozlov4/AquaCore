@@ -13,6 +13,7 @@ from .schemas import (
     PostResponse,
     CommentCreate,
     ReadNotificationsResponse,
+    CreateReport,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
@@ -112,6 +113,19 @@ async def create_comment(
         session=session,
         curr_user_id=curr_user_id,
         comment_text=comment_text,
+    )
+
+
+@router.post("/report/", status_code=status.HTTP_201_CREATED)
+async def create_report(
+    report_data: CreateReport,
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.create_report(
+        session=session,
+        curr_user_id=curr_user_id,
+        report_data=report_data,
     )
 
 

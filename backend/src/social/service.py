@@ -3,8 +3,8 @@ from sqlalchemy import select, Result, or_, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from core.models import Post, User, Comment, PostLike, SavedPost, Notification
-from .schemas import PostCreate, CommentCreate, PostCategory
+from core.models import Post, User, Comment, PostLike, SavedPost, Notification, Report
+from .schemas import PostCreate, CommentCreate, PostCategory, CreateReport
 
 
 async def get_posts(
@@ -232,3 +232,76 @@ async def get_notifications(session: AsyncSession, curr_user_id: int):
     notifications = result.scalars().all()
 
     return list(notifications)
+
+
+async def create_report(
+    session: AsyncSession,
+    curr_user_id: int,
+    report_data: CreateReport,
+):
+    post_id = report_data.post_id
+    reported_user_id = report_data.reported_user_id
+
+    if post_id:
+        post = (
+            await session.execute(select(Post).where(Post.id == post_id))
+        ).scalar_one_or_none()
+
+        if not post:
+            raise HTTPException(status_code=404, detail="Пост не знайдено")
+
+        if post.user_id == curr_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Не можна поскаржитися на свій пост",
+            )
+
+        stmt_dup = select(Report).where(
+            Report.reporter_id == curr_user_id,
+            Report.reported_post_id == post_id,
+        )
+
+    elif reported_user_id:
+        if reported_user_id == curr_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Не можна поскаржитися на самого себе",
+            )
+
+        user = (
+            await session.execute(select(User).where(User.id == reported_user_id))
+        ).scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="Користувача не знайдено")
+
+        stmt_dup = select(Report).where(
+            Report.reporter_id == curr_user_id,
+            Report.reported_user_id == reported_user_id,
+        )
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Потрібно вказати post_id або reported_user_id",
+        )
+
+    existing_report = (await session.execute(stmt_dup)).scalar_one_or_none()
+    if existing_report:
+        raise HTTPException(
+            status_code=409,
+            detail="Ви вже надсилали скаргу на цей об'єкт",
+        )
+
+    new_report = Report(
+        reporter_id=curr_user_id,
+        reported_post_id=post_id,
+        reported_user_id=reported_user_id,
+        reason=report_data.text,
+    )
+
+    session.add(new_report)
+    await session.commit()
+    await session.refresh(new_report)
+
+    return new_report
