@@ -2,9 +2,16 @@ from fastapi import HTTPException
 from sqlalchemy import select, Result, or_, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
+from starlette import status
 
 from core.models import Post, User, Comment, PostLike, SavedPost, Notification, Report
-from .schemas import PostCreate, CommentCreate, PostCategory, CreateReport
+from .schemas import (
+    PostCreate,
+    CommentCreate,
+    PostCategory,
+    CreateReport,
+    UserUpdateMeRequest,
+)
 
 
 async def get_posts(
@@ -305,3 +312,33 @@ async def create_report(
     await session.refresh(new_report)
 
     return new_report
+
+
+async def update_my_profile(
+    session: AsyncSession, current_user_id: int, user_in: UserUpdateMeRequest
+):
+    user = await session.get(User, current_user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Користувача не знайдено"
+        )
+
+    update_data = user_in.model_dump(exclude_unset=True)
+
+    if "nickname" in update_data and update_data["nickname"] != user.nickname:
+        stmt = select(User).where(User.nickname == update_data["nickname"])
+        existing_user = (await session.execute(stmt)).scalar_one_or_none()
+
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Цей нікнейм вже зайнятий іншим користувачем",
+            )
+
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    await session.commit()
+    await session.refresh(user)
+
+    return user

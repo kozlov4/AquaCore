@@ -109,3 +109,14 @@ class CreateReport(BaseModel):
             )
 
         return self
+
+
+class UserUpdateMeRequest(BaseModel):
+    name: Optional[str] = None
+    nickname: Optional[str] = None
+    myself: Optional[str] = None
+    avatar_id: Optional[int] = None
+
+
+class UserResponse(UserUpdateMeRequest):
+    pass

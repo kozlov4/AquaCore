@@ -14,6 +14,8 @@ from .schemas import (
     CommentCreate,
     ReadNotificationsResponse,
     CreateReport,
+    UserUpdateMeRequest,
+    UserResponse,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
@@ -139,6 +141,17 @@ async def save_post(
         post_id=post_id,
         session=session,
         curr_user_id=curr_user_id,
+    )
+
+
+@router.patch("/me/", response_model=UserResponse)
+async def update_my_profile(
+    user_in: UserUpdateMeRequest,
+    current_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.update_my_profile(
+        session=session, current_user_id=current_user_id, user_in=user_in
     )
 
 
