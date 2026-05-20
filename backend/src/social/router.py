@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from core.models.db_helper import db_helper
+from password_reset.router import fm
 from users.dependencies import get_current_user
 from . import service
 from .schemas import (
@@ -17,18 +18,44 @@ from .schemas import (
     UserUpdateMeRequest,
     UserResponse,
     ChangePasswordRequest,
-    ReadMyProfileResponse,
+    ReadProfileResponse,
+    SavedPostPhotoResponse,
+    ChangeEmailRequest,
+    ConfirmEmailChangeRequest,
 )
 
 router = APIRouter(prefix="/social", tags=["Social"])
 
 
-@router.get("/my_profile/", response_model=ReadMyProfileResponse)
+@router.get("/me/", response_model=ReadProfileResponse)
 async def get_my_profile(
-    curr_user_id=Depends(get_current_user),
+    curr_user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-    return await service.get_my_profile(
+    return await service.get_user_profile(
+        session=session,
+        target_user_id=curr_user_id,
+    )
+
+
+@router.get("/{user_id}/", response_model=ReadProfileResponse)
+async def get_other_user_profile(
+    user_id: int,
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_user_profile(
+        session=session,
+        target_user_id=user_id,
+    )
+
+
+@router.get("/me/saved/", response_model=list[SavedPostPhotoResponse])
+async def get_saved_posts(
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_my_saved_posts(
         session=session,
         curr_user_id=curr_user_id,
     )
@@ -87,6 +114,34 @@ async def search_users(
         session=session,
         search_text=search_text,
         curr_user_id=curr_user_id,
+    )
+
+
+@router.post("/request-email-change/")
+async def request_email_change(
+    request: ChangeEmailRequest,
+    background_tasks: BackgroundTasks,
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.request_email_change(
+        request=request,
+        curr_user_id=curr_user_id,
+        background_tasks=background_tasks,
+        session=session,
+        fm=fm,
+    )
+
+
+@router.post("/confirm-email-change/")
+async def confirm_email_change(
+    request: ConfirmEmailChangeRequest,
+    curr_user_id: int = Depends(get_current_user),
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+
+    return await service.confirm_email_change(
+        request=request, curr_user_id=curr_user_id, session=session
     )
 
 
