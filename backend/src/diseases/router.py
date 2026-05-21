@@ -10,7 +10,7 @@ router = APIRouter(tags=["Diseases"])
 
 
 @router.get(
-    "/diseases/tags/",
+    "/diseases/tags",
     response_model=list[str],
     description="Отримати список всіх створених тегів",
     dependencies=[Depends(get_current_user)],
@@ -22,7 +22,7 @@ async def get_disease_tags(
 
 
 @router.get(
-    "/diseases/",
+    "/diseases",
     dependencies=[Depends(get_current_user)],
     response_model=list[DiseasesCardResponse],
 )
@@ -41,7 +41,7 @@ async def get_diseases(
 
 
 @router.get(
-    "/diseases/{disease_id}/",
+    "/diseases/{disease_id}",
     response_model=DiseaseDetailResponse,
     dependencies=[Depends(get_current_user)],
 )

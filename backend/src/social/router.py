@@ -27,7 +27,7 @@ from .schemas import (
 router = APIRouter(prefix="/social", tags=["Social"])
 
 
-@router.get("/me/", response_model=ReadProfileResponse)
+@router.get("/users/me", response_model=ReadProfileResponse)
 async def get_my_profile(
     curr_user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
@@ -38,7 +38,7 @@ async def get_my_profile(
     )
 
 
-@router.get("/{user_id}/", response_model=ReadProfileResponse)
+@router.get("/users/{user_id}", response_model=ReadProfileResponse)
 async def get_other_user_profile(
     user_id: int,
     curr_user_id: int = Depends(get_current_user),
@@ -50,7 +50,7 @@ async def get_other_user_profile(
     )
 
 
-@router.get("/me/saved/", response_model=list[SavedPostPhotoResponse])
+@router.get("/posts/saved", response_model=list[SavedPostPhotoResponse])
 async def get_saved_posts(
     curr_user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
@@ -61,7 +61,7 @@ async def get_saved_posts(
     )
 
 
-@router.get("/posts/", response_model=list[PostCardResponse])
+@router.get("/posts", response_model=list[PostCardResponse])
 async def get_posts(
     limit: int = Query(default=8, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -80,7 +80,7 @@ async def get_posts(
     )
 
 
-@router.get("/notifications/", response_model=list[ReadNotificationsResponse])
+@router.get("/notifications", response_model=list[ReadNotificationsResponse])
 async def get_notifications(
     curr_user_id=Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
@@ -91,7 +91,7 @@ async def get_notifications(
     )
 
 
-@router.get("/{post_id}/", response_model=PostResponse)
+@router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post_by_id(
     post_id: int,
     curr_user_id=Depends(get_current_user),
@@ -104,7 +104,7 @@ async def get_post_by_id(
     )
 
 
-@router.get("/users/", response_model=list[UsersCardResponse])
+@router.get("/users", response_model=list[UsersCardResponse])
 async def search_users(
     curr_user_id=Depends(get_current_user),
     search_text: str | None = None,
@@ -117,7 +117,7 @@ async def search_users(
     )
 
 
-@router.post("/request-email-change/")
+@router.post("/users/me/email-change-request")
 async def request_email_change(
     request: ChangeEmailRequest,
     background_tasks: BackgroundTasks,
@@ -133,7 +133,7 @@ async def request_email_change(
     )
 
 
-@router.post("/confirm-email-change/")
+@router.post("/users/me/email-change-confirm")
 async def confirm_email_change(
     request: ConfirmEmailChangeRequest,
     curr_user_id: int = Depends(get_current_user),
@@ -145,7 +145,7 @@ async def confirm_email_change(
     )
 
 
-@router.post("/create/", status_code=status.HTTP_201_CREATED, response_model=PostCreate)
+@router.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostCreate)
 async def create_post(
     post_in: PostCreate,
     curr_user_id=Depends(get_current_user),
@@ -158,7 +158,7 @@ async def create_post(
     )
 
 
-@router.patch("/change_password/", status_code=status.HTTP_200_OK)
+@router.patch("/users/me/password", status_code=status.HTTP_200_OK)
 async def change_password(
     request: ChangePasswordRequest,
     curr_user_id: int = Depends(get_current_user),
@@ -172,7 +172,7 @@ async def change_password(
     return {"message": "Пароль успішно змінено"}
 
 
-@router.post("/{post_id}/like/", status_code=status.HTTP_201_CREATED)
+@router.post("/posts/{post_id}/like", status_code=status.HTTP_201_CREATED)
 async def create_like(
     post_id: int,
     curr_user_id=Depends(get_current_user),
@@ -185,7 +185,7 @@ async def create_like(
     )
 
 
-@router.post("/{post_id}/comment/", status_code=status.HTTP_201_CREATED)
+@router.post("/posts/{post_id}/comments", status_code=status.HTTP_201_CREATED)
 async def create_comment(
     comment_text: CommentCreate,
     post_id: int,
@@ -200,7 +200,7 @@ async def create_comment(
     )
 
 
-@router.post("/report/", status_code=status.HTTP_201_CREATED)
+@router.post("/reports", status_code=status.HTTP_201_CREATED)
 async def create_report(
     report_data: CreateReport,
     curr_user_id: int = Depends(get_current_user),
@@ -213,7 +213,7 @@ async def create_report(
     )
 
 
-@router.post("/{post_id}/save/", status_code=status.HTTP_201_CREATED)
+@router.post("/posts/{post_id}/save", status_code=status.HTTP_201_CREATED)
 async def save_post(
     post_id: int,
     curr_user_id=Depends(get_current_user),
@@ -226,7 +226,7 @@ async def save_post(
     )
 
 
-@router.patch("/me/", response_model=UserResponse)
+@router.patch("/users/me", response_model=UserResponse)
 async def update_my_profile(
     user_in: UserUpdateMeRequest,
     current_user_id: int = Depends(get_current_user),
@@ -237,7 +237,7 @@ async def update_my_profile(
     )
 
 
-@router.delete("/{post_id}/like/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/posts/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_like(
     post_id: int,
     curr_user_id=Depends(get_current_user),
@@ -250,7 +250,7 @@ async def delete_like(
     )
 
 
-@router.delete("/comment/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_comment(
     comment_id: int,
     curr_user_id=Depends(get_current_user),
@@ -263,7 +263,7 @@ async def delete_comment(
     )
 
 
-@router.delete("/save/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/posts/{post_id}/save", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_save_post(
     post_id: int,
     curr_user_id=Depends(get_current_user),

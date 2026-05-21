@@ -10,7 +10,7 @@ router = APIRouter(prefix="/compatibility", tags=["Compatibility"])
 
 
 @router.post(
-    "/analyze/",
+    "/analyze",
     response_model=CompatibilityResponse,
     dependencies=[Depends(get_current_user)],
 )

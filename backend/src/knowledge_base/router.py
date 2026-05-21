@@ -20,7 +20,7 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 
 
 @router.get(
-    "/",
+    "",
     response_model=list[ArticleCardResponse],
 )
 async def get_articles_route(
@@ -40,7 +40,7 @@ async def get_articles_route(
 
 
 @router.get(
-    "/categories/",
+    "/categories",
     response_model=list[ArticleCategoriesResponse],
     dependencies=[Depends(get_current_user)],
 )
@@ -51,7 +51,7 @@ async def get_article_categories_route(
 
 
 @router.get(
-    "/draft/",
+    "/draft",
     response_model=list[ArticleDraftCardResponse],
 )
 async def get_draft_articles_route(
@@ -62,7 +62,7 @@ async def get_draft_articles_route(
 
 
 @router.get(
-    "/{article_id}/",
+    "/{article_id}",
     response_model=ArticleDetailResponse,
 )
 async def read_article_route(
@@ -86,7 +86,7 @@ async def read_article_route(
 
 
 @router.post(
-    "/",
+    "",
     response_model=ArticleDetailResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -104,7 +104,7 @@ async def create_article_route(
 
 
 @router.post(
-    "/draft/",
+    "/draft",
     response_model=ArticleDetailResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -121,7 +121,7 @@ async def create_draft_article_route(
     )
 
 
-@router.delete("/{article_id}/")
+@router.delete("/{article_id}")
 async def delete_article_route(
     article_id: int,
     user_id: int = Depends(get_current_user),
@@ -135,7 +135,7 @@ async def delete_article_route(
 
 
 @router.put(
-    "/{article_id}/",
+    "/{article_id}",
     response_model=ArticleDetailResponse,
 )
 async def update_article_route(

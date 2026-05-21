@@ -16,7 +16,7 @@ from .service import register_user, refresh_access_token
 router = APIRouter(tags=["Authentication"])
 
 
-@router.get("/google/login/")
+@router.get("/google/login")
 async def google_login():
 
     google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -31,7 +31,7 @@ async def google_login():
     return RedirectResponse(url)
 
 
-@router.get("/google/callback/", response_model=TokenInfo)
+@router.get("/google/callback", response_model=TokenInfo)
 async def google_callback(
     code: str, session: AsyncSession = Depends(db_helper.session_dependency)
 ):
@@ -68,7 +68,7 @@ async def google_callback(
     return await service.process_google_user(session, user_info)
 
 
-@router.post("/register/", status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def user_registration(
     user_data: UserRegistration,
     session: AsyncSession = Depends(db_helper.session_dependency),
@@ -76,7 +76,7 @@ async def user_registration(
     return await register_user(session=session, user_in=user_data)
 
 
-@router.post("/login/")
+@router.post("/login")
 async def login_for_swagger(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(db_helper.session_dependency),
@@ -85,7 +85,7 @@ async def login_for_swagger(
     return await service.user_login(session=session, user_in=user_data)
 
 
-@router.post("/refresh/", response_model=TokenInfo)
+@router.post("/refresh", response_model=TokenInfo)
 async def refresh_jwt_tokens(
     token_data: RefreshTokenRequest,
     session: AsyncSession = Depends(db_helper.session_dependency),

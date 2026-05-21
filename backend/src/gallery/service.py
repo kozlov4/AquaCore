@@ -61,10 +61,10 @@ async def get_gallery_photos(
     return result.scalars().all()
 
 
-async def get_gallery_photo(session: AsyncSession, user_id: int, photo_id: int):
+async def get_gallery_photo(session: AsyncSession, user_id: int, id: int):
     stmt = (
         select(UserGallery)
-        .where(UserGallery.id == photo_id)
+        .where(UserGallery.id == id)
         .options(selectinload(UserGallery.aquarium), selectinload(UserGallery.image))
     )
     result = await session.execute(stmt)
@@ -84,9 +84,9 @@ async def get_gallery_photo(session: AsyncSession, user_id: int, photo_id: int):
 async def delete_photo(
     session: AsyncSession,
     user_id: int,
-    photo_id: int,
+    id: int,
 ):
-    photo = await session.get(UserGallery, photo_id)
+    photo = await session.get(UserGallery, id)
     if not photo:
         raise HTTPException(status_code=404, detail="фото не знайдено")
 

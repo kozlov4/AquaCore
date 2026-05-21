@@ -17,7 +17,7 @@ from .schemas import (
 router = APIRouter(prefix="/gallery", tags=["Gallery"])
 
 
-@router.get("/", response_model=list[ImageResponseList])
+@router.get("", response_model=list[ImageResponseList])
 async def get_gallery_photos(
     session: AsyncSession = Depends(db_helper.session_dependency),
     user_id: int = Depends(get_current_user),
@@ -34,21 +34,21 @@ async def get_gallery_photos(
     )
 
 
-@router.get("/{photo_id}", response_model=ImageResponse)
+@router.get("/{id}", response_model=ImageResponse)
 async def get_gallery_photo(
-    photo_id: int,
+    id: int,
     session: AsyncSession = Depends(db_helper.session_dependency),
     user_id: int = Depends(get_current_user),
 ):
     return await service.get_gallery_photo(
-        photo_id=photo_id,
+        id=id,
         session=session,
         user_id=user_id,
     )
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
 )
 async def create_post_to_gallery_route(
@@ -63,7 +63,7 @@ async def create_post_to_gallery_route(
     )
 
 
-@router.put("/{id}/", response_model=ImageResponse)
+@router.put("/{id}", response_model=ImageResponse)
 async def update_photo_route(
     id: int,
     photo_in: UserGalleryUpdate,
@@ -78,14 +78,14 @@ async def update_photo_route(
     )
 
 
-@router.delete("/{photo_id}/")
+@router.delete("/{id}")
 async def delete_photo_route(
-    photo_id: int,
+    id: int,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
 ):
     return await service.delete_photo(
         session=session,
-        photo_id=photo_id,
+        id=id,
         user_id=user_id,
     )
