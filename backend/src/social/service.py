@@ -90,8 +90,12 @@ async def get_post_by_id(
     )
     result: Result = await session.execute(stmt)
 
-    post = result.scalars().one()
-
+    post = result.scalars().first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пост не знайден",
+        )
     return post
 
 

@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Optional, List
+
 from pydantic import ConfigDict, BaseModel
 
 
@@ -31,14 +32,17 @@ class EquipmentUpdate(BaseModel):
     maintenance_interval_days: Optional[int] = None
 
 
-class EquipmentResponse(EquipmentCreate):
+class EquipmentBaseResponse(EquipmentCreate):
     id: int
     days_until_maintenance: Optional[int] = None
-    logs: List[EquipmentLogResponse] = []
-
     model_config = ConfigDict(from_attributes=True)
+
+
+class EquipmentResponse(EquipmentBaseResponse):
+    logs: List[EquipmentLogResponse] = []
 
 
 class EquipmentAlertResponse(BaseModel):
     needs_attention_count: int
     message: str | None
+    equipment_id: int | None = None

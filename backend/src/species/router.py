@@ -1,12 +1,18 @@
 from typing import Optional
+
 from fastapi import APIRouter, Query, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models.db_helper import db_helper
+from users.dependencies import get_current_user
 from . import service
 from .schemas import SpeciesDetailResponse, SpeciesShortResponse
 
-router = APIRouter(prefix="/species", tags=["Species"])
+router = APIRouter(
+    prefix="/species",
+    tags=["Species"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.get("/", response_model=list[SpeciesShortResponse])

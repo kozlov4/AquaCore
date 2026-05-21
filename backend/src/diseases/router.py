@@ -1,15 +1,28 @@
 from fastapi import APIRouter, Query, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.models.db_helper import db_helper
+from users import get_current_user
 from . import service
 from .schemas import SortByTargetType, DiseasesCardResponse, DiseaseDetailResponse
-from users import get_current_user
 
 router = APIRouter(tags=["Diseases"])
 
 
 @router.get(
-    "/diseases/",
+    "/diseases/tags",
+    response_model=list[str],
+    description="Отримати список всіх створених тегів",
+    dependencies=[Depends(get_current_user)],
+)
+async def get_disease_tags(
+    session: AsyncSession = Depends(db_helper.session_dependency),
+):
+    return await service.get_disease_tags(session=session)
+
+
+@router.get(
+    "/diseases",
     dependencies=[Depends(get_current_user)],
     response_model=list[DiseasesCardResponse],
 )
@@ -28,7 +41,7 @@ async def get_diseases(
 
 
 @router.get(
-    "/diseases/{disease_id}/",
+    "/diseases/{disease_id}",
     response_model=DiseaseDetailResponse,
     dependencies=[Depends(get_current_user)],
 )

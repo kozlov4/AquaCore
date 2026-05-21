@@ -1,18 +1,18 @@
 from typing import Optional
 
-from fastapi import APIRouter, Query, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.models.db_helper import db_helper
-from . import service
-from users import get_current_user
-from .schemas import DiaryListResponse, DiaryCreate, DiaryResponse
 from core.models import UserDairy
+from core.models.db_helper import db_helper
+from users import get_current_user
+from . import service
+from .schemas import DiaryListResponse, DiaryCreate, DiaryResponse, DiaryUpdate
 
 router = APIRouter(prefix="/diary", tags=["Diary"])
 
 
-@router.get("/", response_model=list[DiaryListResponse])
+@router.get("", response_model=list[DiaryListResponse])
 async def list_entries(
     aquarium_id: Optional[int] = None,
     tag: Optional[str] = None,
@@ -23,7 +23,7 @@ async def list_entries(
     return await service.get_diary_entries(session, user_id, aquarium_id, tag, search)
 
 
-@router.get("/{entry_id}/", response_model=DiaryResponse)
+@router.get("/{entry_id}", response_model=DiaryResponse)
 async def get_entry(
     entry_id: int,
     user_id: int = Depends(get_current_user),
@@ -32,7 +32,7 @@ async def get_entry(
     return await service.get_diary_entry(session, user_id, entry_id)
 
 
-@router.post("/", response_model=DiaryCreate)
+@router.post("", response_model=DiaryCreate)
 async def create_entry(
     diary_in: DiaryCreate,
     user_id: int = Depends(get_current_user),
@@ -41,10 +41,7 @@ async def create_entry(
     return await service.create_diary_entry(session, user_id, diary_in)
 
 
-from .schemas import DiaryUpdate, DiaryResponse
-
-
-@router.put("/{entry_id}/", response_model=DiaryResponse)
+@router.put("/{entry_id}", response_model=DiaryResponse)
 async def update_entry_route(
     entry_id: int,
     entry_in: DiaryUpdate,
@@ -59,7 +56,7 @@ async def update_entry_route(
     )
 
 
-@router.delete("/{entry_id}/", status_code=204)
+@router.delete("/{entry_id}", status_code=204)
 async def delete_entry(
     entry_id: int,
     user_id: int = Depends(get_current_user),

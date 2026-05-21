@@ -9,7 +9,7 @@ from users.dependencies import get_current_user
 router = APIRouter(tags=["Uploads"])
 
 
-@router.post("/upload-image/", dependencies=[Depends(get_current_user)])
+@router.post("/upload-image", dependencies=[Depends(get_current_user)])
 async def upload_image(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(db_helper.session_dependency),
