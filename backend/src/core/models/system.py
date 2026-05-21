@@ -164,7 +164,13 @@ class Equipment(Base):
         if not self.maintenance_interval_days or not self.installation_date:
             return None
 
-        next_maintenance = self.installation_date + timedelta(
+        last_service_date = self.installation_date
+
+        if self.logs:
+            latest_log = max(self.logs, key=lambda log: log.log_date)
+            last_service_date = latest_log.log_date
+
+        next_maintenance = last_service_date + timedelta(
             days=self.maintenance_interval_days
         )
         today = date.today()
