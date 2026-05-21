@@ -6,9 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette import status
 
-from core.models import Equipment, EquipmentLog
+from core.models import Equipment, EquipmentLog, Aquarium
 from core.models.system import TimelineEventType
-from models import Aquarium
 from time_line_event.service import log_ecosystem_event
 from .schemas import (
     EquipmentCreate,

@@ -5,8 +5,7 @@ from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.models import UserDairy, User
-from models import Aquarium
+from core.models import UserDairy, User, Aquarium
 from .schemas import DiaryCreate, DiaryUpdate
 
 
