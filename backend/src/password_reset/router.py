@@ -23,7 +23,7 @@ conf = ConnectionConfig(
 fm = FastMail(conf)
 
 
-@router.post("/forgot-password/")
+@router.post("/forgot-password")
 async def forgot_password(
     request: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
@@ -34,7 +34,7 @@ async def forgot_password(
     )
 
 
-@router.post("/reset-password/")
+@router.post("/reset-password")
 async def reset_password(
     request: ResetPasswordRequest,
     session: AsyncSession = Depends(db_helper.session_dependency),

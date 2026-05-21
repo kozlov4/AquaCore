@@ -21,7 +21,7 @@ router = APIRouter(
 )
 
 
-@router.get("/feedbacks/", response_model=list[ReadFeedback])
+@router.get("/feedbacks", response_model=list[ReadFeedback])
 async def get_feedbacks(
     limit: int = Query(default=6, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -36,7 +36,7 @@ async def get_feedbacks(
     )
 
 
-@router.post("/feedbacks/post/", status_code=status.HTTP_201_CREATED)
+@router.post("/feedbacks", status_code=status.HTTP_201_CREATED)
 async def create_or_update_feedback(
     feedback_in: CreateFeedback,
     user_id: int = Depends(get_current_user),
