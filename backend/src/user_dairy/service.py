@@ -1,10 +1,12 @@
 from typing import Optional
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from core.models import UserDairy, User
+from models import Aquarium
 from .schemas import DiaryCreate, DiaryUpdate
 
 
@@ -42,10 +44,29 @@ async def get_diary_entries(
 async def create_diary_entry(
     session: AsyncSession, user_id: int, diary_in: DiaryCreate
 ):
-    new_entry = UserDairy(**diary_in.model_dump(), user_id=user_id)
+    aquarium = await session.get(Aquarium, diary_in.aquarium_id)
+
+    if aquarium is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Акваріум не знайден",
+        )
+
+    if aquarium.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ви не маєте права на створення записів в іншому акваріумі",
+        )
+
+    new_entry = UserDairy(
+        **diary_in.model_dump(),
+        user_id=user_id,
+    )
+
     session.add(new_entry)
     await session.commit()
     await session.refresh(new_entry)
+
     return new_entry
 
 
