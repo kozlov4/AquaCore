@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[SpeciesShortResponse])
+@router.get("", response_model=list[SpeciesShortResponse])
 async def list_species(
     search: Optional[str] = Query(None, description="Пошук за назвою"),
     category: Optional[str] = Query(None),
@@ -40,7 +40,7 @@ async def list_species(
     )
 
 
-@router.get("/{species_id}/", response_model=SpeciesDetailResponse)
+@router.get("/{species_id}", response_model=SpeciesDetailResponse)
 async def get_species_detail(
     species_id: int,
     session: AsyncSession = Depends(db_helper.session_dependency),

@@ -1,8 +1,10 @@
+from datetime import date
 from datetime import datetime
 from enum import Enum
-from datetime import date
 from typing import List, Optional
+
 from pydantic import BaseModel, Field, ConfigDict
+
 from species.schemas import SpeciesShortResponse
 
 
@@ -48,7 +50,6 @@ class AquariumCardResponse(BaseModel):
     id: int
     name: str
     volume: float
-    status: str
     image_url: Optional[str] = None
 
     population: Optional[PopulationDTO] = None

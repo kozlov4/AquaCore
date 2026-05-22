@@ -1,15 +1,17 @@
 from datetime import date, timedelta
+
 from fastapi import HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.models import Aquarium, WaterChangeLog
+from core.models.system import TimelineEventType
+from time_line_event.service import log_ecosystem_event
 from .schemas import (
     WaterChangeCreate,
     WaterChangeScheduleUpdate,
     WaterChangeStatusResponse,
 )
-from core.models.system import TimelineEventType
-from time_line_event.service import log_ecosystem_event
 
 
 async def record_water_change(
