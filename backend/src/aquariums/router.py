@@ -4,6 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
+from core.models.db_helper import db_helper
+from users import get_current_user
+from . import service
 from .schemas import (
     CreateAquarium,
     AquariumNameResponse,
@@ -13,14 +16,11 @@ from .schemas import (
     AquariumCardResponse,
     UpdateAquarium,
 )
-from core.models.db_helper import db_helper
-from . import service
-from users import get_current_user
 
 router = APIRouter(prefix="/aquariums", tags=["Aquariums"])
 
 
-@router.get("/my-aquariums/", response_model=list[AquariumCardResponse])
+@router.get("/my-aquariums", response_model=list[AquariumCardResponse])
 async def list_aquariums(
     session: AsyncSession = Depends(db_helper.session_dependency),
     user_id: int = Depends(get_current_user),
@@ -28,7 +28,7 @@ async def list_aquariums(
     return await service.get_user_aquariums_cards(session=session, user_id=user_id)
 
 
-@router.get("/names/", response_model=List[AquariumNameResponse])
+@router.get("/names", response_model=List[AquariumNameResponse])
 async def get_aquarium_names_route(
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(db_helper.session_dependency),
@@ -40,7 +40,7 @@ async def get_aquarium_names_route(
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
 )
 async def create_aquarium_route(
@@ -92,7 +92,7 @@ async def add_inhabitant_to_aquarium(
     return await service.add_inhabitant(session, aquarium_id, data, user_id=user_id)
 
 
-@router.put("/{aquarium_id}/")
+@router.put("/{aquarium_id}")
 async def update_aquarium(
     aquarium_id: int,
     aquarium_in: UpdateAquarium,
@@ -104,7 +104,7 @@ async def update_aquarium(
     )
 
 
-@router.delete("/{aquarium_id}/")
+@router.delete("/{aquarium_id}")
 async def delete_aquarium(
     aquarium_id: int,
     user_id: int = Depends(get_current_user),

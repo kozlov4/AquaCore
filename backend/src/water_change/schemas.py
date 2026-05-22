@@ -1,6 +1,8 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import date
 from typing import Optional, List
+
+from pydantic import BaseModel, ConfigDict
+
 from core.models.aquarium import ChangeType
 
 

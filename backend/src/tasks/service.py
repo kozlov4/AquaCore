@@ -1,10 +1,13 @@
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
 from datetime import date, timedelta
-from core.models import Task
-from .schemas import TaskCreate, TaskStatusUpdate
+
+from fastapi import HTTPException
+from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from starlette import status
+
+from core.models import Task, Aquarium
+from .schemas import TaskCreate, TaskStatusUpdate, TaskUpdate
 
 
 async def get_tasks(
@@ -54,6 +57,20 @@ async def get_tasks(
 
 
 async def create_task(session: AsyncSession, user_id: int, data: TaskCreate):
+    aquarium = await session.get(Aquarium, data.aquarium_id)
+
+    if aquarium is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Акваріум не знайден",
+        )
+
+    if aquarium.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ви не маєте права на створення записів в іншому акваріумі",
+        )
+
     new_task = Task(user_id=user_id, **data.model_dump())
     session.add(new_task)
     await session.commit()
@@ -98,3 +115,48 @@ async def update_task_status(
 
     stmt = select(Task).options(selectinload(Task.aquarium)).where(Task.id == task_id)
     return (await session.execute(stmt)).scalar_one()
+
+
+async def delete_task(session: AsyncSession, task_id: int, user_id: int):
+    task = await session.get(Task, task_id)
+    if not task or task.user_id != user_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Ви не маєте доступу до видалення цієї таски або її нема",
+        )
+    stmt_task = delete(Task).where(
+        Task.user_id == user_id,
+        Task.id == task_id,
+    )
+    await session.execute(stmt_task)
+    await session.commit()
+
+
+async def update_task(
+    session: AsyncSession,
+    user_id: int,
+    task_id: int,
+    task_in: TaskUpdate,
+):
+
+    stmt = select(Task).where(Task.id == task_id)
+    result = await session.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Таску не знайдено")
+
+    if task.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Ви не можете редагувати чужу таску"
+        )
+
+    update_data = task_in.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(task, key, value)
+
+    await session.commit()
+    await session.refresh(task)
+
+    return task

@@ -3,9 +3,11 @@ from datetime import date, datetime
 from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
+
 from core.models import Aquarium, AquariumInhabitant, Species
 from core.models.system import TimelineEventType
-from sqlalchemy.orm import joinedload, selectinload
+from time_line_event.service import log_ecosystem_event
 from .schemas import (
     CreateAquarium,
     CompatibilityIssue,
@@ -17,7 +19,6 @@ from .schemas import (
     AquariumCardResponse,
     UpdateAquarium,
 )
-from time_line_event.service import log_ecosystem_event
 
 
 async def create_aquarium(
@@ -245,14 +246,31 @@ async def get_aquarium_population(
 
     stmt = (
         select(AquariumInhabitant)
-        .options(selectinload(AquariumInhabitant.species))
         .where(AquariumInhabitant.aquarium_id == aquarium_id)
+        .options(selectinload(AquariumInhabitant.species).selectinload(Species.image))
     )
     result = await session.execute(stmt)
-    inhabitants = result.scalars().all()
+    raw_inhabitants = result.scalars().all()
 
-    total_species = len(set(inh.species_id for inh in inhabitants))
-    total_individuals = sum(inh.quantity for inh in inhabitants)
+    total_species = len(set(inh.species_id for inh in raw_inhabitants))
+    total_individuals = sum(inh.quantity for inh in raw_inhabitants)
+
+    grouped = {}
+
+    for inh in raw_inhabitants:
+        species_id = inh.species_id
+
+        if species_id not in grouped:
+            grouped[species_id] = {
+                "id": inh.id,
+                "quantity": inh.quantity,
+                "settlement_date": inh.settlement_date,
+                "species": inh.species,
+            }
+        else:
+            grouped[species_id]["quantity"] += inh.quantity
+
+    inhabitants = list(grouped.values())
 
     if not inhabitants:
         return PopulationResponse(
@@ -269,14 +287,17 @@ async def get_aquarium_population(
     max_required_volume = 0
 
     for inh in inhabitants:
-        sp = inh.species
+        sp = inh["species"]
+
         if sp.min_volume > max_required_volume:
             max_required_volume = sp.min_volume
 
         if sp.character == "Хижак":
             has_predator = True
-        if sp.character == "Територіальні":
+
+        if sp.character == "Територіальна":
             territorial_count += 1
+
         if sp.max_size and "S" in sp.max_size:
             has_small_fish = True
 
