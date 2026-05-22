@@ -1,6 +1,8 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import date
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 from core.models import TaskType, RepeatType
 
 
@@ -23,3 +25,7 @@ class TaskResponse(TaskCreate):
     is_overdue: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TaskUpdate(TaskCreate):
+    pass

@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from core.models.db_helper import db_helper
+from users import get_current_user
 from . import service
 from .schemas import WaterMetric, AnalyticsPeriod, CreateWaterTest
-from users import get_current_user
 
 router = APIRouter(prefix="/tests", tags=["Tests"])
 
 
-@router.get("/analytics/")
+@router.get("/analytics")
 async def get_water_analytics_route(
     aquarium_id: int,
     metric: WaterMetric,
@@ -27,7 +27,7 @@ async def get_water_analytics_route(
     )
 
 
-@router.get("/export/csv/")
+@router.get("/export/csv")
 async def export_water_tests_csv(
     aquarium_id: int,
     user_id: int = Depends(get_current_user),
@@ -39,7 +39,7 @@ async def export_water_tests_csv(
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
 )
 async def create_water_test_route(
