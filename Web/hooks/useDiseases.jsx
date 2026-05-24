@@ -1,7 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { getDiseaseById, getDiseases } from "../services/diseasesApi";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  getDiseaseById,
+  getDiseases,
+  getDiseaseTags,
+} from "../services/diseasesApi";
+
+export const diseaseTargetTypes = [
+  {
+    label: "Усі",
+    value: "",
+  },
+  {
+    label: "Риби",
+    value: "fish",
+  },
+  {
+    label: "Рослини",
+    value: "plant",
+  },
+  {
+    label: "Безхребетні",
+    value: "invertebrate",
+  },
+];
 
 export const diseaseFilters = [
   "Всі",
@@ -17,12 +41,17 @@ export function useDiseases() {
   const [activeFilter, setActiveFilter] = useState("Всі");
   const [activeTargetType, setActiveTargetType] = useState("");
 
+  const [diseaseTags, setDiseaseTags] = useState(["Всі"]);
   const [filteredDiseases, setFilteredDiseases] = useState([]);
+
   const [selectedDisease, setSelectedDisease] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isTagsLoading, setIsTagsLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+
   const [diseasesError, setDiseasesError] = useState("");
+  const [tagsError, setTagsError] = useState("");
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -31,6 +60,22 @@ export function useDiseases() {
 
     return () => clearTimeout(timeout);
   }, [searchValue]);
+
+  const loadDiseaseTags = useCallback(async () => {
+    try {
+      setIsTagsLoading(true);
+      setTagsError("");
+
+      const tags = await getDiseaseTags();
+
+      setDiseaseTags(["Всі", ...tags.filter(Boolean)]);
+    } catch (error) {
+      setDiseaseTags(["Всі", ...diseaseFilters.filter((item) => item !== "Всі")]);
+      setTagsError(error.message || "Помилка завантаження тегів хвороб");
+    } finally {
+      setIsTagsLoading(false);
+    }
+  }, []);
 
   const loadDiseases = useCallback(async () => {
     try {
@@ -55,6 +100,10 @@ export function useDiseases() {
   }, [activeFilter, activeTargetType, debouncedSearch]);
 
   useEffect(() => {
+    loadDiseaseTags();
+  }, [loadDiseaseTags]);
+
+  useEffect(() => {
     loadDiseases();
   }, [loadDiseases]);
 
@@ -77,6 +126,17 @@ export function useDiseases() {
     setSelectedDisease(null);
   };
 
+  const resetFilters = () => {
+    setSearchValue("");
+    setDebouncedSearch("");
+    setActiveFilter("Всі");
+    setActiveTargetType("");
+  };
+
+  const hasActiveFilters = useMemo(() => {
+    return Boolean(searchValue.trim() || activeFilter !== "Всі" || activeTargetType);
+  }, [searchValue, activeFilter, activeTargetType]);
+
   return {
     searchValue,
     setSearchValue,
@@ -89,16 +149,26 @@ export function useDiseases() {
     activeTargetType,
     setActiveTargetType,
 
+    diseaseTags,
+
     selectedDisease,
     setSelectedDisease,
 
     filteredDiseases,
 
     isLoading,
+    isTagsLoading,
     isDetailLoading,
+
     diseasesError,
+    tagsError,
+
+    hasActiveFilters,
+    resetFilters,
 
     loadDiseases,
+    loadDiseaseTags,
+
     openDiseaseDetails,
     closeDiseaseDetails,
   };

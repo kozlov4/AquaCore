@@ -4,12 +4,62 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
     };
   }
+}
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
+
+  return fallbackMessage;
+}
+
+function validateFeedbackBody(body) {
+  const rate = Number(body?.rate);
+  const description = String(body?.description || "").trim();
+
+  if (!Number.isInteger(rate) || rate < 1 || rate > 5) {
+    return {
+      isValid: false,
+      message: "Оцінка має бути цілим числом від 1 до 5",
+    };
+  }
+
+  if (description.length < 30) {
+    return {
+      isValid: false,
+      message: "Опис відгуку має містити мінімум 30 символів",
+    };
+  }
+
+  if (description.length > 500) {
+    return {
+      isValid: false,
+      message: "Опис відгуку не може перевищувати 500 символів",
+    };
+  }
+
+  return {
+    isValid: true,
+    payload: {
+      rate,
+      description,
+    },
+  };
 }
 
 export default async function handler(req, res) {
@@ -29,17 +79,14 @@ export default async function handler(req, res) {
       params.append("min_rate", String(min_rate));
       params.append("sort_by", String(sort_by));
 
-      const response = await fetch(
-        `${API_URL}/feedbacks/?${params.toString()}`,
-        {
-          method: "GET",
-        }
-      );
+      const response = await fetch(`${API_URL}/feedbacks?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
       const data = await readResponse(response);
-
-      console.log("GET /feedbacks status:", response.status);
-      console.log("GET /feedbacks response:", data);
 
       return res.status(response.status).json(data);
     }
@@ -47,34 +94,43 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const token = req.headers.authorization;
 
-      console.log("POST /api/feedbacks body:", req.body);
-      console.log("POST /api/feedbacks token exists:", Boolean(token));
-
       if (!token) {
         return res.status(401).json({
           message: "Authorization token is missing",
         });
       }
 
-      const response = await fetch(`${API_URL}/feedbacks/post/`, {
+      const validation = validateFeedbackBody(req.body);
+
+      if (!validation.isValid) {
+        return res.status(400).json({
+          message: validation.message,
+        });
+      }
+
+      const response = await fetch(`${API_URL}/feedbacks`, {
         method: "POST",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({
-          rate: Number(req.body.rate),
-          description: String(req.body.description || ""),
-        }),
+        body: JSON.stringify(validation.payload),
       });
 
       const data = await readResponse(response);
 
-      console.log("POST /feedbacks/post status:", response.status);
-      console.log("POST /feedbacks/post response:", data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося зберегти відгук"),
+          detail: data?.detail,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(response.status || 201).json(data);
     }
+
+    res.setHeader("Allow", ["GET", "POST"]);
 
     return res.status(405).json({
       message: "Method not allowed",

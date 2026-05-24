@@ -4,7 +4,7 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
@@ -15,6 +15,8 @@ async function readResponse(response) {
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
@@ -32,7 +34,7 @@ export default async function handler(req, res) {
 
     const params = new URLSearchParams();
 
-    if (target_type && target_type !== "null") {
+    if (target_type && target_type !== "null" && target_type !== "all") {
       params.append("target_type", String(target_type));
     }
 
@@ -48,26 +50,24 @@ export default async function handler(req, res) {
       tags
         .map((tag) => tag.trim())
         .filter(Boolean)
+        .filter((tag) => tag !== "Всі" && tag !== "all")
         .forEach((tag) => {
           params.append("category_tags", tag);
         });
     }
 
-    const url = `${API_URL}/diseases/${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: token,
-      },
-    });
+    const response = await fetch(
+      `${API_URL}/diseases${params.toString() ? `?${params.toString()}` : ""}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: token,
+        },
+      }
+    );
 
     const data = await readResponse(response);
-
-    console.log("GET /diseases status:", response.status);
-    console.log("GET /diseases response:", data);
 
     return res.status(response.status).json(data);
   } catch (error) {

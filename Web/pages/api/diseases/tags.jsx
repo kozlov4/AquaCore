@@ -23,7 +23,6 @@ export default async function handler(req, res) {
     }
 
     const token = req.headers.authorization;
-    const { id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -31,13 +30,7 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!id) {
-      return res.status(400).json({
-        message: "Disease id is required",
-      });
-    }
-
-    const response = await fetch(`${API_URL}/diseases/${id}`, {
+    const response = await fetch(`${API_URL}/diseases/tags`, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -49,10 +42,10 @@ export default async function handler(req, res) {
 
     return res.status(response.status).json(data);
   } catch (error) {
-    console.error("Disease detail proxy error:", error);
+    console.error("Disease tags proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Disease detail proxy server error",
+      message: error.message || "Disease tags proxy server error",
     });
   }
 }

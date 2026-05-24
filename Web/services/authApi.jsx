@@ -1,3 +1,27 @@
+import {
+  saveTokens,
+  clearTokens,
+  refreshAccessToken,
+  getAccessToken,
+  getRefreshToken,
+} from "./apiClient";
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
+
+  return fallbackMessage;
+}
+
 export async function registerUser({ name, email, password }) {
   const response = await fetch("/api/register", {
     method: "POST",
@@ -14,12 +38,7 @@ export async function registerUser({ name, email, password }) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(
-      data?.detail?.[0]?.msg ||
-        data?.detail ||
-        data?.message ||
-        "Помилка реєстрації"
-    );
+    throw new Error(getErrorMessage(data, "Помилка реєстрації"));
   }
 
   return data;
@@ -40,25 +59,26 @@ export async function loginUser({ email, password }) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(
-      data?.detail?.[0]?.msg ||
-        data?.detail ||
-        data?.message ||
-        "Невірний email або пароль"
-    );
+    throw new Error(getErrorMessage(data, "Невірний email або пароль"));
   }
 
-  if (data?.access_token) {
-    localStorage.setItem("access_token", data.access_token);
-  }
-
-  if (data?.refresh_token) {
-    localStorage.setItem("refresh_token", data.refresh_token);
-  }
-
-  if (data?.token_type) {
-    localStorage.setItem("token_type", data.token_type);
-  }
+  saveTokens(data);
 
   return data;
+}
+
+export async function refreshUserToken() {
+  return refreshAccessToken();
+}
+
+export function logoutUser() {
+  clearTokens();
+
+  if (typeof window !== "undefined") {
+    window.location.href = "/signIn";
+  }
+}
+
+export function isAuthenticated() {
+  return Boolean(getAccessToken() && getRefreshToken());
 }

@@ -4,12 +4,28 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
     };
   }
+}
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
+
+  return fallbackMessage;
 }
 
 export default async function handler(req, res) {
@@ -30,60 +46,59 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PUT") {
-      const body = {
-        name: req.body.name,
-        volume: Number(req.body.volume),
-        type: req.body.type,
-        created_at: req.body.created_at,
-        image_id: req.body.image_id || null,
-      };
-
-      const response = await fetch(`${API_URL}/aquariums/${id}/`, {
+      const response = await fetch(`${API_URL}/aquariums/${id}`, {
         method: "PUT",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(req.body),
       });
 
       const data = await readResponse(response);
 
-      console.log(`PUT /aquariums/${id} status:`, response.status);
-      console.log(`PUT /aquariums/${id} response:`, data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося оновити акваріум"),
+          detail: data?.detail,
+        });
+      }
 
       return res.status(response.status).json(data);
     }
 
     if (req.method === "DELETE") {
-      const response = await fetch(`${API_URL}/aquariums/${id}/`, {
+      const response = await fetch(`${API_URL}/aquariums/${id}`, {
         method: "DELETE",
         headers: {
+          Accept: "application/json",
           Authorization: token,
         },
       });
 
-      console.log(`DELETE /aquariums/${id} status:`, response.status);
-
-      if (response.status === 204) {
-        return res.status(204).end();
-      }
-
       const data = await readResponse(response);
 
-      console.log(`DELETE /aquariums/${id} response:`, data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося видалити акваріум"),
+          detail: data?.detail,
+        });
+      }
 
       return res.status(response.status).json(data);
     }
+
+    res.setHeader("Allow", ["PUT", "DELETE"]);
 
     return res.status(405).json({
       message: "Method not allowed",
     });
   } catch (error) {
-    console.error("Aquarium detail proxy error:", error);
+    console.error("Aquarium by id proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Aquarium detail proxy server error",
+      message: error.message || "Aquarium by id proxy server error",
     });
   }
 }

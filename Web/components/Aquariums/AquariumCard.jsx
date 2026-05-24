@@ -5,6 +5,109 @@ import { useRouter } from "next/router";
 import { Droplet, Pencil, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 
+function getAquariumImage(aquarium) {
+  return (
+    aquarium.image ||
+    aquarium.image_url ||
+    aquarium.cover_image_url ||
+    "/images/fish-card.jpg"
+  );
+}
+
+function getAquariumVolume(aquarium) {
+  const volume = aquarium.volume;
+
+  if (volume === null || volume === undefined || volume === "") {
+    return "0 л";
+  }
+
+  if (typeof volume === "string" && volume.includes("л")) {
+    return volume;
+  }
+
+  return `${volume} л`;
+}
+
+function getPopulationText(aquarium) {
+  const population = aquarium.population;
+
+  if (!population) {
+    return "Жителів ще немає";
+  }
+
+  if (typeof population === "string") {
+    return population;
+  }
+
+  if (typeof population === "object") {
+    if (population.total_count !== undefined) {
+      return population.total_count > 0
+        ? `${population.total_count} жителів`
+        : "Жителів ще немає";
+    }
+
+    if (population.count !== undefined) {
+      return population.count > 0
+        ? `${population.count} жителів`
+        : "Жителів ще немає";
+    }
+  }
+
+  return "Жителів ще немає";
+}
+
+function getLastTestText(aquarium) {
+  const lastTest = aquarium.lastTest || aquarium.last_test;
+
+  if (!lastTest) {
+    return "Тестів ще немає";
+  }
+
+  if (typeof lastTest === "string") {
+    return lastTest;
+  }
+
+  if (typeof lastTest === "object") {
+    if (lastTest.days_ago === 0) {
+      return "сьогодні";
+    }
+
+    if (lastTest.days_ago === 1) {
+      return "1 день тому";
+    }
+
+    if (typeof lastTest.days_ago === "number") {
+      return `${lastTest.days_ago} днів тому`;
+    }
+  }
+
+  return "Тестів ще немає";
+}
+
+function formatParam(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  return value;
+}
+
+function getParamsText(aquarium) {
+  const lastTest = aquarium.lastTest || aquarium.last_test;
+
+  if (aquarium.params && typeof aquarium.params === "string") {
+    return aquarium.params;
+  }
+
+  if (lastTest && typeof lastTest === "object") {
+    return `pH ${formatParam(lastTest.ph)} · GH ${formatParam(
+      lastTest.gh
+    )} · KH ${formatParam(lastTest.kh)}`;
+  }
+
+  return "pH — · GH — · KH —";
+}
+
 export function AquariumCard({
   aquarium,
   index,
@@ -53,7 +156,7 @@ export function AquariumCard({
     >
       <div className="relative h-[185px] overflow-hidden bg-[#eaf1fb]">
         <Image
-          src={aquarium.image || "/images/fish-card.jpg"}
+          src={getAquariumImage(aquarium)}
           alt={aquarium.name || "Aquarium"}
           fill
           priority={index < 3}
@@ -75,7 +178,7 @@ export function AquariumCard({
             backdrop-blur-md
           "
         >
-          {aquarium.volume || "0 л"}
+          {getAquariumVolume(aquarium)}
         </span>
       </div>
 
@@ -92,7 +195,7 @@ export function AquariumCard({
 
             <p className="m-0">
               <span className="font-semibold text-[#374151]">Населення:</span>{" "}
-              {aquarium.population || "Жителів ще немає"}
+              {getPopulationText(aquarium)}
             </p>
           </div>
 
@@ -106,11 +209,11 @@ export function AquariumCard({
                 <span className="font-semibold text-[#374151]">
                   Останній тест
                 </span>{" "}
-                {aquarium.lastTest || "Тестів ще немає"}
+                {getLastTestText(aquarium)}
               </p>
 
               <p className="m-0 mt-[1px] font-semibold text-[#6b7280]">
-                {aquarium.params || "pH — · GH — · KH —"}
+                {getParamsText(aquarium)}
               </p>
             </div>
           </div>
@@ -174,3 +277,5 @@ export function AquariumCard({
     </motion.article>
   );
 }
+
+export default AquariumCard;

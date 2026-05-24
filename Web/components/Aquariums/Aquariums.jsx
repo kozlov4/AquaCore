@@ -48,24 +48,7 @@ export function Aquariums() {
               </p>
             </div>
 
-            <motion.button
-              type="button"
-              onClick={aquariums.openCreateModal}
-              whileHover={{
-                y: -2,
-                boxShadow: "0 16px 35px rgba(99,91,255,0.32)",
-              }}
-              whileTap={{ scale: 0.96 }}
-              className="
-                flex w-full items-center justify-center gap-2
-                rounded-xl bg-[#635BFF] px-6 py-3
-                text-sm font-black text-white transition hover:bg-[#5147f5]
-                sm:w-fit
-              "
-            >
-              <Plus size={17} />
-              Додати акваріум
-            </motion.button>
+            
           </motion.header>
 
           {aquariums.aquariumsError && (
@@ -144,27 +127,28 @@ export function Aquariums() {
       </AnimatePresence>
 
       <WaterParamsModal
-        isOpen={aquariums.isWaterParamsOpen}
-        aquarium={aquariums.selectedAquarium}
-        onClose={aquariums.closeWaterParamsModal}
-        onSave={aquariums.saveWaterParamsLocally}
-      />
+  isOpen={aquariums.isWaterParamsOpen}
+  onClose={aquariums.closeWaterParamsModal}
+  onSave={aquariums.saveWaterParamsLocally}
+  isSaving={aquariums.isSaving}
+/>
 
       <TaskModal
-        isOpen={aquariums.isTaskOpen}
-        aquarium={aquariums.selectedAquarium}
-        onClose={aquariums.closeTaskModal}
-        onSave={aquariums.closeTaskModal}
-      />
+  isOpen={aquariums.isTaskOpen}
+  aquarium={aquariums.selectedAquarium}
+  onClose={aquariums.closeTaskModal}
+  onSave={aquariums.saveTask}
+  isSaving={aquariums.isSaving}
+/>
 
-      <AquariumSettingsModal
-        isOpen={aquariums.isSettingsOpen}
-        aquarium={aquariums.selectedAquarium}
-        onClose={aquariums.closeSettingsModal}
-        onEdit={aquariums.openEditModal}
-        onSave={aquariums.openEditModal}
-        onDelete={aquariums.askDeleteAquarium}
-      />
+     <AquariumSettingsModal
+  isOpen={aquariums.isSettingsOpen}
+  aquarium={aquariums.selectedAquarium}
+  onClose={aquariums.closeSettingsModal}
+  onSave={aquariums.saveSettingsAquarium}
+  onDelete={aquariums.deleteSelectedAquarium}
+  isSaving={aquariums.isSaving}
+/>
 
       <DeleteAquariumModal
         aquarium={aquariums.deletingAquarium}

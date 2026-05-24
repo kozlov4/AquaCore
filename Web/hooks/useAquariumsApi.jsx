@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+
 import {
   createAquarium,
   deleteAquarium,
@@ -8,6 +9,9 @@ import {
   getMyAquariums,
   updateAquarium,
 } from "../services/aquariumsApi";
+
+import { createWaterTest } from "../services/waterTestsApi";
+import { createTask } from "../services/tasksApi";
 
 export function useAquariumsApi() {
   const [aquariums, setAquariums] = useState([]);
@@ -46,6 +50,7 @@ export function useAquariumsApi() {
   const loadAquariumNames = useCallback(async () => {
     try {
       const data = await getAquariumNames();
+
       setAquariumNames(data);
     } catch {
       setAquariumNames([]);
@@ -84,6 +89,7 @@ export function useAquariumsApi() {
 
   const openWaterParamsModal = (aquarium) => {
     setSelectedAquarium(aquarium);
+    setAquariumsError("");
     setIsWaterParamsOpen(true);
   };
 
@@ -93,6 +99,7 @@ export function useAquariumsApi() {
 
   const openTaskModal = (aquarium) => {
     setSelectedAquarium(aquarium);
+    setAquariumsError("");
     setIsTaskOpen(true);
   };
 
@@ -115,6 +122,7 @@ export function useAquariumsApi() {
       }
 
       closeAddModal();
+
       await loadAquariums();
       await loadAquariumNames();
     } catch (error) {
@@ -159,22 +167,59 @@ export function useAquariumsApi() {
     }
   };
 
-  const saveWaterParamsLocally = (params) => {
-    if (!selectedAquarium?.id) return;
+  const saveWaterParamsLocally = async (params) => {
+    if (!selectedAquarium?.id) {
+      throw new Error("Не обрано акваріум для тесту води");
+    }
 
-    setAquariums((prev) =>
-      prev.map((aquarium) =>
-        aquarium.id === selectedAquarium.id
-          ? {
-              ...aquarium,
-              lastTest: "Останній тест: сьогодні",
-              params: `pH ${params.ph} · GH ${params.gh} · KH ${params.kh}`,
-            }
-          : aquarium
-      )
-    );
+    try {
+      setIsSaving(true);
+      setAquariumsError("");
 
-    setIsWaterParamsOpen(false);
+      await createWaterTest(selectedAquarium.id, params);
+
+      setAquariums((prev) =>
+        prev.map((aquarium) =>
+          aquarium.id === selectedAquarium.id
+            ? {
+                ...aquarium,
+                lastTest: "Останній тест: сьогодні",
+                params: `pH ${params.ph || "—"} · GH ${
+                  params.gh || "—"
+                } · KH ${params.kh || "—"}`,
+              }
+            : aquarium
+        )
+      );
+
+      setIsWaterParamsOpen(false);
+
+      await loadAquariums();
+    } catch (error) {
+      setAquariumsError(error.message || "Не вдалося зберегти тест води");
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveTask = async (payload) => {
+    try {
+      setIsSaving(true);
+      setAquariumsError("");
+
+      await createTask({
+        ...payload,
+        aquarium_id: payload.aquarium_id || selectedAquarium?.id || null,
+      });
+
+      setIsTaskOpen(false);
+    } catch (error) {
+      setAquariumsError(error.message || "Не вдалося створити завдання");
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return {
@@ -192,6 +237,7 @@ export function useAquariumsApi() {
 
     isLoading,
     isSaving,
+
     aquariumsError,
 
     loadAquariums,
@@ -217,5 +263,6 @@ export function useAquariumsApi() {
     confirmDeleteAquarium,
 
     saveWaterParamsLocally,
+    saveTask,
   };
 }
