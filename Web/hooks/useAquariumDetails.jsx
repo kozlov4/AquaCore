@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export function useAquariumDetails() {
-  const [activeTab, setActiveTab] = useState("Огляд");
+  const [activeTab, setActiveTab] = useState("Населення");
   const [isAddResidentOpen, setIsAddResidentOpen] = useState(false);
   const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
 
