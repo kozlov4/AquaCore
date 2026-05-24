@@ -46,6 +46,21 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PUT") {
+      const body = {
+        name: req.body.name,
+        volume: Number(req.body.volume),
+        type: req.body.type,
+        created_at: req.body.created_at,
+        image_id:
+          req.body.image_id === undefined ? undefined : req.body.image_id || null,
+      };
+
+      Object.keys(body).forEach((key) => {
+        if (body[key] === undefined) {
+          delete body[key];
+        }
+      });
+
       const response = await fetch(`${API_URL}/aquariums/${id}`, {
         method: "PUT",
         headers: {
@@ -53,7 +68,7 @@ export default async function handler(req, res) {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify(body),
       });
 
       const data = await readResponse(response);
@@ -77,6 +92,10 @@ export default async function handler(req, res) {
         },
       });
 
+      if (response.status === 204) {
+        return res.status(204).end();
+      }
+
       const data = await readResponse(response);
 
       if (!response.ok) {
@@ -95,10 +114,10 @@ export default async function handler(req, res) {
       message: "Method not allowed",
     });
   } catch (error) {
-    console.error("Aquarium by id proxy error:", error);
+    console.error("Aquarium detail proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Aquarium by id proxy server error",
+      message: error.message || "Aquarium detail proxy server error",
     });
   }
 }

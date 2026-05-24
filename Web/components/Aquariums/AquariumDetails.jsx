@@ -50,6 +50,18 @@ export function AquariumDetails() {
           />
 
           <div className="p-5 md:p-6">
+            {aquarium.equipmentError && (
+              <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+                {aquarium.equipmentError}
+              </div>
+            )}
+
+            {aquarium.isEquipmentLoading && activeTab === "Обладнання" && (
+              <div className="mb-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
+                Завантаження обладнання...
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
               {activeTab === "Населення" && (
                 <motion.div
@@ -77,6 +89,8 @@ export function AquariumDetails() {
                   <EquipmentTab
                     equipment={aquarium.equipment}
                     onAddEquipment={() => aquarium.setIsAddEquipmentOpen(true)}
+                    onServiceEquipment={aquarium.handleServiceEquipment}
+                    isServiceLoading={aquarium.isServiceLoading}
                   />
                 </motion.div>
               )}
@@ -95,6 +109,7 @@ export function AquariumDetails() {
         isOpen={aquarium.isAddEquipmentOpen}
         onClose={() => aquarium.setIsAddEquipmentOpen(false)}
         onSave={aquarium.handleAddEquipment}
+        isSaving={aquarium.isEquipmentSaving}
       />
     </main>
   );

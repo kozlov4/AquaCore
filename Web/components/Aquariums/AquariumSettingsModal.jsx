@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Upload, CalendarDays } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { X, Upload } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-function todayInputDate() {
-  return new Date().toISOString().slice(0, 10);
+function getVolumeValue(volume) {
+  if (volume === null || volume === undefined) return "";
+
+  return String(volume).replace(" л", "");
 }
 
-function toInputDate(value) {
+function getAquariumType(aquarium) {
+  return aquarium?.type || aquarium?.environment || "Прісноводний";
+}
+
+function getCreatedAtValue(aquarium) {
+  const value = aquarium?.createdAt || aquarium?.created_at;
+
   if (!value) return "";
 
   try {
@@ -16,16 +24,6 @@ function toInputDate(value) {
   } catch {
     return "";
   }
-}
-
-function getInitialForm(aquarium) {
-  return {
-    name: aquarium?.name || "",
-    volume: aquarium?.volume ? String(aquarium.volume).replace(" л", "") : "",
-    type: aquarium?.type || aquarium?.environment || "Прісноводний",
-    created_at: toInputDate(aquarium?.created_at) || "",
-    image_id: aquarium?.image_id || null,
-  };
 }
 
 export function AquariumSettingsModal({
@@ -36,62 +34,61 @@ export function AquariumSettingsModal({
   onDelete,
   isSaving = false,
 }) {
-  const [formData, setFormData] = useState(getInitialForm(aquarium));
+  const [name, setName] = useState("");
+  const [volume, setVolume] = useState("");
+  const [type, setType] = useState("Прісноводний");
+  const [createdAt, setCreatedAt] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocalSaving, setIsLocalSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setFormData(getInitialForm(aquarium));
+    if (isOpen && aquarium) {
+      setName(aquarium.name || "");
+      setVolume(getVolumeValue(aquarium.volume));
+      setType(getAquariumType(aquarium));
+      setCreatedAt(getCreatedAtValue(aquarium));
       setErrorMessage("");
-      setIsSubmitting(false);
+      setIsLocalSaving(false);
       setIsDeleting(false);
     }
   }, [isOpen, aquarium]);
 
-  const saving = isSaving || isSubmitting || isDeleting;
-
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const saving = isSaving || isLocalSaving || isDeleting;
 
   const handleSave = async () => {
     try {
-      setIsSubmitting(true);
+      setIsLocalSaving(true);
       setErrorMessage("");
 
       if (!aquarium?.id) {
         throw new Error("Не передано id акваріума");
       }
 
-      if (!formData.name.trim()) {
+      if (!name.trim()) {
         throw new Error("Введіть назву акваріума");
       }
 
-      if (!formData.volume || Number(formData.volume) <= 0) {
+      if (!volume || Number(volume) <= 0) {
         throw new Error("Вкажіть коректний обʼєм акваріума");
       }
 
       await onSave?.({
         id: aquarium.id,
-        name: formData.name.trim(),
-        volume: Number(formData.volume),
-        type: formData.type,
-        created_at: formData.created_at
-          ? new Date(formData.created_at).toISOString()
-          : aquarium.created_at || new Date().toISOString(),
-        image_id: formData.image_id,
+        name: name.trim(),
+        volume: Number(volume),
+        type,
+        createdAt: createdAt
+          ? new Date(createdAt).toISOString()
+          : aquarium.createdAt || aquarium.created_at || new Date().toISOString(),
+        keepImage: true,
       });
 
       onClose?.();
     } catch (error) {
       setErrorMessage(error.message || "Не вдалося зберегти зміни");
     } finally {
-      setIsSubmitting(false);
+      setIsLocalSaving(false);
     }
   };
 
@@ -116,7 +113,7 @@ export function AquariumSettingsModal({
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && aquarium && (
         <>
           <motion.div
             className="fixed inset-0 z-[80] bg-black/45 backdrop-blur-sm"
@@ -192,8 +189,8 @@ export function AquariumSettingsModal({
                     </label>
 
                     <input
-                      value={formData.name}
-                      onChange={(event) => handleChange("name", event.target.value)}
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
                       disabled={saving}
                       className="h-11 w-full rounded-[7px] border border-[#d6dbe4] px-4 text-[14px] font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10 disabled:bg-slate-100"
                     />
@@ -207,10 +204,8 @@ export function AquariumSettingsModal({
                     <input
                       type="number"
                       min="1"
-                      value={formData.volume}
-                      onChange={(event) =>
-                        handleChange("volume", event.target.value)
-                      }
+                      value={volume}
+                      onChange={(event) => setVolume(event.target.value)}
                       disabled={saving}
                       className="h-11 w-full rounded-[7px] border border-[#d6dbe4] px-4 text-[14px] font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10 disabled:bg-slate-100"
                     />
@@ -222,8 +217,8 @@ export function AquariumSettingsModal({
                     </label>
 
                     <select
-                      value={formData.type}
-                      onChange={(event) => handleChange("type", event.target.value)}
+                      value={type}
+                      onChange={(event) => setType(event.target.value)}
                       disabled={saving}
                       className="h-11 w-full rounded-[7px] border border-[#d6dbe4] bg-white px-4 text-[14px] font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10 disabled:bg-slate-100"
                     >
@@ -237,22 +232,13 @@ export function AquariumSettingsModal({
                       Дата запуску
                     </label>
 
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={formData.created_at}
-                        onChange={(event) =>
-                          handleChange("created_at", event.target.value)
-                        }
-                        disabled={saving}
-                        className="h-11 w-full rounded-[7px] border border-[#d6dbe4] px-4 pr-11 text-[14px] font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10 disabled:bg-slate-100"
-                      />
-
-                      <CalendarDays
-                        size={17}
-                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#6b7280]"
-                      />
-                    </div>
+                    <input
+                      type="date"
+                      value={createdAt}
+                      onChange={(event) => setCreatedAt(event.target.value)}
+                      disabled={saving}
+                      className="h-11 w-full rounded-[7px] border border-[#d6dbe4] px-4 text-[14px] font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10 disabled:bg-slate-100"
+                    />
                   </div>
                 </div>
 
@@ -293,7 +279,7 @@ export function AquariumSettingsModal({
                   disabled={saving}
                   className="rounded-[8px] bg-[#5b4cf6] px-5 py-3 text-[13px] font-extrabold text-white shadow-[0_12px_28px_rgba(91,76,246,0.24)] transition hover:bg-[#4d3fe0] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {isSubmitting ? "Збереження..." : "Зберегти зміни"}
+                  {isLocalSaving ? "Збереження..." : "Зберегти зміни"}
                 </button>
               </div>
             </div>
