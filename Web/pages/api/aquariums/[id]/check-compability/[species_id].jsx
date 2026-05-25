@@ -17,8 +17,13 @@ function getErrorMessage(data, fallbackMessage) {
     return data.detail[0]?.msg || fallbackMessage;
   }
 
-  if (typeof data?.detail === "string") return data.detail;
-  if (typeof data?.message === "string") return data.message;
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
 
   return fallbackMessage;
 }
@@ -34,6 +39,7 @@ export default async function handler(req, res) {
     }
 
     const token = req.headers.authorization;
+    const { id, species_id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -41,7 +47,23 @@ export default async function handler(req, res) {
       });
     }
 
-    const response = await fetch(`${API_URL}/tasks`, {
+    if (!id) {
+      return res.status(400).json({
+        message: "Aquarium id is required",
+      });
+    }
+
+    if (!species_id) {
+      return res.status(400).json({
+        message: "Species id is required",
+      });
+    }
+
+    const backendUrl = `${API_URL}/aquariums/${id}/check-compability/${species_id}`;
+
+    console.log("GET check-compability backend url:", backendUrl);
+
+    const response = await fetch(backendUrl, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -51,20 +73,23 @@ export default async function handler(req, res) {
 
     const data = await readResponse(response);
 
+    console.log("GET check-compability status:", response.status);
+    console.log("GET check-compability response:", data);
+
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити завдання"),
+        message: getErrorMessage(data, "Не вдалося перевірити сумісність"),
         detail: data?.detail,
         backendStatus: response.status,
       });
     }
 
-    return res.status(200).json(Array.isArray(data) ? data : []);
+    return res.status(200).json(data);
   } catch (error) {
-    console.error("Tasks proxy error:", error);
+    console.error("Check compatibility proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Tasks proxy server error",
+      message: error.message || "Check compatibility proxy server error",
     });
   }
 }

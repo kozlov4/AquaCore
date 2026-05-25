@@ -25,8 +25,8 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
+    if (req.method !== "PATCH") {
+      res.setHeader("Allow", ["PATCH"]);
 
       return res.status(405).json({
         message: "Method not allowed",
@@ -34,6 +34,7 @@ export default async function handler(req, res) {
     }
 
     const token = req.headers.authorization;
+    const { id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -41,30 +42,38 @@ export default async function handler(req, res) {
       });
     }
 
-    const response = await fetch(`${API_URL}/tasks`, {
-      method: "GET",
+    if (!id) {
+      return res.status(400).json({
+        message: "Task id is required",
+      });
+    }
+
+    const response = await fetch(`${API_URL}/tasks/${id}/status`, {
+      method: "PATCH",
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: token,
       },
+      body: JSON.stringify(req.body || {}),
     });
 
     const data = await readResponse(response);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити завдання"),
+        message: getErrorMessage(data, "Не вдалося змінити статус завдання"),
         detail: data?.detail,
         backendStatus: response.status,
       });
     }
 
-    return res.status(200).json(Array.isArray(data) ? data : []);
+    return res.status(response.status || 200).json(data);
   } catch (error) {
-    console.error("Tasks proxy error:", error);
+    console.error("Task status proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Tasks proxy server error",
+      message: error.message || "Task status proxy server error",
     });
   }
 }

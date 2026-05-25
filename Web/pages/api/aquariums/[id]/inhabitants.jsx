@@ -30,8 +30,8 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
+    if (req.method !== "POST") {
+      res.setHeader("Allow", ["POST"]);
 
       return res.status(405).json({
         message: "Method not allowed",
@@ -49,40 +49,67 @@ export default async function handler(req, res) {
 
     if (!id) {
       return res.status(400).json({
-        message: "Species id is required",
+        message: "Aquarium id is required",
       });
     }
 
-    const response = await fetch(`${API_URL}/species/${id}`, {
-      method: "GET",
+    const speciesId = Number(req.body?.species_id);
+    const quantity = Number(req.body?.quantity);
+    const settlementDate = req.body?.settlement_date;
+    const ignoreWarnings = Boolean(req.body?.ignore_warnings);
+
+    if (!speciesId) {
+      return res.status(400).json({
+        message: "species_id is required",
+      });
+    }
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({
+        message: "quantity must be greater than 0",
+      });
+    }
+
+    if (!settlementDate) {
+      return res.status(400).json({
+        message: "settlement_date is required",
+      });
+    }
+
+    const payload = {
+      species_id: speciesId,
+      quantity,
+      settlement_date: settlementDate,
+      ignore_warnings: ignoreWarnings,
+    };
+
+    const response = await fetch(`${API_URL}/aquariums/${id}/inhabitants`, {
+      method: "POST",
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: token,
       },
+      body: JSON.stringify(payload),
     });
 
     const data = await readResponse(response);
 
     if (!response.ok) {
-      console.error("Species detail backend error:", {
-        status: response.status,
-        id,
-        data,
-      });
-
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити деталі виду"),
+        message: getErrorMessage(data, "Не вдалося заселити вид в акваріум"),
         detail: data?.detail,
         backendStatus: response.status,
+        sentPayload: payload,
       });
     }
 
-    return res.status(200).json(data);
+    return res.status(response.status || 201).json(data);
   } catch (error) {
-    console.error("Species detail proxy error:", error);
+    console.error("Add inhabitant proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Species detail proxy server error",
+      message: error.message || "Add inhabitant proxy server error",
     });
   }
 }

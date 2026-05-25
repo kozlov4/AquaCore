@@ -69,9 +69,7 @@ export function SpeciesCard({ item, index }) {
             className="object-cover"
           />
         ) : (
-          <span className="text-[52px] leading-none">
-            {item.icon || "🐟"}
-          </span>
+          <span className="text-[52px] leading-none">{item.icon || "🐟"}</span>
         )}
 
         <span
@@ -100,7 +98,7 @@ export function SpeciesCard({ item, index }) {
             <span
               key={`${item.id}-${tag}`}
               className={`inline-flex h-[21px] items-center rounded-[5px] px-[7px] text-[10px] font-bold ${getTagStyle(
-                tag
+                tag,
               )}`}
             >
               {tag}
@@ -111,12 +109,12 @@ export function SpeciesCard({ item, index }) {
         <Link
           href={`/species-details?id=${item.id}`}
           className="
-            mt-[13px] flex h-[32px] items-center justify-center
-            rounded-[7px] bg-[#fafafa]
-            text-[12px] font-extrabold text-[#374151]
-            transition-all duration-200
-            hover:bg-[#f4f2ff] hover:text-[#635bff]
-          "
+    mt-[13px] flex h-[32px] items-center justify-center
+    rounded-[7px] bg-[#fafafa]
+    text-[12px] font-extrabold text-[#374151]
+    transition-all duration-200
+    hover:bg-[#f4f2ff] hover:text-[#635bff]
+  "
         >
           Детальніше
         </Link>

@@ -3,14 +3,21 @@ function getErrorMessage(data, fallbackMessage) {
     return data.detail[0]?.msg || fallbackMessage;
   }
 
-  if (typeof data?.detail === "string") return data.detail;
-  if (typeof data?.message === "string") return data.message;
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
 
   return fallbackMessage;
 }
 
 function getToken() {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") {
+    return null;
+  }
 
   return (
     localStorage.getItem("access_token") ||
@@ -42,6 +49,7 @@ export const fallbackSpecies = [
     icon: "🐟",
     minVolume: 40,
     size: "4–5 см",
+    maxSize: "5",
     temperature: "22–26 °C",
     ph: "6.0–7.0",
     diet: "Всеїдний",
@@ -61,6 +69,7 @@ export const fallbackSpecies = [
     icon: "🐠",
     minVolume: 250,
     size: "25–35 см",
+    maxSize: "35",
     temperature: "23–28 °C",
     ph: "6.5–7.5",
     diet: "Хижий",
@@ -70,13 +79,58 @@ export const fallbackSpecies = [
       "Астронотус — велика інтелектуальна цихліда, якій потрібен просторий акваріум.",
     tags: ["від 250 л", "Хижак", "Цихліда"],
   },
+  {
+    id: 3,
+    name: "Анубіас нана",
+    latin: "Anubias barteri var. nana",
+    category: "Рослини",
+    water: "Прісна",
+    character: "Мирні",
+    icon: "🌿",
+    minVolume: 10,
+    size: "5–15 см",
+    maxSize: "15",
+    temperature: "20–28 °C",
+    ph: "6.0–7.5",
+    diet: "Фотосинтез",
+    difficulty: "Легкий",
+    lifespan: "Багаторічна",
+    description:
+      "Анубіас нана — невибаглива акваріумна рослина, добре підходить для початківців.",
+    tags: ["Слабке світло", "Без CO2", "Невибаглива"],
+  },
+  {
+    id: 4,
+    name: "Креветка Амано",
+    latin: "Caridina multidentata",
+    category: "Безхребетні",
+    water: "Прісна",
+    character: "Мирні",
+    icon: "🦐",
+    minVolume: 20,
+    size: "4–5 см",
+    maxSize: "5",
+    temperature: "22–26 °C",
+    ph: "6.5–7.5",
+    diet: "Водорості",
+    difficulty: "Легкий",
+    lifespan: "2–3 роки",
+    description:
+      "Креветка Амано допомагає боротися з водоростями та підходить для мирних акваріумів.",
+    tags: ["від 20 л", "Мирна", "Водоростейд"],
+  },
 ];
 
 function getIconByCategory(category) {
   const value = String(category || "").toLowerCase();
 
-  if (value.includes("рослин")) return "🌿";
-  if (value.includes("крев") || value.includes("безхреб")) return "🦐";
+  if (value.includes("рослин")) {
+    return "🌿";
+  }
+
+  if (value.includes("крев") || value.includes("безхреб")) {
+    return "🦐";
+  }
 
   return "🐟";
 }
@@ -118,12 +172,35 @@ function getDiet(item) {
   return item.diet || item.food_type || item.feeding_type || "Всеїдний";
 }
 
+function getMaxSize(item) {
+  return item.max_size || item.maxSize || item.size_cm || item.size || "";
+}
+
+function getAquariumId(item) {
+  return item?.id || item?.aquarium_id || item?.aquariumId;
+}
+
+function getAquariumName(item) {
+  return item?.name || item?.title || "Акваріум";
+}
+
+function getAquariumVolume(item) {
+  return (
+    item?.volume ||
+    item?.liters ||
+    item?.capacity_liters ||
+    item?.capacity ||
+    null
+  );
+}
+
 export function mapSpeciesFromApi(item) {
   const category = item.category || item.type || "Риби";
   const minVolume = getMinVolume(item);
   const character = getCharacter(item);
   const difficulty = getDifficulty(item);
   const diet = getDiet(item);
+  const maxSize = getMaxSize(item);
 
   const tags = Array.isArray(item.tags)
     ? item.tags
@@ -142,7 +219,7 @@ export function mapSpeciesFromApi(item) {
     character,
     icon: item.icon || item.emoji || getIconByCategory(category),
     minVolume,
-    maxSize: item.max_size || item.maxSize || item.size_cm || item.size || "",
+    maxSize,
     size: item.size || item.max_size || item.maxSize || "—",
     temperature:
       item.temperature ||
@@ -161,35 +238,52 @@ export function mapSpeciesFromApi(item) {
   };
 }
 
+function sizeToBackendValue(size) {
+  if (size === "S") return "S";
+  if (size === "M") return "M";
+  if (size === "L") return "L";
+  if (size === "XL") return "XL";
+
+  return null;
+}
+
 export async function getSpeciesList(filters = {}) {
   const params = new URLSearchParams();
 
-  if (filters.search) params.append("search", filters.search);
+  if (filters.search) {
+    params.append("search", filters.search);
+  }
+
   if (filters.category && filters.category !== "all") {
     params.append("category", filters.category);
   }
+
   if (filters.waterType && filters.waterType !== "all") {
     params.append("water_type", filters.waterType);
   }
+
   if (filters.character && filters.character !== "all") {
     params.append("character", filters.character);
   }
-  if (filters.maxSize && filters.maxSize !== "all") {
-    params.append("max_size", filters.maxSize);
+
+  if (filters.minVolume && Number(filters.minVolume) < 500) {
+    params.append("maxVolume", String(filters.minVolume));
   }
+
+  const backendSize = sizeToBackendValue(filters.maxSize);
+
+  if (backendSize && backendSize !== "XL") {
+    params.append("maxSizes", backendSize);
+  }
+
   if (filters.difficulty && filters.difficulty !== "all") {
-    params.append("difficulty", filters.difficulty);
+    params.append("careLevels", filters.difficulty);
   }
-  if (filters.minVolume) {
-    params.append("min_volume", String(filters.minVolume));
-  }
+
   if (Array.isArray(filters.foodTypes) && filters.foodTypes.length > 0) {
     filters.foodTypes.forEach((foodType) => {
-      params.append("food_type", foodType);
+      params.append("diets", foodType);
     });
-  }
-  if (filters.sortBy) {
-    params.append("sort_by", filters.sortBy);
   }
 
   const response = await fetch(
@@ -198,6 +292,7 @@ export async function getSpeciesList(filters = {}) {
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...authHeaders(),
       },
     }
   );
@@ -211,21 +306,99 @@ export async function getSpeciesList(filters = {}) {
   return data.map(mapSpeciesFromApi);
 }
 
+export function mapSpeciesDetailFromApi(item) {
+  const category = item.category || item.type || "Риби";
+
+  return {
+    id: item.id,
+    name: item.name || "Без назви",
+    latin: item.scientific_name || item.latin || item.latin_name || "",
+    category,
+    water: item.water_type || item.water || "—",
+    character: item.character || "—",
+    icon:
+      item.icon ||
+      item.emoji ||
+      (String(category).toLowerCase().includes("рослин")
+        ? "🌿"
+        : String(category).toLowerCase().includes("безхреб")
+          ? "🦐"
+          : "🐟"),
+    imageUrl: item.image_url || null,
+    minVolume: item.min_volume || 0,
+    size: item.max_size || "—",
+    maxSize: item.max_size || "—",
+    temperature: item.temperature || "—",
+    ph: item.ph || "—",
+    diet: item.diet || "—",
+    difficulty: item.care_level || "—",
+    lifespan: item.lifespan || "—",
+    description: item.description || "Опис для цього виду поки відсутній.",
+    lighting: item.lighting || null,
+    co2: item.co2 || null,
+    tags: [
+      item.water_type,
+      category,
+      item.care_level,
+      item.character,
+      item.min_volume ? `від ${item.min_volume} л` : null,
+    ].filter(Boolean),
+  };
+}
+
 export async function getSpeciesById(id) {
-  const response = await fetch(`/api/species/${id}`, {
+  if (!id) {
+    throw new Error("Не передано id виду");
+  }
+
+  const response = await fetch(`/api/species/${encodeURIComponent(id)}`, {
     method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
   });
 
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    return (
+    const fallbackItem =
       fallbackSpecies.find((item) => String(item.id) === String(id)) ||
-      fallbackSpecies[0]
-    );
+      fallbackSpecies[0];
+
+    return fallbackItem;
   }
 
-  return mapSpeciesFromApi(data);
+  return mapSpeciesDetailFromApi(data);
+}
+
+export async function getAquariumNames() {
+  const response = await fetch("/api/aquariums/names", {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося завантажити акваріуми"));
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item) => ({
+      id: getAquariumId(item),
+      name: getAquariumName(item),
+      volume: getAquariumVolume(item),
+      ...item,
+    }))
+    .filter((item) => item.id);
 }
 
 export function normalizeCompatibility(data) {
@@ -260,26 +433,54 @@ export function normalizeCompatibility(data) {
       points:
         warnings.length > 0
           ? warnings
-          : ["Система виявила критичну несумісність для цього виду."],
+          : [
+              "Система виявила критичну несумісність.",
+              "Додавання виду може бути небезпечним для поточних жителів.",
+            ],
       raw: data,
     };
   }
 
   if (
+    rawStatus.includes("aggression") ||
     rawStatus.includes("warning") ||
-    rawStatus.includes("partial") ||
-    rawStatus.includes("част") ||
+    rawStatus.includes("risk") ||
+    rawStatus.includes("агрес") ||
     rawStatus.includes("ризик")
   ) {
     return {
-      type: "warning",
+      type: "aggression",
+      title: "Можлива агресія",
+      icon: "⚠️",
+      needsConfirm: true,
+      points:
+        warnings.length > 0
+          ? warnings
+          : [
+              "Вид може проявляти територіальність.",
+              "Рекомендується уважно стежити за поведінкою після заселення.",
+            ],
+      raw: data,
+    };
+  }
+
+  if (
+    rawStatus.includes("partial") ||
+    rawStatus.includes("част") ||
+    rawStatus.includes("recommend")
+  ) {
+    return {
+      type: "partial",
       title: "Часткова сумісність",
       icon: "ℹ️",
       needsConfirm: true,
       points:
         warnings.length > 0
           ? warnings
-          : ["Є рекомендації або ризики, які потрібно врахувати."],
+          : [
+              "Є певні рекомендації для цього виду.",
+              "Перед заселенням перевірте умови утримання.",
+            ],
       raw: data,
     };
   }
@@ -292,14 +493,22 @@ export function normalizeCompatibility(data) {
     points:
       warnings.length > 0
         ? warnings
-        : ["Вид сумісний з поточними умовами акваріума."],
+        : [
+            "Ідеальний вибір. Цей вид має схожі вимоги до параметрів води.",
+            "Конфлікти виключені або малоймовірні.",
+          ],
     raw: data,
   };
 }
 
 export async function checkSpeciesCompatibility({ aquariumId, speciesId }) {
-  if (!aquariumId) throw new Error("Не передано id акваріума");
-  if (!speciesId) throw new Error("Не передано id виду");
+  if (!aquariumId) {
+    throw new Error("Не передано id акваріума");
+  }
+
+  if (!speciesId) {
+    throw new Error("Не передано id виду");
+  }
 
   const response = await fetch(
     `/api/aquariums/${encodeURIComponent(

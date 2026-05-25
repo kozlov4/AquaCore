@@ -4,58 +4,60 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   SlidersHorizontal,
-  Fish,
-  Leaf,
-  Shell,
-  ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 
 import { Sidebar } from "../Profile/Sidebar";
 import { SpeciesCard } from "./SpeciesCard";
 import { SpeciesAdvancedFiltersModal } from "./SpeciesAdvancedFiltersModal";
+import { SpeciesFilterDropdown } from "./SpeciesFilterDropdown";
 import { getSpeciesList } from "../../services/speciesApi";
 
 const categoryOptions = [
   {
     label: "Усі риби",
     value: "all",
-    icon: Fish,
+    icon: "🐟",
   },
   {
     label: "Риби",
     value: "Риби",
-    icon: Fish,
+    icon: "🐟",
   },
   {
     label: "Рослини",
     value: "Рослини",
-    icon: Leaf,
+    icon: "🌿",
   },
   {
     label: "Безхребетні",
     value: "Безхребетні",
-    icon: Shell,
+    icon: "🦐",
   },
 ];
 
 const waterOptions = [
   {
-    label: "Прісна вода",
+    label: "Будь-яка вода",
+    value: "all",
+  },
+  {
+    label: "Прісна",
     value: "Прісна",
   },
   {
-    label: "Морська вода",
+    label: "Морська",
     value: "Морська",
   },
   {
-    label: "Будь-яка вода",
-    value: "all",
+    label: "Солонувата (Brackish)",
+    value: "Солонувата",
   },
 ];
 
 const characterOptions = [
   {
-    label: "Будь-який характер",
+    label: "Усі види",
     value: "all",
   },
   {
@@ -69,6 +71,7 @@ const characterOptions = [
   {
     label: "Хижаки",
     value: "Хижаки",
+    danger: true,
   },
 ];
 
@@ -87,90 +90,40 @@ const sortOptions = [
   },
   {
     label: "За мін. обʼємом",
-    value: "volume_asc",
+    value: "volume",
   },
 ];
 
-function CategoryButton({ item, activeValue, onChange }) {
-  const Icon = item.icon;
-  const isActive = activeValue === item.value;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(item.value)}
-      className={`
-        inline-flex h-[38px] items-center justify-center gap-[7px]
-        rounded-[8px] border px-[16px]
-        text-[13px] font-extrabold transition-all duration-200
-        ${
-          isActive
-            ? "border-[#dbeafe] bg-[#edf4ff] text-[#2563eb]"
-            : "border-[#e8edf4] bg-white text-[#475467] hover:border-[#cfd7e6] hover:bg-[#fbfcff]"
-        }
-      `}
-    >
-      <Icon size={15} strokeWidth={2} />
-      {item.label}
-    </button>
-  );
+function normalizeText(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
-function SelectFilter({ value, onChange, options, className = "" }) {
-  return (
-    <div className={`relative ${className}`}>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="
-          h-[38px] min-w-[185px] appearance-none rounded-[8px]
-          border border-[#e8edf4] bg-white
-          px-[14px] pr-[38px]
-          text-[13px] font-extrabold text-[#475467]
-          outline-none transition-all duration-200
-          hover:border-[#cfd7e6]
-          focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10
-        "
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-
-      <ChevronDown
-        size={15}
-        strokeWidth={2.2}
-        className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[#635bff]"
-      />
-    </div>
-  );
-}
-
-function getNumericSize(item) {
-  const raw =
-    item.maxSize ||
-    item.max_size ||
-    item.size ||
-    item.size_cm ||
-    "";
-
-  if (typeof raw === "number") {
-    return raw;
-  }
-
-  const numbers = String(raw).match(/\d+(\.\d+)?/g);
-
-  if (!numbers || numbers.length === 0) {
+function getNumericValue(value) {
+  if (value === null || value === undefined) {
     return 0;
   }
 
-  return Number(numbers[numbers.length - 1]);
+  const preparedValue = String(value).replace(",", ".");
+  const match = preparedValue.match(/\d+(\.\d+)?/);
+
+  return match ? Number(match[0]) : 0;
 }
 
-function getNumericVolume(item) {
-  return Number(item.minVolume || item.min_volume || item.min_volume_l || 0);
+function matchesValue(actual, expected) {
+  if (!expected || expected === "all") {
+    return true;
+  }
+
+  return normalizeText(actual).includes(normalizeText(expected));
+}
+
+function getSizeLimit(maxSize) {
+  if (maxSize === "S") return 5;
+  if (maxSize === "M") return 10;
+  if (maxSize === "L") return 20;
+  if (maxSize === "XL") return 999;
+
+  return 999;
 }
 
 export function Species() {
@@ -180,14 +133,14 @@ export function Species() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [category, setCategory] = useState("all");
-  const [waterType, setWaterType] = useState("Прісна");
+  const [waterType, setWaterType] = useState("all");
   const [character, setCharacter] = useState("all");
   const [sortBy, setSortBy] = useState("name");
 
-  const [maxSize, setMaxSize] = useState("S");
-  const [difficulty, setDifficulty] = useState("Легкий");
-  const [minVolume, setMinVolume] = useState(100);
-  const [foodTypes, setFoodTypes] = useState(["Всеїдний"]);
+  const [maxSize, setMaxSize] = useState("XL");
+  const [difficulty, setDifficulty] = useState("all");
+  const [minVolume, setMinVolume] = useState(500);
+  const [foodTypes, setFoodTypes] = useState([]);
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -209,14 +162,6 @@ export function Species() {
 
         const data = await getSpeciesList({
           search: debouncedSearch,
-          category,
-          waterType,
-          character,
-          sortBy,
-          maxSize,
-          difficulty,
-          minVolume,
-          foodTypes,
         });
 
         setSpecies(Array.isArray(data) ? data : []);
@@ -229,52 +174,115 @@ export function Species() {
     }
 
     loadSpecies();
-  }, [
-    debouncedSearch,
-    category,
-    waterType,
-    character,
-    sortBy,
-    maxSize,
-    difficulty,
-    minVolume,
-    foodTypes,
-  ]);
+  }, [debouncedSearch]);
 
   const visibleSpecies = useMemo(() => {
-    const list = [...species];
+    let list = [...species];
+
+    const search = normalizeText(debouncedSearch);
+
+    if (search) {
+      list = list.filter((item) => {
+        return (
+          normalizeText(item.name).includes(search) ||
+          normalizeText(item.latin).includes(search)
+        );
+      });
+    }
+
+    list = list.filter((item) => matchesValue(item.category, category));
+    list = list.filter((item) => matchesValue(item.water, waterType));
+    list = list.filter((item) => matchesValue(item.character, character));
+
+    if (maxSize && maxSize !== "all") {
+      const limit = getSizeLimit(maxSize);
+
+      list = list.filter((item) => {
+        const size = getNumericValue(item.maxSize || item.size);
+
+        if (!size) return true;
+
+        return size <= limit;
+      });
+    }
+
+    if (difficulty && difficulty !== "all") {
+      list = list.filter((item) => matchesValue(item.difficulty, difficulty));
+    }
+
+    if (minVolume) {
+      list = list.filter((item) => {
+        const volume = Number(item.minVolume || 0);
+
+        if (!volume) return true;
+
+        return volume <= Number(minVolume);
+      });
+    }
+
+    if (Array.isArray(foodTypes) && foodTypes.length > 0) {
+      list = list.filter((item) => {
+        const diet = normalizeText(item.diet);
+
+        return foodTypes.some((foodType) =>
+          diet.includes(normalizeText(foodType))
+        );
+      });
+    }
 
     if (sortBy === "name") {
-      return list.sort((a, b) =>
+      list.sort((a, b) =>
         String(a.name || "").localeCompare(String(b.name || ""), "uk")
       );
     }
 
+    if (sortBy === "volume") {
+      list.sort(
+        (a, b) => Number(a.minVolume || 0) - Number(b.minVolume || 0)
+      );
+    }
+
     if (sortBy === "size_asc") {
-      return list.sort((a, b) => getNumericSize(a) - getNumericSize(b));
+      list.sort(
+        (a, b) =>
+          getNumericValue(a.maxSize || a.size) -
+          getNumericValue(b.maxSize || b.size)
+      );
     }
 
     if (sortBy === "size_desc") {
-      return list.sort((a, b) => getNumericSize(b) - getNumericSize(a));
-    }
-
-    if (sortBy === "volume_asc") {
-      return list.sort((a, b) => getNumericVolume(a) - getNumericVolume(b));
+      list.sort(
+        (a, b) =>
+          getNumericValue(b.maxSize || b.size) -
+          getNumericValue(a.maxSize || a.size)
+      );
     }
 
     return list;
-  }, [species, sortBy]);
+  }, [
+    species,
+    debouncedSearch,
+    category,
+    waterType,
+    character,
+    maxSize,
+    difficulty,
+    minVolume,
+    foodTypes,
+    sortBy,
+  ]);
 
   const resetAllFilters = () => {
     setSearchValue("");
+    setDebouncedSearch("");
     setCategory("all");
-    setWaterType("Прісна");
+    setWaterType("all");
     setCharacter("all");
     setSortBy("name");
-    setMaxSize("S");
-    setDifficulty("Легкий");
-    setMinVolume(100);
-    setFoodTypes(["Всеїдний"]);
+    setMaxSize("XL");
+    setDifficulty("all");
+    setMinVolume(500);
+    setFoodTypes([]);
   };
 
   return (
@@ -288,23 +296,23 @@ export function Species() {
           xl:px-10
         "
       >
-        <div className="mx-auto max-w-[1180px]">
-          <header className="mb-[26px] flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="mx-auto max-w-[1320px]">
+          <header className="mb-[34px] flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.035em] text-[#111827]">
+              <h1 className="m-0 text-[32px] font-extrabold tracking-[-0.04em] text-[#071126]">
                 Енциклопедія видів
               </h1>
 
-              <p className="mt-[7px] text-[14px] font-semibold text-[#98a2b3]">
+              <p className="mt-[12px] text-[15px] font-bold text-[#98a2b3]">
                 Знайдіть ідеальних жителів для вашої екосистеми
               </p>
             </div>
 
-            <div className="relative w-full lg:w-[390px]">
+            <div className="relative w-full lg:w-[430px]">
               <Search
-                size={17}
+                size={20}
                 strokeWidth={2}
-                className="absolute left-[15px] top-1/2 -translate-y-1/2 text-[#667085]"
+                className="absolute left-[17px] top-1/2 -translate-y-1/2 text-[#667085]"
               />
 
               <input
@@ -312,8 +320,8 @@ export function Species() {
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Пошук за назвою..."
                 className="
-                  h-[44px] w-full rounded-[10px] border border-[#e7ebf2]
-                  bg-white pl-[43px] pr-4 text-[13px] font-semibold text-[#111827]
+                  h-[54px] w-full rounded-[12px] border border-[#e3e9f2]
+                  bg-white pl-[54px] pr-4 text-[15px] font-bold text-[#111827]
                   outline-none transition-all duration-200
                   placeholder:text-[#98a2b3]
                   focus:border-[#cfd7e6] focus:ring-4 focus:ring-[#eef3ff]
@@ -324,34 +332,36 @@ export function Species() {
 
           <div
             className="
-              mb-[28px] rounded-[14px] border border-[#edf0f5] bg-white
-              px-[14px] py-[14px]
-              shadow-[0_8px_24px_rgba(15,23,42,0.025)]
+              mb-[34px] rounded-[18px] border border-[#edf0f5]
+              bg-white p-[16px]
+              shadow-[0_16px_42px_rgba(15,23,42,0.04)]
             "
           >
-            <div className="flex flex-wrap items-center gap-[10px]">
-              {categoryOptions.map((item) => (
-                <CategoryButton
-                  key={item.value}
-                  item={item}
-                  activeValue={category}
-                  onChange={setCategory}
-                />
-              ))}
+            <div className="flex flex-wrap items-center gap-[14px]">
+              <SpeciesFilterDropdown
+                title="Категорія"
+                value={category}
+                onChange={setCategory}
+                options={categoryOptions}
+              />
 
-              <SelectFilter
+              <SpeciesFilterDropdown
+                title="Тип води"
                 value={waterType}
                 onChange={setWaterType}
                 options={waterOptions}
               />
 
-              <SelectFilter
+              <SpeciesFilterDropdown
+                title="Характер"
                 value={character}
                 onChange={setCharacter}
                 options={characterOptions}
+                accent={false}
               />
 
-              <SelectFilter
+              <SpeciesFilterDropdown
+                title="Сортування"
                 value={sortBy}
                 onChange={setSortBy}
                 options={sortOptions}
@@ -361,14 +371,31 @@ export function Species() {
                 type="button"
                 onClick={() => setIsFiltersOpen(true)}
                 className="
-                  ml-auto inline-flex h-[38px] items-center justify-center gap-[7px]
-                  rounded-[8px] border border-[#e8edf4] bg-white px-[16px]
-                  text-[13px] font-extrabold text-[#635bff]
-                  transition-all duration-200 hover:bg-[#f4f2ff]
+                  ml-auto inline-flex h-[44px] items-center justify-center gap-[9px]
+                  rounded-[10px] border border-[#e3e9f2] bg-white px-[20px]
+                  text-[14px] font-extrabold text-[#635bff]
+                  shadow-[0_8px_22px_rgba(15,23,42,0.03)]
+                  transition-all duration-200
+                  hover:bg-[#f4f2ff] hover:border-[#d8d3ff]
                 "
               >
-                <SlidersHorizontal size={15} />
+                <SlidersHorizontal size={17} />
                 Всі фільтри
+              </button>
+
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="
+                  inline-flex h-[44px] items-center justify-center gap-[8px]
+                  rounded-[10px] px-[16px]
+                  text-[14px] font-extrabold text-[#64748b]
+                  transition-all duration-200
+                  hover:bg-[#f8fafc] hover:text-[#111827]
+                "
+              >
+                <RotateCcw size={16} />
+                Скинути
               </button>
             </div>
           </div>
@@ -380,7 +407,7 @@ export function Species() {
           )}
 
           {isLoading ? (
-            <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-[22px] sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, index) => (
                 <div
                   key={index}
@@ -389,7 +416,7 @@ export function Species() {
               ))}
             </div>
           ) : visibleSpecies.length > 0 ? (
-            <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-[22px] sm:grid-cols-2 xl:grid-cols-4">
               {visibleSpecies.map((item, index) => (
                 <SpeciesCard key={item.id} item={item} index={index} />
               ))}
