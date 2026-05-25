@@ -100,10 +100,11 @@ export function AquariumDetails() {
       </section>
 
       <AddResidentModal
-        isOpen={aquarium.isAddResidentOpen}
-        onClose={() => aquarium.setIsAddResidentOpen(false)}
-        onSave={aquarium.handleAddResident}
-      />
+  isOpen={aquarium.isAddResidentOpen}
+  onClose={() => aquarium.setIsAddResidentOpen(false)}
+  onSave={aquarium.handleAddResident}
+  isSaving={aquarium.isResidentSaving}
+/>
 
       <AddEquipmentModal
         isOpen={aquarium.isAddEquipmentOpen}

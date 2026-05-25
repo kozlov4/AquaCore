@@ -9,6 +9,8 @@ import {
   serviceEquipment,
 } from "../services/equipmentApi";
 
+import { addSpeciesToAquarium } from "../services/speciesApi";
+
 export function useAquariumDetails() {
   const router = useRouter();
   const aquariumId = router.query.id;
@@ -21,6 +23,9 @@ export function useAquariumDetails() {
   const [residents, setResidents] = useState([]);
   const [equipment, setEquipment] = useState([]);
 
+  const [isResidentSaving, setIsResidentSaving] = useState(false);
+  const [residentError, setResidentError] = useState("");
+
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
   const [isEquipmentSaving, setIsEquipmentSaving] = useState(false);
   const [isServiceLoading, setIsServiceLoading] = useState(false);
@@ -28,7 +33,7 @@ export function useAquariumDetails() {
   const [equipmentError, setEquipmentError] = useState("");
 
   const loadEquipment = useCallback(async () => {
-    if (!aquariumId) return;
+    if (!router.isReady || !aquariumId) return;
 
     try {
       setIsEquipmentLoading(true);
@@ -36,30 +41,78 @@ export function useAquariumDetails() {
 
       const data = await getEquipment(aquariumId);
 
-      setEquipment(data);
+      setEquipment(Array.isArray(data) ? data : []);
     } catch (error) {
       setEquipment([]);
       setEquipmentError(error.message || "Не вдалося завантажити обладнання");
     } finally {
       setIsEquipmentLoading(false);
     }
-  }, [aquariumId]);
+  }, [router.isReady, aquariumId]);
 
   useEffect(() => {
-    loadEquipment();
-  }, [loadEquipment]);
+    if (router.isReady && aquariumId) {
+      loadEquipment();
+    }
+  }, [router.isReady, aquariumId, loadEquipment]);
 
-  const handleAddResident = (resident) => {
-    setResidents((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        name: resident?.species?.name || "Новий житель",
-        latin: resident?.species?.latin || "",
-        count: `${resident?.count || 1} шт`,
-        icon: resident?.species?.icon || "🐟",
-      },
-    ]);
+  const handleAddResident = async (resident) => {
+    if (!aquariumId) {
+      throw new Error("Не передано id акваріума");
+    }
+
+    const species = resident?.species;
+
+    if (!species?.id) {
+      throw new Error("Не обрано вид для заселення");
+    }
+
+    const count = Number(resident?.count || resident?.quantity || 1);
+    const date = resident?.date || resident?.settlement_date;
+    const ignoreWarnings = Boolean(
+      resident?.ignoreWarnings || resident?.ignore_warnings
+    );
+
+    if (!count || count <= 0) {
+      throw new Error("Кількість має бути більшою за 0");
+    }
+
+    if (!date) {
+      throw new Error("Оберіть дату заселення");
+    }
+
+    try {
+      setIsResidentSaving(true);
+      setResidentError("");
+
+      const createdResident = await addSpeciesToAquarium({
+        aquariumId,
+        speciesId: species.id,
+        quantity: count,
+        settlementDate: date,
+        ignoreWarnings,
+      });
+
+      setResidents((prev) => [
+        ...prev,
+        {
+          id: createdResident?.id || Date.now(),
+          name: species.name || "Новий житель",
+          latin: species.latin || species.scientific_name || "",
+          count: `≈ ${count} шт`,
+          icon: species.icon || species.emoji || "🐟",
+          speciesId: species.id,
+          settlementDate: date,
+        },
+      ]);
+
+      setIsAddResidentOpen(false);
+    } catch (error) {
+      setResidentError(error.message || "Не вдалося додати жителя");
+      throw error;
+    } finally {
+      setIsResidentSaving(false);
+    }
   };
 
   const handleAddEquipment = async (device) => {
@@ -106,6 +159,30 @@ export function useAquariumDetails() {
     }
   };
 
+  const openAddResidentModal = () => {
+    setResidentError("");
+    setIsAddResidentOpen(true);
+  };
+
+  const closeAddResidentModal = () => {
+    if (isResidentSaving) return;
+
+    setResidentError("");
+    setIsAddResidentOpen(false);
+  };
+
+  const openAddEquipmentModal = () => {
+    setEquipmentError("");
+    setIsAddEquipmentOpen(true);
+  };
+
+  const closeAddEquipmentModal = () => {
+    if (isEquipmentSaving) return;
+
+    setEquipmentError("");
+    setIsAddEquipmentOpen(false);
+  };
+
   return {
     aquariumId,
 
@@ -114,18 +191,30 @@ export function useAquariumDetails() {
 
     isAddResidentOpen,
     setIsAddResidentOpen,
+    openAddResidentModal,
+    closeAddResidentModal,
 
     isAddEquipmentOpen,
     setIsAddEquipmentOpen,
+    openAddEquipmentModal,
+    closeAddEquipmentModal,
 
     residents,
+    setResidents,
+
     equipment,
+    setEquipment,
+
+    isResidentSaving,
+    residentError,
+    setResidentError,
 
     isEquipmentLoading,
     isEquipmentSaving,
     isServiceLoading,
 
     equipmentError,
+    setEquipmentError,
 
     loadEquipment,
 

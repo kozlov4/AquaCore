@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Filter, Lightbulb, Thermometer, Wrench, Upload } from "lucide-react";
+import { X, Filter, Lightbulb, Thermometer, Wrench } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 function todayInputDate() {
@@ -13,33 +13,29 @@ const categories = [
     label: "Фільтрація",
     value: "Фільтрація",
     icon: Filter,
-    powerLabel: "Потужність",
-    powerPlaceholder: "Напр., 800 л/год",
-    defaultName: "",
+    specsLabel: "Потужність",
+    placeholder: "Напр., 800 л/год",
   },
   {
     label: "Освітлення",
     value: "Освітлення",
     icon: Lightbulb,
-    powerLabel: "Графік та інтенсивність",
-    powerPlaceholder: "Напр., 8 годин, 70%",
-    defaultName: "",
+    specsLabel: "Графік та інтенсивність",
+    placeholder: "Напр., 8 годин, 70%",
   },
   {
     label: "Обігрів",
     value: "Обігрів / Охолодження",
     icon: Thermometer,
-    powerLabel: "Потужність",
-    powerPlaceholder: "Напр., 100 Вт",
-    defaultName: "",
+    specsLabel: "Потужність",
+    placeholder: "Напр., 100 Вт",
   },
   {
     label: "Інше",
     value: "Інше",
     icon: Wrench,
-    powerLabel: "Додаткові характеристики",
-    powerPlaceholder: "Будь-які деталі...",
-    defaultName: "",
+    specsLabel: "Додаткові характеристики",
+    placeholder: "Будь-які деталі...",
   },
 ];
 
@@ -88,7 +84,7 @@ export function AddEquipmentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeCategory =
-    categories.find((item) => item.value === formData.category) ||
+    categories.find((category) => category.value === formData.category) ||
     categories[0];
 
   useEffect(() => {
@@ -118,6 +114,10 @@ export function AddEquipmentModal({
     try {
       setIsSubmitting(true);
       setErrorMessage("");
+
+      if (!formData.name.trim()) {
+        throw new Error("Введіть бренд та модель обладнання");
+      }
 
       await onSave?.({
         category: formData.category,
@@ -220,9 +220,7 @@ export function AddEquipmentModal({
 
                     <input
                       value={formData.name}
-                      onChange={(event) =>
-                        handleChange("name", event.target.value)
-                      }
+                      onChange={(event) => handleChange("name", event.target.value)}
                       disabled={saving}
                       placeholder="Напр. Aquael Fan 1 Plus"
                       className="h-12 w-full rounded-xl border border-[#d6dbe4] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#5b4cf6] focus:ring-4 focus:ring-[#5b4cf6]/10 disabled:bg-slate-100"
@@ -231,7 +229,7 @@ export function AddEquipmentModal({
 
                   <div>
                     <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#5b4cf6]">
-                      {activeCategory.powerLabel}
+                      {activeCategory.specsLabel}
                     </label>
 
                     <input
@@ -240,7 +238,7 @@ export function AddEquipmentModal({
                         handleChange("specifications", event.target.value)
                       }
                       disabled={saving}
-                      placeholder={activeCategory.powerPlaceholder}
+                      placeholder={activeCategory.placeholder}
                       className="h-12 w-full rounded-xl border border-[#c7d2fe] bg-[#f8fbff] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#5b4cf6] focus:ring-4 focus:ring-[#5b4cf6]/10 disabled:bg-slate-100"
                     />
                   </div>
@@ -284,23 +282,6 @@ export function AddEquipmentModal({
                           </option>
                         ))}
                       </select>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-dashed border-[#d9dee8] bg-[#fbfcfe] px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5b4cf6] shadow-sm">
-                        <Upload size={18} />
-                      </span>
-
-                      <div>
-                        <p className="text-sm font-extrabold text-[#111827]">
-                          Фото пристрою можна додати пізніше
-                        </p>
-                        <p className="mt-1 text-xs font-medium text-[#98a2b3]">
-                          Зараз створюємо тільки технічний запис обладнання.
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>

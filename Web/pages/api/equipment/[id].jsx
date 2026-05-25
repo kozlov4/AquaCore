@@ -28,18 +28,23 @@ function getErrorMessage(data, fallbackMessage) {
   return fallbackMessage;
 }
 
+function toNullableNumber(value) {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const numberValue = Number(value);
+
+  return Number.isNaN(numberValue) ? null : numberValue;
+}
+
 function normalizeEquipmentPayload(body) {
   return {
-    category: body?.category,
-    name: body?.name,
+    category: String(body?.category || "").trim(),
+    name: String(body?.name || "").trim(),
     installation_date: body?.installation_date,
-    specifications: body?.specifications || null,
-    maintenance_interval_days:
-      body?.maintenance_interval_days === "" ||
-      body?.maintenance_interval_days === null ||
-      body?.maintenance_interval_days === undefined
-        ? null
-        : Number(body.maintenance_interval_days),
+    specifications: String(body?.specifications || "").trim() || null,
+    maintenance_interval_days: toNullableNumber(body?.maintenance_interval_days),
   };
 }
 
@@ -61,18 +66,14 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const { equipment_category } = req.query;
-
       const params = new URLSearchParams();
 
-      if (equipment_category) {
-        params.append("equipment_category", String(equipment_category));
+      if (req.query.equipment_category) {
+        params.append("equipment_category", String(req.query.equipment_category));
       }
 
       const response = await fetch(
-        `${API_URL}/equipment/${id}${
-          params.toString() ? `?${params.toString()}` : ""
-        }`,
+        `${API_URL}/equipment/${id}${params.toString() ? `?${params.toString()}` : ""}`,
         {
           method: "GET",
           headers: {
@@ -108,6 +109,8 @@ export default async function handler(req, res) {
         });
       }
 
+      console.log("POST /equipment payload:", payload);
+
       const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "POST",
         headers: {
@@ -121,6 +124,8 @@ export default async function handler(req, res) {
       const data = await readResponse(response);
 
       if (!response.ok) {
+        console.error("Backend add equipment error:", data);
+
         return res.status(response.status).json({
           message: getErrorMessage(data, "Не вдалося додати обладнання"),
           detail: data?.detail,
