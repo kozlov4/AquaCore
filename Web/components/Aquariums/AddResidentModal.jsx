@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, Search, AlertTriangle, CheckCircle2, Info, ShieldAlert } from "lucide-react";
+import {
+  X,
+  Search,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  ShieldAlert,
+} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { getSpeciesList } from "../../services/speciesApi";
@@ -78,7 +85,7 @@ function getCompatibilityInfo(species) {
       boxClass: "border-blue-200 bg-blue-50 text-blue-700",
       buttonClass: "bg-blue-500 hover:bg-blue-600",
       points: [
-        "Укриття: рослина потребує відповідного освітлення та стабільних параметрів.",
+        "Умови: рослина потребує відповідного освітлення та стабільних параметрів.",
         "CO₂ та добрива: для активного росту можуть знадобитися додаткові умови.",
       ],
       checkboxText: "Я врахував ці рекомендації. Додати вид.",
@@ -188,7 +195,7 @@ export function AddResidentModal({
           search: query,
         });
 
-        setSpecies(data);
+        setSpecies(Array.isArray(data) ? data : []);
       } catch {
         setSpecies([]);
       } finally {

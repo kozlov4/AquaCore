@@ -1,370 +1,434 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   SlidersHorizontal,
   Fish,
   Leaf,
   Shell,
-  Droplets,
-  Zap,
-  BadgeCheck,
+  ChevronDown,
 } from "lucide-react";
 
 import { Sidebar } from "../Profile/Sidebar";
-
-const species = [
-  {
-    id: 1,
-    name: "Неон звичайний",
-    latin: "Paracheirodon innesi",
-    emoji: "🐟",
-    category: "Риби",
-    water: "Прісна",
-    character: "Мирні",
-    tags: [
-      { label: "від 20 л", type: "water" },
-      { label: "Мирна", type: "safe" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Астронотус (Оскар)",
-    latin: "Astronotus ocellatus",
-    emoji: "🐠",
-    category: "Риби",
-    water: "Прісна",
-    character: "Хижаки",
-    tags: [
-      { label: "від 250 л", type: "water" },
-      { label: "Хижак", type: "danger" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Анубіас нана",
-    latin: "Anubias barteri var. nana",
-    emoji: "🌿",
-    category: "Рослини",
-    water: "Прісна",
-    character: "Мирні",
-    tags: [
-      { label: "Слабке світло", type: "light" },
-      { label: "Без CO2", type: "neutral" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Креветка Амано",
-    latin: "Caridina multidentata",
-    emoji: "🦐",
-    category: "Безхребетні",
-    water: "Прісна",
-    character: "Мирні",
-    tags: [
-      { label: "від 10 л", type: "water" },
-      { label: "Водоростейд", type: "safe" },
-    ],
-  },
-  {
-    id: 5,
-    name: "Неон звичайний",
-    latin: "Paracheirodon innesi",
-    emoji: "🐟",
-    category: "Риби",
-    water: "Прісна",
-    character: "Мирні",
-    tags: [
-      { label: "від 20 л", type: "water" },
-      { label: "Мирна", type: "safe" },
-    ],
-  },
-  {
-    id: 6,
-    name: "Астронотус (Оскар)",
-    latin: "Astronotus ocellatus",
-    emoji: "🐠",
-    category: "Риби",
-    water: "Прісна",
-    character: "Хижаки",
-    tags: [
-      { label: "від 250 л", type: "water" },
-      { label: "Хижак", type: "danger" },
-    ],
-  },
-  {
-    id: 7,
-    name: "Анубіас нана",
-    latin: "Anubias barteri var. nana",
-    emoji: "🌿",
-    category: "Рослини",
-    water: "Прісна",
-    character: "Мирні",
-    tags: [
-      { label: "Слабке світло", type: "light" },
-      { label: "Без CO2", type: "neutral" },
-    ],
-  },
-  {
-    id: 8,
-    name: "Креветка Амано",
-    latin: "Caridina multidentata",
-    emoji: "🦐",
-    category: "Безхребетні",
-    water: "Прісна",
-    character: "Мирні",
-    tags: [
-      { label: "від 10 л", type: "water" },
-      { label: "Водоростейд", type: "safe" },
-    ],
-  },
-];
+import { SpeciesCard } from "./SpeciesCard";
+import { SpeciesAdvancedFiltersModal } from "./SpeciesAdvancedFiltersModal";
+import { getSpeciesList } from "../../services/speciesApi";
 
 const categoryOptions = [
-  { label: "Усі риби", value: "all", icon: Fish },
-  { label: "Риби", value: "Риби", icon: Fish },
-  { label: "Рослини", value: "Рослини", icon: Leaf },
-  { label: "Безхребетні", value: "Безхребетні", icon: Shell },
+  {
+    label: "Усі риби",
+    value: "all",
+    icon: Fish,
+  },
+  {
+    label: "Риби",
+    value: "Риби",
+    icon: Fish,
+  },
+  {
+    label: "Рослини",
+    value: "Рослини",
+    icon: Leaf,
+  },
+  {
+    label: "Безхребетні",
+    value: "Безхребетні",
+    icon: Shell,
+  },
 ];
 
 const waterOptions = [
-  { label: "Будь-яка вода", value: "all" },
-  { label: "Прісна вода", value: "Прісна" },
-  { label: "Морська вода", value: "Морська" },
+  {
+    label: "Прісна вода",
+    value: "Прісна",
+  },
+  {
+    label: "Морська вода",
+    value: "Морська",
+  },
+  {
+    label: "Будь-яка вода",
+    value: "all",
+  },
 ];
 
 const characterOptions = [
-  { label: "Будь-який характер", value: "all" },
-  { label: "Мирні", value: "Мирні" },
-  { label: "Хижаки", value: "Хижаки" },
-  { label: "Територіальні", value: "Територіальні" },
+  {
+    label: "Будь-який характер",
+    value: "all",
+  },
+  {
+    label: "Мирні",
+    value: "Мирні",
+  },
+  {
+    label: "Територіальні",
+    value: "Територіальні",
+  },
+  {
+    label: "Хижаки",
+    value: "Хижаки",
+  },
 ];
 
-function FilterPill({ value, activeValue, onChange, children, icon: Icon }) {
-  const isActive = activeValue === value;
+const sortOptions = [
+  {
+    label: "За назвою",
+    value: "name",
+  },
+  {
+    label: "Спочатку менші",
+    value: "size_asc",
+  },
+  {
+    label: "Спочатку більші",
+    value: "size_desc",
+  },
+  {
+    label: "За мін. обʼємом",
+    value: "volume_asc",
+  },
+];
+
+function CategoryButton({ item, activeValue, onChange }) {
+  const Icon = item.icon;
+  const isActive = activeValue === item.value;
 
   return (
     <button
       type="button"
-      onClick={() => onChange(value)}
-      className={`flex h-[42px] min-w-[168px] items-center justify-center gap-2 rounded-[9px] border px-4 text-[13px] font-semibold transition-all duration-200 ${
-        isActive
-          ? "border-[#dfe7f5] bg-white text-[#1f2937] shadow-[0_8px_22px_rgba(15,23,42,0.04)]"
-          : "border-[#eef1f6] bg-[#fbfcfe] text-[#4b5563] hover:border-[#dfe7f5] hover:bg-white"
-      }`}
+      onClick={() => onChange(item.value)}
+      className={`
+        inline-flex h-[38px] items-center justify-center gap-[7px]
+        rounded-[8px] border px-[16px]
+        text-[13px] font-extrabold transition-all duration-200
+        ${
+          isActive
+            ? "border-[#dbeafe] bg-[#edf4ff] text-[#2563eb]"
+            : "border-[#e8edf4] bg-white text-[#475467] hover:border-[#cfd7e6] hover:bg-[#fbfcff]"
+        }
+      `}
     >
-      {Icon && <Icon size={15} strokeWidth={1.8} className="text-[#4c83ff]" />}
-      <span>{children}</span>
+      <Icon size={15} strokeWidth={2} />
+      {item.label}
     </button>
   );
 }
 
-function TagBadge({ tag }) {
-  const styles = {
-    water: "bg-[#eaf4ff] text-[#1785ff]",
-    safe: "bg-[#e8f8ee] text-[#1f9d55]",
-    danger: "bg-[#ffe8e8] text-[#e11d48]",
-    light: "bg-[#fff5d7] text-[#c47a00]",
-    neutral: "bg-[#f2f4f7] text-[#475467]",
-  };
-
-  const icons = {
-    water: <Droplets size={11} />,
-    safe: <BadgeCheck size={11} />,
-    danger: <Zap size={11} />,
-    light: <span className="text-[11px]">☀</span>,
-    neutral: null,
-  };
-
+function SelectFilter({ value, onChange, options, className = "" }) {
   return (
-    <span
-      className={`inline-flex h-[22px] items-center gap-[4px] rounded-[5px] px-[7px] text-[11px] font-semibold ${
-        styles[tag.type] || styles.neutral
-      }`}
-    >
-      {icons[tag.type]}
-      {tag.label}
-    </span>
+    <div className={`relative ${className}`}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="
+          h-[38px] min-w-[185px] appearance-none rounded-[8px]
+          border border-[#e8edf4] bg-white
+          px-[14px] pr-[38px]
+          text-[13px] font-extrabold text-[#475467]
+          outline-none transition-all duration-200
+          hover:border-[#cfd7e6]
+          focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10
+        "
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      <ChevronDown
+        size={15}
+        strokeWidth={2.2}
+        className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[#635bff]"
+      />
+    </div>
   );
 }
 
-function SpeciesCard({ item, index }) {
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 18, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.04, duration: 0.28, ease: "easeOut" }}
-      whileHover={{
-        y: -3,
-        boxShadow: "0 18px 36px rgba(15,23,42,0.07)",
-      }}
-      className="group overflow-hidden rounded-[15px] border border-[#edf0f5] bg-white p-[14px] shadow-[0_8px_24px_rgba(15,23,42,0.025)] transition-all duration-300"
-    >
-      <div className="relative flex h-[154px] items-center justify-center overflow-hidden rounded-[10px] bg-[#f8fafc]">
-        <span className="absolute right-[10px] top-[8px] rounded-[5px] bg-white px-[8px] py-[4px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-[#667085] shadow-sm">
-          {item.water}
-        </span>
+function getNumericSize(item) {
+  const raw =
+    item.maxSize ||
+    item.max_size ||
+    item.size ||
+    item.size_cm ||
+    "";
 
-        <div className="text-[58px] transition-transform duration-300 group-hover:scale-110">
-          {item.emoji}
-        </div>
-      </div>
+  if (typeof raw === "number") {
+    return raw;
+  }
 
-      <div className="pt-[14px]">
-        <h3 className="m-0 text-[15px] font-extrabold leading-tight text-[#111827]">
-          {item.name}
-        </h3>
+  const numbers = String(raw).match(/\d+(\.\d+)?/g);
 
-        <p className="mt-[2px] text-[11px] italic leading-tight text-[#6b7280]">
-          {item.latin}
-        </p>
+  if (!numbers || numbers.length === 0) {
+    return 0;
+  }
 
-        <div className="mt-[12px] flex flex-wrap gap-[6px]">
-          {item.tags.map((tag) => (
-            <TagBadge key={`${item.id}-${tag.label}`} tag={tag} />
-          ))}
-        </div>
+  return Number(numbers[numbers.length - 1]);
+}
 
-        <Link
-          href={`/species-details?id=${item.id}`}
-          className="mt-[14px] flex h-[34px] items-center justify-center rounded-[7px] bg-[#fafafa] text-[13px] font-bold text-[#374151] transition-all duration-200 hover:bg-[#f4f2ff] hover:text-[#635bff]"
-        >
-          Детальніше
-        </Link>
-      </div>
-    </motion.article>
-  );
+function getNumericVolume(item) {
+  return Number(item.minVolume || item.min_volume || item.min_volume_l || 0);
 }
 
 export function Species() {
+  const [species, setSpecies] = useState([]);
+
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const [category, setCategory] = useState("all");
   const [waterType, setWaterType] = useState("Прісна");
   const [character, setCharacter] = useState("all");
+  const [sortBy, setSortBy] = useState("name");
 
-  const filteredSpecies = useMemo(() => {
-    return species.filter((item) => {
-      const search = searchValue.trim().toLowerCase();
+  const [maxSize, setMaxSize] = useState("S");
+  const [difficulty, setDifficulty] = useState("Легкий");
+  const [minVolume, setMinVolume] = useState(100);
+  const [foodTypes, setFoodTypes] = useState(["Всеїдний"]);
 
-      const matchesSearch =
-        !search ||
-        item.name.toLowerCase().includes(search) ||
-        item.latin.toLowerCase().includes(search);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [speciesError, setSpeciesError] = useState("");
 
-      const matchesCategory = category === "all" || item.category === category;
-      const matchesWater = waterType === "all" || item.water === waterType;
-      const matchesCharacter =
-        character === "all" || item.character === character;
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+    }, 350);
 
-      return matchesSearch && matchesCategory && matchesWater && matchesCharacter;
-    });
-  }, [searchValue, category, waterType, character]);
+    return () => clearTimeout(timeout);
+  }, [searchValue]);
 
-  const resetFilters = () => {
-    setCategory("all");
-    setWaterType("all");
-    setCharacter("all");
+  useEffect(() => {
+    async function loadSpecies() {
+      try {
+        setIsLoading(true);
+        setSpeciesError("");
+
+        const data = await getSpeciesList({
+          search: debouncedSearch,
+          category,
+          waterType,
+          character,
+          sortBy,
+          maxSize,
+          difficulty,
+          minVolume,
+          foodTypes,
+        });
+
+        setSpecies(Array.isArray(data) ? data : []);
+      } catch (error) {
+        setSpecies([]);
+        setSpeciesError(error.message || "Не вдалося завантажити види");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadSpecies();
+  }, [
+    debouncedSearch,
+    category,
+    waterType,
+    character,
+    sortBy,
+    maxSize,
+    difficulty,
+    minVolume,
+    foodTypes,
+  ]);
+
+  const visibleSpecies = useMemo(() => {
+    const list = [...species];
+
+    if (sortBy === "name") {
+      return list.sort((a, b) =>
+        String(a.name || "").localeCompare(String(b.name || ""), "uk")
+      );
+    }
+
+    if (sortBy === "size_asc") {
+      return list.sort((a, b) => getNumericSize(a) - getNumericSize(b));
+    }
+
+    if (sortBy === "size_desc") {
+      return list.sort((a, b) => getNumericSize(b) - getNumericSize(a));
+    }
+
+    if (sortBy === "volume_asc") {
+      return list.sort((a, b) => getNumericVolume(a) - getNumericVolume(b));
+    }
+
+    return list;
+  }, [species, sortBy]);
+
+  const resetAllFilters = () => {
     setSearchValue("");
+    setCategory("all");
+    setWaterType("Прісна");
+    setCharacter("all");
+    setSortBy("name");
+    setMaxSize("S");
+    setDifficulty("Легкий");
+    setMinVolume(100);
+    setFoodTypes(["Всеїдний"]);
   };
 
   return (
     <main className="min-h-screen bg-white text-[#111827]">
       <Sidebar />
 
-      <section className="min-h-screen px-5 py-9 md:ml-[280px] md:px-10 lg:px-[54px]">
-        <header className="mb-[34px] flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.03em] text-[#111827]">
-              Енциклопедія видів
-            </h1>
+      <section
+        className="
+          min-h-screen px-5 py-8
+          md:ml-[280px] md:px-8
+          xl:px-10
+        "
+      >
+        <div className="mx-auto max-w-[1180px]">
+          <header className="mb-[26px] flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.035em] text-[#111827]">
+                Енциклопедія видів
+              </h1>
 
-            <p className="mt-[6px] text-[14px] font-medium text-[#8a93a3]">
-              Знайдіть ідеальних жителів для вашої екосистеми
-            </p>
-          </div>
+              <p className="mt-[7px] text-[14px] font-semibold text-[#98a2b3]">
+                Знайдіть ідеальних жителів для вашої екосистеми
+              </p>
+            </div>
 
-          <div className="relative w-full lg:w-[390px]">
-            <Search
-              size={17}
-              strokeWidth={2}
-              className="absolute left-[15px] top-1/2 -translate-y-1/2 text-[#667085]"
-            />
+            <div className="relative w-full lg:w-[390px]">
+              <Search
+                size={17}
+                strokeWidth={2}
+                className="absolute left-[15px] top-1/2 -translate-y-1/2 text-[#667085]"
+              />
 
-            <input
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Пошук за назвою..."
-              className="h-[44px] w-full rounded-[10px] border border-[#e7ebf2] bg-white pl-[44px] pr-4 text-[13px] font-medium text-[#111827] outline-none transition-all duration-200 placeholder:text-[#98a2b3] focus:border-[#cfd7e6] focus:ring-4 focus:ring-[#eef3ff]"
-            />
-          </div>
-        </header>
+              <input
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="Пошук за назвою..."
+                className="
+                  h-[44px] w-full rounded-[10px] border border-[#e7ebf2]
+                  bg-white pl-[43px] pr-4 text-[13px] font-semibold text-[#111827]
+                  outline-none transition-all duration-200
+                  placeholder:text-[#98a2b3]
+                  focus:border-[#cfd7e6] focus:ring-4 focus:ring-[#eef3ff]
+                "
+              />
+            </div>
+          </header>
 
-        <div className="mb-[30px] flex min-h-[56px] items-center justify-between gap-4 rounded-[14px] border border-[#edf0f5] bg-white px-[14px] py-[9px] shadow-[0_8px_24px_rgba(15,23,42,0.025)]">
-          <div className="flex flex-wrap items-center gap-[10px]">
-            <FilterPill
-              value="all"
-              activeValue={category}
-              onChange={setCategory}
-              icon={Fish}
-            >
-              Усі риби
-            </FilterPill>
-
-            <FilterPill
-              value="Прісна"
-              activeValue={waterType}
-              onChange={setWaterType}
-            >
-              Прісна вода
-            </FilterPill>
-
-            <FilterPill
-              value="all"
-              activeValue={character}
-              onChange={setCharacter}
-            >
-              Будь-який характер
-            </FilterPill>
-          </div>
-
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="flex h-[38px] shrink-0 items-center gap-2 rounded-[9px] px-3 text-[13px] font-bold text-[#635bff] transition-all duration-200 hover:bg-[#f4f2ff]"
+          <div
+            className="
+              mb-[28px] rounded-[14px] border border-[#edf0f5] bg-white
+              px-[14px] py-[14px]
+              shadow-[0_8px_24px_rgba(15,23,42,0.025)]
+            "
           >
-            <SlidersHorizontal size={15} strokeWidth={2} />
-            Всі фільтри
-          </button>
-        </div>
+            <div className="flex flex-wrap items-center gap-[10px]">
+              {categoryOptions.map((item) => (
+                <CategoryButton
+                  key={item.value}
+                  item={item}
+                  activeValue={category}
+                  onChange={setCategory}
+                />
+              ))}
 
-        <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {filteredSpecies.map((item, index) => (
-            <SpeciesCard key={item.id} item={item} index={index} />
-          ))}
-        </div>
+              <SelectFilter
+                value={waterType}
+                onChange={setWaterType}
+                options={waterOptions}
+              />
 
-        {filteredSpecies.length === 0 && (
-          <div className="mt-10 rounded-2xl border border-dashed border-[#d9dee8] bg-[#fbfcfe] p-10 text-center">
-            <p className="text-[16px] font-bold text-[#111827]">
-              Нічого не знайдено
-            </p>
-            <p className="mt-2 text-[13px] text-[#8a93a3]">
-              Спробуйте змінити пошук або скинути фільтри.
-            </p>
+              <SelectFilter
+                value={character}
+                onChange={setCharacter}
+                options={characterOptions}
+              />
 
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="mt-5 rounded-xl bg-[#635bff] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#554df0]"
-            >
-              Скинути фільтри
-            </button>
+              <SelectFilter
+                value={sortBy}
+                onChange={setSortBy}
+                options={sortOptions}
+              />
+
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(true)}
+                className="
+                  ml-auto inline-flex h-[38px] items-center justify-center gap-[7px]
+                  rounded-[8px] border border-[#e8edf4] bg-white px-[16px]
+                  text-[13px] font-extrabold text-[#635bff]
+                  transition-all duration-200 hover:bg-[#f4f2ff]
+                "
+              >
+                <SlidersHorizontal size={15} />
+                Всі фільтри
+              </button>
+            </div>
           </div>
-        )}
+
+          {speciesError && (
+            <div className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+              {speciesError}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-[300px] animate-pulse rounded-[14px] border border-[#edf0f5] bg-[#f8fafc]"
+                />
+              ))}
+            </div>
+          ) : visibleSpecies.length > 0 ? (
+            <div className="grid grid-cols-1 gap-[20px] sm:grid-cols-2 xl:grid-cols-4">
+              {visibleSpecies.map((item, index) => (
+                <SpeciesCard key={item.id} item={item} index={index} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-10 rounded-2xl border border-dashed border-[#d9dee8] bg-[#fbfcfe] p-10 text-center">
+              <p className="text-[16px] font-bold text-[#111827]">
+                Нічого не знайдено
+              </p>
+
+              <p className="mt-2 text-[13px] text-[#8a93a3]">
+                Спробуйте змінити пошук або скинути фільтри.
+              </p>
+
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="mt-5 rounded-xl bg-[#635bff] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#554df0]"
+              >
+                Скинути фільтри
+              </button>
+            </div>
+          )}
+        </div>
       </section>
+
+      <SpeciesAdvancedFiltersModal
+        isOpen={isFiltersOpen}
+        onClose={() => setIsFiltersOpen(false)}
+        maxSize={maxSize}
+        setMaxSize={setMaxSize}
+        difficulty={difficulty}
+        setDifficulty={setDifficulty}
+        minVolume={minVolume}
+        setMinVolume={setMinVolume}
+        foodTypes={foodTypes}
+        setFoodTypes={setFoodTypes}
+        onReset={resetAllFilters}
+      />
     </main>
   );
 }
