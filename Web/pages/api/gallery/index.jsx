@@ -4,12 +4,23 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
     };
   }
+}
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
+
+  return fallbackMessage;
 }
 
 export default async function handler(req, res) {
@@ -23,27 +34,28 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const { category, aquarium_name, sort_order = "newest" } = req.query;
-
       const params = new URLSearchParams();
 
-      if (category && category !== "Всі фотографії") {
-        params.append("category", String(category));
+      if (req.query.category && req.query.category !== "all") {
+        params.append("category", String(req.query.category));
       }
 
-      if (aquarium_name && aquarium_name !== "Усі акваріуми") {
-        params.append("aquarium_name", String(aquarium_name));
+      if (req.query.aquarium_name && req.query.aquarium_name !== "all") {
+        params.append("aquarium_name", String(req.query.aquarium_name));
       }
 
-      if (sort_order) {
-        params.append("sort_order", String(sort_order));
+      if (req.query.sort_order) {
+        params.append("sort_order", String(req.query.sort_order));
       }
+
+      const queryString = params.toString();
 
       const response = await fetch(
-        `${API_URL}/gallery/${params.toString() ? `?${params.toString()}` : ""}`,
+        `${API_URL}/gallery${queryString ? `?${queryString}` : ""}`,
         {
           method: "GET",
           headers: {
+            Accept: "application/json",
             Authorization: token,
           },
         }
@@ -51,35 +63,42 @@ export default async function handler(req, res) {
 
       const data = await readResponse(response);
 
-      console.log("GET /gallery status:", response.status);
-      console.log("GET /gallery response:", data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося завантажити галерею"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(200).json(data);
     }
 
     if (req.method === "POST") {
-      const response = await fetch(`${API_URL}/gallery/`, {
+      const response = await fetch(`${API_URL}/gallery`, {
         method: "POST",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({
-          signature: req.body.signature || null,
-          category: req.body.category,
-          created_at: req.body.created_at,
-          aquarium_id: Number(req.body.aquarium_id),
-          image_id: Number(req.body.image_id),
-        }),
+        body: JSON.stringify(req.body),
       });
 
       const data = await readResponse(response);
 
-      console.log("POST /gallery status:", response.status);
-      console.log("POST /gallery response:", data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося створити фото"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(201).json(data);
     }
+
+    res.setHeader("Allow", ["GET", "POST"]);
 
     return res.status(405).json({
       message: "Method not allowed",

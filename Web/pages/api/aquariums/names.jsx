@@ -4,7 +4,7 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
@@ -12,9 +12,45 @@ async function readResponse(response) {
   }
 }
 
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
+
+  return fallbackMessage;
+}
+
+function normalizeAquariumNames(data) {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map((item) => ({
+    id: item.id || item.aquarium_id || item.aquariumId,
+    name: item.name || item.title || "Акваріум",
+    volume:
+      item.volume ||
+      item.liters ||
+      item.capacity_liters ||
+      item.capacity ||
+      null,
+    ...item,
+  }));
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
@@ -28,9 +64,10 @@ export default async function handler(req, res) {
       });
     }
 
-    const response = await fetch(`${API_URL}/aquariums/names/`, {
+    const response = await fetch(`${API_URL}/aquariums/names`, {
       method: "GET",
       headers: {
+        Accept: "application/json",
         Authorization: token,
       },
     });
@@ -40,7 +77,15 @@ export default async function handler(req, res) {
     console.log("GET /aquariums/names status:", response.status);
     console.log("GET /aquariums/names response:", data);
 
-    return res.status(response.status).json(data);
+    if (!response.ok) {
+      return res.status(response.status).json({
+        message: getErrorMessage(data, "Не вдалося завантажити назви акваріумів"),
+        detail: data?.detail,
+        backendStatus: response.status,
+      });
+    }
+
+    return res.status(200).json(normalizeAquariumNames(data));
   } catch (error) {
     console.error("Aquarium names proxy error:", error);
 

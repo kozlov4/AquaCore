@@ -1,10 +1,16 @@
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 const API_URL = "https://aquacore.onrender.com";
 
 async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
@@ -12,40 +18,19 @@ async function readResponse(response) {
   }
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-async function requestToFormData(req) {
-  const chunks = [];
-
-  for await (const chunk of req) {
-    chunks.push(chunk);
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
   }
 
-  const buffer = Buffer.concat(chunks);
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
 
-  const contentType = req.headers["content-type"];
-
-  const response = new Response(buffer, {
-    headers: {
-      "Content-Type": contentType,
-    },
-  });
-
-  return response.formData();
+  return fallbackMessage;
 }
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({
-        message: "Method not allowed",
-      });
-    }
-
     const token = req.headers.authorization;
 
     if (!token) {
@@ -54,32 +39,34 @@ export default async function handler(req, res) {
       });
     }
 
-    const incomingFormData = await requestToFormData(req);
-    const file = incomingFormData.get("file");
-
-    if (!file) {
-      return res.status(400).json({
-        message: "File is required",
+    if (req.method !== "POST") {
+      res.setHeader("Allow", ["POST"]);
+      return res.status(405).json({
+        message: "Method not allowed",
       });
     }
 
-    const backendFormData = new FormData();
-    backendFormData.append("file", file);
-
-    const response = await fetch(`${API_URL}/upload-image/`, {
+    const response = await fetch(`${API_URL}/upload-image`, {
       method: "POST",
       headers: {
         Authorization: token,
+        "content-type": req.headers["content-type"],
       },
-      body: backendFormData,
+      body: req,
+      duplex: "half",
     });
 
     const data = await readResponse(response);
 
-    console.log("POST /upload-image status:", response.status);
-    console.log("POST /upload-image response:", data);
+    if (!response.ok) {
+      return res.status(response.status).json({
+        message: getErrorMessage(data, "Не вдалося завантажити фото"),
+        detail: data?.detail,
+        backendStatus: response.status,
+      });
+    }
 
-    return res.status(response.status).json(data);
+    return res.status(200).json(data);
   } catch (error) {
     console.error("Upload image proxy error:", error);
 

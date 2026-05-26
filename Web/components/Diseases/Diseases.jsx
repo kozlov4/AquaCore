@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Sidebar } from "../Profile/Sidebar";
 import { DiseaseDetailsModal } from "./DiseaseDetailsModal";
-import { useDiseases, diseaseFilters } from "../../hooks/useDiseases";
+import { useDiseases } from "../../hooks/useDiseases";
 import { DiseasesHero } from "./DiseasesParts/DiseasesHero";
 import { DiseasesCategories } from "./DiseasesParts/DiseasesCategories";
 import { DiseasesFilters } from "./DiseasesParts/DiseasesFilters";
@@ -44,10 +44,22 @@ export function Diseases() {
             />
 
             <DiseasesFilters
-              filters={diseaseFilters}
-              activeFilter={diseases.activeFilter}
-              setActiveFilter={diseases.setActiveFilter}
-            />
+  filters={diseases.diseaseTags}
+  activeFilter={diseases.activeFilter}
+  setActiveFilter={diseases.setActiveFilter}
+/>
+
+{diseases.isTagsLoading && (
+  <p className="mt-4 rounded-2xl border border-white/80 bg-white/80 px-5 py-3 text-sm font-bold text-slate-500 shadow-sm backdrop-blur">
+    Завантаження фільтрів...
+  </p>
+)}
+
+{diseases.tagsError && (
+  <p className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-600 shadow-sm">
+    {diseases.tagsError}
+  </p>
+)}
 
             {diseases.isLoading && (
               <p className="mt-8 rounded-2xl border border-white/80 bg-white/80 px-5 py-4 text-sm font-bold text-slate-500 shadow-sm backdrop-blur">

@@ -1,10 +1,10 @@
-const API_URL = "https://aquacore.onrender.com ";
+const API_URL = "https://aquacore.onrender.com";
 
 async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
@@ -12,9 +12,27 @@ async function readResponse(response) {
   }
 }
 
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (typeof data?.message === "string") {
+    return data.message;
+  }
+
+  return fallbackMessage;
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
+      res.setHeader("Allow", ["POST"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
@@ -28,11 +46,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const aquariumId = Number(req.body.aquarium_id);
-    const speciesId = Number(req.body.species_id);
-    const quantity = Number(req.body.quantity);
-    const settlementDate = req.body.settlement_date;
-    const ignoreWarnings = Boolean(req.body.ignore_warnings);
+    const aquariumId = Number(req.body?.aquarium_id);
+    const speciesId = Number(req.body?.species_id);
+    const quantity = Number(req.body?.quantity);
+    const settlementDate = req.body?.settlement_date;
+    const ignoreWarnings = Boolean(req.body?.ignore_warnings);
 
     if (!aquariumId) {
       return res.status(400).json({
@@ -77,6 +95,7 @@ export default async function handler(req, res) {
       {
         method: "POST",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: token,
         },
@@ -92,7 +111,16 @@ export default async function handler(req, res) {
     );
     console.log(`POST /aquariums/${aquariumId}/inhabitants response:`, data);
 
-    return res.status(response.status).json(data);
+    if (!response.ok) {
+      return res.status(response.status).json({
+        message: getErrorMessage(data, "Не вдалося заселити вид в акваріум"),
+        detail: data?.detail,
+        backendStatus: response.status,
+        sentPayload: backendBody,
+      });
+    }
+
+    return res.status(response.status || 201).json(data);
   } catch (error) {
     console.error("Add species proxy error:", error);
 

@@ -3,220 +3,342 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { Menu } from "lucide-react";
 
-const navItems = [
-  { label: "Дашборд", href: "/dashboard", icon: "/images/Menu.svg" },
-  { label: "Акваріуми", href: "/aquariums", icon: "/images/Aqarium.svg" },
-  { label: "Таймлайн", href: "/timeline", icon: "/images/Vectory.svg" },
-  { label: "Галерея", href: "/gallery", icon: "/images/Gallery.svg" },
-  { label: "Інвентар", href: "/equipment", icon: "/images/Tools.svg" },
-  { label: "Аналітика", href: "/analytics", icon: "/images/Statics.svg" },
-  { label: "Щоденник", href: "/diary", icon: "/images/Notes.svg" },
-  { label: "Список завдань", href: "/tasks", icon: "/images/tasking.svg" },
-  { label: "Вода", href: "/water-change", icon: "/images/Kaplya.svg" },
-  { label: "Калькулятор", href: "/calculators", icon: "/images/Calc.svg" },
-  { label: "Сумісність", href: "/compatibility", icon: "/images/Alarm.svg" },
-  { label: "Види", href: "/species", icon: "/images/Fish.svg" },
-  { label: "Книга", href: "/#", icon: "/images/Book.svg" },
-  { label: "Вірус", href: "/diseases", icon: "/images/Virus.svg" },
-  { label: "Ком'юніті", href: "/#", icon: "/images/Community.svg" },
-  { label: "Відгуки", href: "/reviews", icon: "/images/Message.svg" },
-  { label: "Користувач", href: "/profile", icon: "/images/User.svg" },
+const menuGroups = [
+  {
+    title: "Акваріуми",
+    items: [
+      {
+        label: "Мої Акваріуми",
+        href: "/aquariums",
+        icon: "/images/Aqarium.svg",
+      },
+      {
+        label: "Хронологія Акваріума",
+        href: "/timeline",
+        icon: "/images/Vectory.svg",
+      },
+      {
+        label: "Особиста Галерея",
+        href: "/gallery",
+        icon: "/images/Gallery.svg",
+      },
+      {
+        label: "Історія Обладнання",
+        href: "/equipment",
+        icon: "/images/Tools.svg",
+      },
+    ],
+  },
+  {
+    title: "Моніторинг та аналітика",
+    items: [
+      {
+        label: "Графіки Показників",
+        href: "/analytics",
+        icon: "/images/Statics.svg",
+      },
+      {
+        label: "Журнал Акваріуміста",
+        href: "/diary",
+        icon: "/images/Notes.svg",
+      },
+    ],
+  },
+  {
+    title: "Планування",
+    items: [
+      {
+        label: "To-Do List",
+        href: "/tasks",
+        icon: "/images/tasking.svg",
+      },
+      {
+        label: "Графік Підмін",
+        href: "/water-change",
+        icon: "/images/Kaplya.svg",
+      },
+    ],
+  },
+  {
+    title: "Інструменти",
+    items: [
+      {
+        label: "Банк Калькуляторів",
+        href: "/calculators",
+        icon: "/images/Calc.svg",
+      },
+      {
+        label: "Перевірка Сумісності",
+        href: "/compatibility",
+        icon: "/images/Alarm.svg",
+      },
+    ],
+  },
+  {
+    title: "Ресурси",
+    items: [
+      {
+        label: "Довідник Видів",
+        href: "/species",
+        icon: "/images/Fish.svg",
+      },
+      {
+        label: "База Знань",
+        href: "/knowledge-base",
+        icon: "/images/Book.svg",
+      },
+      {
+        label: "Хвороби та Лікування",
+        href: "/diseases",
+        icon: "/images/Virus.svg",
+      },
+    ],
+  },
+  {
+    title: "Соціальна мережа",
+    items: [
+      {
+        label: "Спільнота",
+        href: "/feed",
+        icon: "/images/Community.svg",
+      },
+    ],
+  },
+  {
+    title: "Підтримка",
+    items: [
+      {
+        label: "Зворотний зв'язок",
+        href: "/reviews",
+        icon: "/images/Message.svg",
+      },
+    ],
+  },
 ];
 
 const mobileMainItems = [
-  "/dashboard",
-  "/aquariums",
-  "/calculators",
-  "/diary",
-  "/profile",
+  {
+    label: "Панель",
+    href: "/dashboard",
+    icon: "/images/Menu.svg",
+  },
+  {
+    label: "Акваріуми",
+    href: "/aquariums",
+    icon: "/images/Aqarium.svg",
+  },
+  {
+    label: "Калькулятор",
+    href: "/calculators",
+    icon: "/images/Calc.svg",
+  },
+  {
+    label: "Журнал",
+    href: "/diary",
+    icon: "/images/Notes.svg",
+  },
+  {
+    label: "Профіль",
+    href: "/profile",
+    icon: "/images/User.svg",
+  },
 ];
+
+function SidebarIcon({ src, alt, size = 22 }) {
+  return (
+    <span
+      className="relative shrink-0"
+      style={{
+        width: size,
+        height: size,
+      }}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={`${size}px`}
+        className="object-contain"
+      />
+    </span>
+  );
+}
+
+function DotsIcon() {
+  return (
+    <span className="flex items-center gap-[3px]">
+      <span className="h-[4px] w-[4px] rounded-full bg-[#505866]" />
+      <span className="h-[4px] w-[4px] rounded-full bg-[#505866]" />
+      <span className="h-[4px] w-[4px] rounded-full bg-[#505866]" />
+    </span>
+  );
+}
+
+function SidebarItem({ item }) {
+  const router = useRouter();
+
+  const isActive =
+    router.pathname === item.href || router.pathname.startsWith(`${item.href}/`);
+
+  return (
+    <Link
+      href={item.href}
+      className={`group flex h-[32px] items-center gap-[12px] rounded-[8px] px-[6px] text-[12px] font-normal transition-all duration-200 ${
+        isActive
+          ? "bg-[#efa7d2] text-[#111827]"
+          : "text-[#111827] hover:bg-[#f7e1ef]"
+      }`}
+    >
+      <SidebarIcon src={item.icon} alt={item.label} size={21} />
+      <span className="truncate">{item.label}</span>
+    </Link>
+  );
+}
 
 export function Sidebar() {
   const router = useRouter();
 
-  const isActiveLink = (href) => {
-    if (href === "/#") return false;
-
-    return router.pathname === href || router.pathname.startsWith(href + "/");
-  };
-
-  const desktopItems = navItems;
-  const mobileItems = navItems.filter((item) =>
-    mobileMainItems.includes(item.href)
-  );
+  const isDashboardActive =
+    router.pathname === "/dashboard" ||
+    router.pathname.startsWith("/dashboard/");
 
   return (
     <>
-      {/* DESKTOP SIDEBAR */}
-      <aside
-        className="
-          fixed left-0 top-0 z-40
-          hidden h-screen w-[88px] flex-col
-          border-r border-slate-200 bg-white/95
-          px-3 py-5 backdrop-blur-xl
-          lg:flex
-        "
-      >
-        {/* LOGO */}
-        <div className="mb-6 flex justify-center">
+      <aside className="fixed left-0 top-0 z-50 hidden h-screen w-[210px] flex-col bg-[#fbfbfc] text-[#111827] shadow-[8px_0_30px_rgba(15,23,42,0.04)] md:flex">
+        <div className="flex min-h-0 flex-1 flex-col px-[24px] pt-[24px]">
           <Link
             href="/dashboard"
-            className="relative h-9 w-9 transition duration-300 hover:scale-110"
+            className="mb-[42px] flex items-center gap-[13px]"
           >
             <Image
-              src="/images/mini-logo.svg"
-              alt="logo"
-              fill
-              className="object-contain"
+              src="/images/Logo.svg"
+              alt="AquaCore"
+              width={48}
+              height={48}
+              priority
+              className="h-[42px] w-auto object-contain"
             />
+
+            <span className="bg-gradient-to-r from-[#7665ff] via-[#b66fd5] to-[#f0a2ce] bg-clip-text text-[17px] font-extrabold uppercase tracking-[0.04em] text-transparent">
+              Aqua Core
+            </span>
           </Link>
+
+          <Link
+            href="/dashboard"
+            className={`mb-[21px] flex h-[43px] items-center gap-[13px] rounded-[9px] px-[10px] text-[13px] font-medium text-[#111827] transition-all duration-200 ${
+              isDashboardActive
+                ? "bg-[#efa7d2]"
+                : "bg-[#efa7d2] hover:bg-[#e99ccc]"
+            }`}
+          >
+            <SidebarIcon
+              src="/images/Menu.svg"
+              alt="Панель управління"
+              size={27}
+            />
+            <span>Панель управління</span>
+          </Link>
+
+          <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto pr-[2px]">
+            <div className="flex flex-col gap-[15px] pb-[18px]">
+              {menuGroups.map((group) => (
+                <section key={group.title}>
+                  <h3 className="mb-[6px] px-[2px] text-[8px] font-semibold uppercase tracking-[0.09em] text-[#b7bbc4]">
+                    {group.title}
+                  </h3>
+
+                  <div className="flex flex-col gap-[4px]">
+                    {group.items.map((item) => (
+                      <SidebarItem key={item.href} item={item} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </nav>
         </div>
 
-        {/* NAVIGATION */}
-        <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto pr-1">
-          {desktopItems.map(({ label, href, icon }) => {
-            const isActive = isActiveLink(href);
+        <div className="flex h-[78px] shrink-0 items-center justify-between bg-[#f1f4f8] px-[24px]">
+          <div className="flex min-w-0 items-center gap-[11px]">
+            <Image
+              src="/images/Avatar.png"
+              alt="Jane"
+              width={42}
+              height={42}
+              className="h-[42px] w-[42px] shrink-0 rounded-full object-cover"
+            />
 
-            return (
-              <Link
-                key={label + href}
-                href={href}
-                title={label}
-                className={`
-                  group relative flex h-11 w-11 shrink-0
-                  items-center justify-center rounded-2xl
-                  transition-all duration-300
-                  ${
-                    isActive
-                      ? "bg-gradient-to-br from-[#635BFF] to-[#7C72FF] shadow-[0_10px_30px_rgba(99,91,255,0.35)]"
-                      : "hover:bg-slate-100"
-                  }
-                `}
-              >
-                {isActive && (
-                  <div className="absolute inset-0 rounded-2xl bg-[#635BFF]/20 blur-xl" />
-                )}
+            <div className="min-w-0">
+              <p className="m-0 truncate text-[13px] font-semibold leading-[18px] text-[#111827]">
+                Jane
+              </p>
 
-                <div className="relative z-10 transition duration-300 group-hover:scale-110">
-                  <Image
-                    src={icon}
-                    alt={label}
-                    width={20}
-                    height={20}
-                    className={`
-                      object-contain transition duration-300
-                      ${
-                        isActive
-                          ? "brightness-0 invert"
-                          : "opacity-70 group-hover:opacity-100"
-                      }
-                    `}
-                  />
-                </div>
+              <p className="m-0 truncate text-[12px] leading-[17px] text-[#7b8190]">
+                jane@example.com
+              </p>
+            </div>
+          </div>
 
-                <div
-                  className="
-                    pointer-events-none absolute left-14 hidden
-                    whitespace-nowrap rounded-xl bg-slate-950
-                    px-3 py-2 text-xs font-semibold text-white
-                    shadow-2xl group-hover:block
-                  "
-                >
-                  {label}
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* BOTTOM BUTTON */}
-        <div className="mt-4 flex justify-center">
           <button
             type="button"
-            className="
-              group flex h-11 w-11 items-center justify-center
-              rounded-2xl text-slate-500
-              transition-all duration-300
-              hover:bg-slate-100 hover:text-slate-950
-            "
+            aria-label="User menu"
+            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[#4b5563] transition-colors hover:bg-white"
           >
-            <Menu
-              size={20}
-              strokeWidth={2}
-              className="transition duration-300 group-hover:rotate-90"
-            />
+            <DotsIcon />
           </button>
         </div>
       </aside>
 
-      {/* MOBILE BOTTOM NAVIGATION */}
-      <nav
-        className="
-          fixed bottom-0 left-0 right-0 z-50
-          flex items-center justify-around
-          border-t border-slate-200 bg-white/95
-          px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3
-          shadow-[0_-12px_35px_rgba(15,23,42,0.10)]
-          backdrop-blur-xl
-          lg:hidden
-        "
-      >
-        {mobileItems.map(({ label, href, icon }) => {
-          const isActive = isActiveLink(href);
+      <nav className="fixed bottom-0 left-0 z-50 grid h-[70px] w-full grid-cols-5 border-t border-slate-200 bg-white shadow-[0_-10px_35px_rgba(15,23,42,0.08)] md:hidden">
+        {mobileMainItems.map((item) => {
+          const isActive =
+            router.pathname === item.href ||
+            router.pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
-              key={label + href}
-              href={href}
-              className="
-                flex min-w-[58px] flex-col items-center justify-center gap-1
-              "
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center gap-1 text-[10px] font-medium ${
+                isActive ? "text-[#111827]" : "text-[#7b8190]"
+              }`}
             >
-              <div
-                className={`
-                  relative flex h-11 w-11 items-center justify-center
-                  rounded-2xl transition-all duration-300
-                  ${
-                    isActive
-                      ? "bg-gradient-to-br from-[#635BFF] to-[#7C72FF] shadow-[0_10px_24px_rgba(99,91,255,0.28)]"
-                      : "bg-transparent"
-                  }
-                `}
-              >
-                {isActive && (
-                  <div className="absolute inset-0 rounded-2xl bg-[#635BFF]/20 blur-lg" />
-                )}
-
-                <Image
-                  src={icon}
-                  alt={label}
-                  width={20}
-                  height={20}
-                  className={`
-                    relative z-10 object-contain transition duration-300
-                    ${isActive ? "brightness-0 invert" : "opacity-70"}
-                  `}
-                />
-              </div>
-
               <span
-                className={`
-                  max-w-[64px] truncate text-[10px] font-bold
-                  ${
-                    isActive
-                      ? "text-[#635BFF]"
-                      : "text-slate-400"
-                  }
-                `}
+                className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                  isActive ? "bg-[#efa7d2]" : "bg-transparent"
+                }`}
               >
-                {label}
+                <SidebarIcon src={item.icon} alt={item.label} size={19} />
               </span>
+
+              <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
+
+      <style jsx global>{`
+        .sidebar-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+          background: #e1e5ec;
+          border-radius: 999px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+          background: #cfd5df;
+        }
+      `}</style>
     </>
   );
 }
+
+export default Sidebar;

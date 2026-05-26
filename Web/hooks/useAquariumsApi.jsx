@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+
 import {
   createAquarium,
   deleteAquarium,
@@ -46,6 +47,7 @@ export function useAquariumsApi() {
   const loadAquariumNames = useCallback(async () => {
     try {
       const data = await getAquariumNames();
+
       setAquariumNames(data);
     } catch {
       setAquariumNames([]);
@@ -75,6 +77,7 @@ export function useAquariumsApi() {
 
   const openSettingsModal = (aquarium) => {
     setSelectedAquarium(aquarium);
+    setAquariumsError("");
     setIsSettingsOpen(true);
   };
 
@@ -84,6 +87,7 @@ export function useAquariumsApi() {
 
   const openWaterParamsModal = (aquarium) => {
     setSelectedAquarium(aquarium);
+    setAquariumsError("");
     setIsWaterParamsOpen(true);
   };
 
@@ -93,6 +97,7 @@ export function useAquariumsApi() {
 
   const openTaskModal = (aquarium) => {
     setSelectedAquarium(aquarium);
+    setAquariumsError("");
     setIsTaskOpen(true);
   };
 
@@ -115,10 +120,30 @@ export function useAquariumsApi() {
       }
 
       closeAddModal();
+
       await loadAquariums();
       await loadAquariumNames();
     } catch (error) {
       setAquariumsError(error.message || "Не вдалося зберегти акваріум");
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveSettingsAquarium = async (payload) => {
+    try {
+      setIsSaving(true);
+      setAquariumsError("");
+
+      await updateAquarium(payload);
+
+      setIsSettingsOpen(false);
+
+      await loadAquariums();
+      await loadAquariumNames();
+    } catch (error) {
+      setAquariumsError(error.message || "Не вдалося оновити акваріум");
       throw error;
     } finally {
       setIsSaving(false);
@@ -154,6 +179,36 @@ export function useAquariumsApi() {
       await loadAquariumNames();
     } catch (error) {
       setAquariumsError(error.message || "Не вдалося видалити акваріум");
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteSelectedAquarium = async (id) => {
+    if (!id) {
+      throw new Error("Не передано id акваріума");
+    }
+
+    try {
+      setIsSaving(true);
+      setAquariumsError("");
+
+      await deleteAquarium(id);
+
+      setAquariums((prev) =>
+        prev.filter((aquarium) => aquarium.id !== id)
+      );
+
+      setIsSettingsOpen(false);
+      setSelectedAquarium(null);
+      setDeletingAquarium(null);
+
+      await loadAquariums();
+      await loadAquariumNames();
+    } catch (error) {
+      setAquariumsError(error.message || "Не вдалося видалити акваріум");
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -192,6 +247,7 @@ export function useAquariumsApi() {
 
     isLoading,
     isSaving,
+
     aquariumsError,
 
     loadAquariums,
@@ -211,10 +267,12 @@ export function useAquariumsApi() {
     closeTaskModal,
 
     saveAquarium,
+    saveSettingsAquarium,
 
     askDeleteAquarium,
     cancelDeleteAquarium,
     confirmDeleteAquarium,
+    deleteSelectedAquarium,
 
     saveWaterParamsLocally,
   };

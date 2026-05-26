@@ -4,12 +4,23 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
     };
   }
+}
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
+
+  return fallbackMessage;
 }
 
 export default async function handler(req, res) {
@@ -23,65 +34,71 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const { aquarium_id, tag, search } = req.query;
-
       const params = new URLSearchParams();
 
-      if (aquarium_id && aquarium_id !== "all") {
-        params.append("aquarium_id", String(aquarium_id));
+      if (req.query.aquarium_id && req.query.aquarium_id !== "all") {
+        params.append("aquarium_id", String(req.query.aquarium_id));
       }
 
-      if (tag && tag !== "all") {
-        params.append("tag", String(tag));
+      if (req.query.tag && req.query.tag !== "all") {
+        params.append("tag", String(req.query.tag));
       }
 
-      if (search && String(search).trim()) {
-        params.append("search", String(search).trim());
+      if (req.query.search && String(req.query.search).trim()) {
+        params.append("search", String(req.query.search).trim());
       }
 
-      const response = await fetch(
-        `${API_URL}/diary/${params.toString() ? `?${params.toString()}` : ""}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: token,
-          },
-        }
-      );
+      const queryString = params.toString();
+      const url = queryString
+        ? `${API_URL}/diary?${queryString}`
+        : `${API_URL}/diary`;
 
-      const data = await readResponse(response);
-
-      console.log("GET /diary status:", response.status);
-      console.log("GET /diary response:", data);
-
-      return res.status(response.status).json(data);
-    }
-
-    if (req.method === "POST") {
-      const response = await fetch(`${API_URL}/diary/`, {
-        method: "POST",
+      const response = await fetch(url, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: token,
         },
-        body: JSON.stringify({
-          created_at: req.body.created_at,
-          title: req.body.title,
-          observation: req.body.observation,
-          aquarium_id: Number(req.body.aquarium_id),
-          tag: req.body.tag,
-          image_id: req.body.image_id || null,
-          is_pinned: Boolean(req.body.is_pinned),
-        }),
       });
 
       const data = await readResponse(response);
 
-      console.log("POST /diary status:", response.status);
-      console.log("POST /diary response:", data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося завантажити записи"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(200).json(data);
     }
+
+    if (req.method === "POST") {
+      const response = await fetch(`${API_URL}/diary`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося створити запис"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data);
+    }
+
+    res.setHeader("Allow", ["GET", "POST"]);
 
     return res.status(405).json({
       message: "Method not allowed",

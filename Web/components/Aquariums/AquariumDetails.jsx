@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/router";
+
 import { Sidebar } from "../Profile/Sidebar";
 import { AddResidentModal } from "./AddResidentModal";
 import { AddEquipmentModal } from "./AddEquipmentModal";
@@ -10,84 +11,109 @@ import { useAquariumDetails } from "../../hooks/useAquariumDetails";
 
 import { AquariumHero } from "./AquariumDetailsParts/AquariumHero";
 import { AquariumTabs } from "./AquariumDetailsParts/AquariumTabs";
-import { OverviewTab } from "./AquariumDetailsParts/OverviewTab";
-import { WaterParamsTab } from "./AquariumDetailsParts/WaterParamsTab";
 import { PopulationTab } from "./AquariumDetailsParts/PopulationTab";
 import { EquipmentTab } from "./AquariumDetailsParts/EquipmentTab";
 
-const tabs = ["Огляд", "Параметри води", "Населення", "Обладнання"];
+const tabs = ["Населення", "Обладнання"];
 
 export function AquariumDetails() {
   const router = useRouter();
   const aquarium = useAquariumDetails();
 
+  const activeTab = tabs.includes(aquarium.activeTab)
+    ? aquarium.activeTab
+    : "Населення";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-[#FAFCFF] to-[#F4F7FF]">
+    <main className="min-h-screen bg-[#f6f7fb] text-[#111827]">
       <Sidebar />
 
-      <main className="ml-[88px] px-12 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 34 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
-          className="mx-auto max-w-[980px]"
+      <section className="min-h-screen px-4 py-6 md:ml-[280px] md:px-8 lg:px-10">
+        <motion.button
+          type="button"
+          onClick={() => router.back()}
+          whileHover={{ x: -4 }}
+          whileTap={{ scale: 0.96 }}
+          className="mb-5 flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-black"
         >
-          <motion.button
-            onClick={() => router.back()}
-            whileHover={{ x: -4 }}
-            whileTap={{ scale: 0.96 }}
-            className="mb-5 flex items-center text-gray-500 transition hover:text-black"
-          >
-            <ArrowLeft size={22} />
-          </motion.button>
+          <ArrowLeft size={18} />
+          Назад до акваріумів
+        </motion.button>
 
-          <AquariumHero />
+        <AquariumHero />
 
+        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
           <AquariumTabs
             tabs={tabs}
-            activeTab={aquarium.activeTab}
+            activeTab={activeTab}
             setActiveTab={aquarium.setActiveTab}
           />
 
-          <div className="mt-8">
+          <div className="p-5 md:p-6">
+            {aquarium.equipmentError && (
+              <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+                {aquarium.equipmentError}
+              </div>
+            )}
+
+            {aquarium.isEquipmentLoading && activeTab === "Обладнання" && (
+              <div className="mb-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
+                Завантаження обладнання...
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
-              {aquarium.activeTab === "Огляд" && <OverviewTab key="overview" />}
-
-              {aquarium.activeTab === "Параметри води" && (
-                <WaterParamsTab key="water" />
-              )}
-
-              {aquarium.activeTab === "Населення" && (
-                <PopulationTab
+              {activeTab === "Населення" && (
+                <motion.div
                   key="population"
-                  residents={aquarium.residents}
-                  onAddResident={() => aquarium.setIsAddResidentOpen(true)}
-                />
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <PopulationTab
+                    residents={aquarium.residents}
+                    onAddResident={() => aquarium.setIsAddResidentOpen(true)}
+                  />
+                </motion.div>
               )}
 
-              {aquarium.activeTab === "Обладнання" && (
-                <EquipmentTab
+              {activeTab === "Обладнання" && (
+                <motion.div
                   key="equipment"
-                  equipment={aquarium.equipment}
-                  onAddEquipment={() => aquarium.setIsAddEquipmentOpen(true)}
-                />
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <EquipmentTab
+                    equipment={aquarium.equipment}
+                    onAddEquipment={() => aquarium.setIsAddEquipmentOpen(true)}
+                    onServiceEquipment={aquarium.handleServiceEquipment}
+                    isServiceLoading={aquarium.isServiceLoading}
+                  />
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
-      </main>
+        </div>
+      </section>
 
       <AddResidentModal
-        isOpen={aquarium.isAddResidentOpen}
-        onClose={() => aquarium.setIsAddResidentOpen(false)}
-        onSave={aquarium.handleAddResident}
-      />
+  isOpen={aquarium.isAddResidentOpen}
+  onClose={() => aquarium.setIsAddResidentOpen(false)}
+  onSave={aquarium.handleAddResident}
+  isSaving={aquarium.isResidentSaving}
+/>
 
       <AddEquipmentModal
         isOpen={aquarium.isAddEquipmentOpen}
         onClose={() => aquarium.setIsAddEquipmentOpen(false)}
         onSave={aquarium.handleAddEquipment}
+        isSaving={aquarium.isEquipmentSaving}
       />
-    </div>
+    </main>
   );
 }
+
+export default AquariumDetails;

@@ -1,23 +1,4 @@
-function getErrorMessage(data, fallbackMessage) {
-  if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
-  }
-
-  if (typeof data?.detail === "string") {
-    return data.detail;
-  }
-
-  if (typeof data?.message === "string") {
-    return data.message;
-  }
-
-  return fallbackMessage;
-}
-
-function getAccessToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
-}
+import { apiJson } from "./apiClient";
 
 function getDangerType(dangerLevel) {
   const value = String(dangerLevel || "").toLowerCase();
@@ -25,9 +6,18 @@ function getDangerType(dangerLevel) {
   if (
     value.includes("high") ||
     value.includes("вис") ||
-    value.includes("небез")
+    value.includes("небез") ||
+    value.includes("крит")
   ) {
     return "high";
+  }
+
+  if (
+    value.includes("low") ||
+    value.includes("низ") ||
+    value.includes("лег")
+  ) {
+    return "low";
   }
 
   return "medium";
@@ -50,9 +40,10 @@ export function mapDiseaseCardFromApi(item) {
     name: item.name || "Без назви",
     tags: Array.isArray(item.tags) ? item.tags : [],
     symptoms: Array.isArray(item.tags) ? item.tags : [],
-    danger: "medium",
-    dangerLabel: "Помірна небезпека",
+    danger: getDangerType(item.danger_level),
+    dangerLabel: getDangerLabel(item.danger_level),
     avatarUrl: item.avatar_url || null,
+    avatar_url: item.avatar_url || null,
   };
 }
 
@@ -64,11 +55,10 @@ export function mapDiseaseDetailsFromApi(item) {
   const treatment = Array.isArray(item.treatment_steps)
     ? item.treatment_steps
         .map((step) => {
-          if (step.subtext) {
-            return `${step.text} ${step.subtext}`;
-          }
+          const text = step?.text || "";
+          const subtext = step?.subtext || "";
 
-          return step.text;
+          return `${text}${subtext ? ` ${subtext}` : ""}`.trim();
         })
         .filter(Boolean)
     : [];
@@ -85,7 +75,20 @@ export function mapDiseaseDetailsFromApi(item) {
     reason: item.causes_text || "Причини не вказані.",
     treatment,
     avatarUrl: item.avatar_url || null,
+    avatar_url: item.avatar_url || null,
   };
+}
+
+export async function getDiseaseTags() {
+  const data = await apiJson(
+    "/api/diseases/tags",
+    {
+      method: "GET",
+    },
+    "Не вдалося завантажити теги хвороб"
+  );
+
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getDiseases({
@@ -93,15 +96,9 @@ export async function getDiseases({
   searchText = "",
   categoryTags = [],
 } = {}) {
-  const token = getAccessToken();
-
-  if (!token) {
-    throw new Error("Щоб переглядати хвороби, потрібно увійти в акаунт");
-  }
-
   const params = new URLSearchParams();
 
-  if (targetType) {
+  if (targetType && targetType !== "all") {
     params.append("target_type", targetType);
   }
 
@@ -109,48 +106,38 @@ export async function getDiseases({
     params.append("search_text", searchText.trim());
   }
 
-  if (categoryTags.length > 0) {
-    params.append("category_tags", categoryTags.join(","));
+  if (Array.isArray(categoryTags) && categoryTags.length > 0) {
+    categoryTags
+      .filter(Boolean)
+      .filter((tag) => tag !== "Всі" && tag !== "all")
+      .forEach((tag) => {
+        params.append("category_tags", tag);
+      });
   }
 
-  const response = await fetch(
+  const data = await apiJson(
     `/api/diseases${params.toString() ? `?${params.toString()}` : ""}`,
     {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+    },
+    "Не вдалося завантажити хвороби"
   );
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося завантажити хвороби"));
-  }
 
   return Array.isArray(data) ? data.map(mapDiseaseCardFromApi) : [];
 }
 
 export async function getDiseaseById(id) {
-  const token = getAccessToken();
-
-  if (!token) {
-    throw new Error("Щоб переглянути деталі хвороби, потрібно увійти в акаунт");
+  if (!id) {
+    throw new Error("Не передано id хвороби");
   }
 
-  const response = await fetch(`/api/diseases/${id}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const data = await apiJson(
+    `/api/diseases/${id}`,
+    {
+      method: "GET",
     },
-  });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося завантажити деталі"));
-  }
+    "Не вдалося завантажити деталі хвороби"
+  );
 
   return mapDiseaseDetailsFromApi(data);
 }

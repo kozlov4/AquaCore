@@ -4,7 +4,7 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
@@ -15,6 +15,8 @@ async function readResponse(response) {
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
@@ -35,17 +37,15 @@ export default async function handler(req, res) {
       });
     }
 
-    const response = await fetch(`${API_URL}/diseases/${id}/`, {
+    const response = await fetch(`${API_URL}/diseases/${id}`, {
       method: "GET",
       headers: {
+        Accept: "application/json",
         Authorization: token,
       },
     });
 
     const data = await readResponse(response);
-
-    console.log(`GET /diseases/${id} status:`, response.status);
-    console.log(`GET /diseases/${id} response:`, data);
 
     return res.status(response.status).json(data);
   } catch (error) {

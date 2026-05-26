@@ -1,147 +1,803 @@
 "use client";
 
-import { ImagePlus } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Sidebar } from "../Profile/Sidebar";
-import { GalleryFilters } from "./GalleryFilters";
-import { GalleryCard } from "./GalleryCard";
-import { UploadPhotoModal } from "./UploadPhotoModal";
-import { GalleryPhotoModal } from "./GalleryPhotoModal";
-import { useGallery } from "../../hooks/useGallery";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Camera,
+  ChevronDown,
+  Grid2X2,
+  Image as ImageIcon,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
-export function Gallery() {
-  const gallery = useGallery();
+import { Sidebar } from "../Profile/Sidebar";
+import {
+  createGalleryPhoto,
+  deleteGalleryPhoto,
+  getAquariumNamesForGallery,
+  getGalleryPhoto,
+  getGalleryPhotos,
+  updateGalleryPhoto,
+  uploadGalleryImage,
+} from "../../services/galleryApi";
+
+const categories = [
+  "Всі фотографії",
+  "Рослини",
+  "Жителі",
+  "Загальний план",
+  "Інше",
+];
+
+function getCategoryValue(value) {
+  return value === "Всі фотографії" ? "all" : value;
+}
+
+function GalleryCard({ photo, index, onOpen }) {
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+      onClick={() => onOpen(photo)}
+      className="group relative h-[210px] overflow-hidden rounded-[18px] bg-slate-100 text-left shadow-[0_12px_34px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(15,23,42,0.10)]"
+    >
+      {photo.imageUrl ? (
+        <img
+          src={photo.imageUrl}
+          alt={photo.signature || "Фото галереї"}
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#a78bfa] to-[#60a5fa] text-4xl">
+          🐟
+        </div>
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+
+      <div className="absolute bottom-0 left-0 right-0 translate-y-3 p-4 opacity-0 transition group-hover:translate-y-0 group-hover:opacity-100">
+        <p className="text-sm font-black text-white">
+          {photo.signature || "Без опису"}
+        </p>
+        <p className="mt-1 text-xs font-bold text-white/70">
+          {photo.aquariumName}
+        </p>
+      </div>
+    </motion.button>
+  );
+}
+
+function UploadPhotoModal({
+  isOpen,
+  aquariums,
+  isSaving,
+  onClose,
+  onSubmit,
+}) {
+  const allowedCategories = ["Загальний план", "Жителі", "Рослини", "Інше"];
+
+  const [file, setFile] = useState(null);
+  const [aquariumId, setAquariumId] = useState(aquariums[0]?.id || "");
+  const [category, setCategory] = useState("Загальний план");
+  const [signature, setSignature] = useState("");
+  const [preview, setPreview] = useState("");
+
+  useEffect(() => {
+    if (!aquariumId && aquariums[0]?.id) {
+      setAquariumId(aquariums[0].id);
+    }
+  }, [aquariums, aquariumId]);
+
+  useEffect(() => {
+    if (!file) {
+      setPreview("");
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = () => {
+    onSubmit({
+      file,
+      aquariumId,
+      category,
+      signature,
+    });
+  };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white">
-      <Sidebar />
-
-      <main
-        className="
-          px-4 pb-28 pt-6
-          sm:px-6 sm:pb-32 sm:pt-8
-          lg:ml-[88px] lg:px-16 lg:py-10
-        "
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.98 }}
+        className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-2xl"
       >
-        <div className="mx-auto max-w-[1120px]">
-          <motion.header
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="
-              mb-6 flex flex-col gap-5
-              sm:mb-8
-              md:flex-row md:items-start md:justify-between
-            "
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 className="text-[17px] font-black text-slate-950">
+            Завантажити фотографію
+          </h2>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           >
-            <div>
-              <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
-                Особиста Галерея
-              </h1>
-
-              <p className="mt-2 max-w-[520px] text-sm leading-6 text-slate-500">
-                Візуальна історія еволюції ваших екосистем
-              </p>
-            </div>
-
-            <motion.button
-              type="button"
-              onClick={() => gallery.setIsUploadOpen(true)}
-              whileHover={{
-                y: -2,
-                boxShadow: "0 16px 34px rgba(99,91,255,0.32)",
-              }}
-              whileTap={{ scale: 0.96 }}
-              className="
-                flex w-full items-center justify-center gap-2
-                rounded-xl bg-[#635BFF] px-5 py-3
-                text-sm font-black text-white
-                transition hover:bg-[#5147f5]
-                sm:w-fit sm:px-6
-              "
-            >
-              <ImagePlus size={17} />
-              Завантажити фото
-            </motion.button>
-          </motion.header>
-
-          <GalleryFilters
-            aquariums={gallery.aquariums}
-            selectedAquariumName={gallery.selectedAquariumName}
-            setSelectedAquariumName={gallery.setSelectedAquariumName}
-            selectedCategory={gallery.selectedCategory}
-            setSelectedCategory={gallery.setSelectedCategory}
-            sortOrder={gallery.sortOrder}
-            setSortOrder={gallery.setSortOrder}
-          />
-
-          {gallery.galleryError && (
-            <p className="mt-6 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold text-red-500">
-              {gallery.galleryError}
-            </p>
-          )}
-
-          {gallery.isLoading && (
-            <p className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-500">
-              Завантаження галереї...
-            </p>
-          )}
-
-          {gallery.isPhotoLoading && (
-            <p className="mt-4 rounded-2xl border border-[#635BFF]/10 bg-[#635BFF]/10 px-5 py-4 text-sm font-bold text-[#635BFF]">
-              Завантаження фото...
-            </p>
-          )}
-
-          {!gallery.isLoading && gallery.photos.length === 0 && (
-            <div className="mt-8 rounded-3xl border border-slate-100 bg-slate-50 p-10 text-center">
-              <p className="text-5xl">🖼️</p>
-              <h3 className="mt-4 text-xl font-black text-slate-950">
-                Фото ще немає
-              </h3>
-              <p className="mt-2 text-sm text-slate-500">
-                Завантажте перше фото своєї екосистеми.
-              </p>
-            </div>
-          )}
-
-          <motion.section
-            layout
-            className="
-              mt-6 grid auto-rows-[145px] grid-cols-1 gap-4
-              sm:mt-8 sm:auto-rows-[155px] sm:grid-cols-2 sm:gap-5
-              xl:grid-cols-4
-            "
-          >
-            {gallery.photos.map((photo, index) => (
-              <GalleryCard
-                key={photo.id}
-                photo={photo}
-                index={index}
-                onOpen={() => gallery.openPhoto(photo)}
-              />
-            ))}
-          </motion.section>
+            <X size={18} />
+          </button>
         </div>
-      </main>
 
-      <AnimatePresence>
-        {gallery.isUploadOpen && (
-          <UploadPhotoModal
-            aquariums={gallery.aquariums}
-            onClose={() => gallery.setIsUploadOpen(false)}
-            onSave={gallery.handleSavePhoto}
-            isLoading={gallery.isUploading}
-          />
-        )}
-      </AnimatePresence>
+        <div className="space-y-4 px-5 py-5">
+          <label className="block">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              className="hidden"
+              onChange={(event) => setFile(event.target.files?.[0] || null)}
+              disabled={isSaving}
+            />
 
-      <GalleryPhotoModal
-        photo={gallery.selectedPhoto}
-        onClose={gallery.closePhoto}
-        onDelete={gallery.handleDeletePhoto}
-        onUpdateCaption={gallery.handleUpdatePhotoCaption}
-      />
+            <div className="flex h-[145px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#b9c7ff] bg-[#fbfcff] text-center transition hover:border-[#635BFF] hover:bg-[#f7f5ff]">
+              {preview ? (
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <>
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#635BFF] shadow-sm">
+                    <Upload size={20} />
+                  </div>
+
+                  <p className="text-[13px] font-black text-slate-700">
+                    Натисніть для вибору файлу
+                  </p>
+
+                  <p className="mt-1 max-w-[230px] text-[11px] font-semibold leading-4 text-slate-400">
+                    або перетягніть фотографію сюди, до 10 МБ
+                  </p>
+                </>
+              )}
+            </div>
+          </label>
+
+          <div>
+            <label className="mb-2 block text-[13px] font-black text-slate-700">
+              Для якої екосистеми?
+            </label>
+
+            <div className="relative">
+              <select
+                value={aquariumId}
+                onChange={(event) => setAquariumId(event.target.value)}
+                disabled={isSaving}
+                className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-10 text-[13px] font-bold text-slate-700 outline-none transition focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+              >
+                {aquariums.length === 0 ? (
+                  <option value="">Акваріуми відсутні</option>
+                ) : (
+                  aquariums.map((aquarium) => (
+                    <option key={aquarium.id} value={aquarium.id}>
+                      {aquarium.name}
+                    </option>
+                  ))
+                )}
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-[13px] font-black text-slate-700">
+              Що на фото? (Категорія)
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {allowedCategories.map((item) => {
+                const active = category === item;
+
+                const icon =
+                  item === "Загальний план"
+                    ? "🖼️"
+                    : item === "Жителі"
+                    ? "🐟"
+                    : item === "Рослини"
+                    ? "🌿"
+                    : "⚙️";
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setCategory(item)}
+                    disabled={isSaving}
+                    className={`
+                      rounded-lg border px-3 py-2 text-[12px] font-black transition
+                      ${
+                        active
+                          ? "border-[#635BFF] bg-[#635BFF] text-white shadow-[0_8px_18px_rgba(99,91,255,0.22)]"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-[#635BFF]/40 hover:bg-[#f8f7ff]"
+                      }
+                    `}
+                  >
+                    {icon} {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[13px] font-black text-slate-700">
+              Підпис (Опціонально)
+            </label>
+
+            <input
+              value={signature}
+              onChange={(event) => setSignature(event.target.value)}
+              disabled={isSaving}
+              placeholder="Наприклад: Вигляд після прополки..."
+              className="h-11 w-full rounded-xl border border-slate-200 px-4 text-[13px] font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-5 pb-5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="h-11 rounded-xl px-5 text-[13px] font-black text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+          >
+            Скасувати
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="flex h-11 items-center gap-2 rounded-xl bg-[#635BFF] px-5 text-[13px] font-black text-white shadow-[0_12px_24px_rgba(99,91,255,0.24)] transition hover:bg-[#5147f5] disabled:opacity-60"
+          >
+            {isSaving && <Loader2 size={16} className="animate-spin" />}
+            Зберегти в галерею
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }
+
+function PhotoViewerModal({
+  photo,
+  isSaving,
+  isDeleting,
+  onClose,
+  onEdit,
+  onDelete,
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [signature, setSignature] = useState(photo?.signature || "");
+
+  useEffect(() => {
+    setSignature(photo?.signature || "");
+    setIsEditing(false);
+  }, [photo]);
+
+  if (!photo) return null;
+
+  const handleSave = () => {
+    onEdit(signature);
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.98 }}
+        className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-slate-950 shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div>
+            <p className="text-sm font-black text-white">
+              {photo.aquariumName}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-white/50">
+              Особиста галерея
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 text-white/70">
+            <button
+              type="button"
+              onClick={() => setIsEditing((prev) => !prev)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/15 hover:text-white"
+            >
+              <Pencil size={18} />
+            </button>
+
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition hover:bg-red-500 hover:text-white disabled:opacity-60"
+            >
+              {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/15 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-black">
+          {photo.imageUrl ? (
+            <img
+              src={photo.imageUrl}
+              alt={photo.signature || "Фото"}
+              className="max-h-[66vh] w-full object-contain"
+            />
+          ) : (
+            <div className="flex h-[420px] w-full items-center justify-center text-5xl">
+              🐟
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-white/10 px-5 py-4">
+          {isEditing ? (
+            <div className="flex flex-col gap-3 md:flex-row">
+              <input
+                value={signature}
+                onChange={(event) => setSignature(event.target.value)}
+                disabled={isSaving}
+                className="h-11 flex-1 rounded-xl border border-white/10 bg-white/10 px-4 text-sm font-semibold text-white outline-none placeholder:text-white/40 focus:border-[#635BFF]"
+                placeholder="Опис фото"
+              />
+
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="h-11 rounded-xl bg-[#635BFF] px-5 text-sm font-black text-white disabled:opacity-60"
+              >
+                {isSaving ? "Збереження..." : "Зберегти"}
+              </button>
+            </div>
+          ) : (
+            <p className="whitespace-pre-line text-sm font-semibold leading-6 text-white/80">
+              {photo.signature || "Опис відсутній."}
+            </p>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function DeletePhotoModal({ photo, isDeleting, onCancel, onConfirm }) {
+  if (!photo) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        className="w-full max-w-[390px] rounded-3xl bg-white p-6 text-center shadow-2xl"
+      >
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+          <Trash2 size={30} />
+        </div>
+
+        <h2 className="text-xl font-black text-slate-950">
+          Видалити фото?
+        </h2>
+
+        <p className="mt-3 text-sm font-medium leading-6 text-slate-500">
+          Фото буде назавжди видалено з галереї. Цю дію неможливо скасувати.
+        </p>
+
+        <div className="mt-7 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="h-12 rounded-xl border border-slate-200 text-sm font-black text-slate-700 hover:bg-slate-50"
+          >
+            Скасувати
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="h-12 rounded-xl bg-red-500 text-sm font-black text-white hover:bg-red-600 disabled:opacity-60"
+          >
+            {isDeleting ? "Видалення..." : "Видалити"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+export function Gallery() {
+  const [aquariums, setAquariums] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [selectedAquariumName, setSelectedAquariumName] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  const selectedAquarium = useMemo(() => {
+    return aquariums.find((item) => item.name === selectedAquariumName);
+  }, [aquariums, selectedAquariumName]);
+
+  const loadPhotos = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const data = await getGalleryPhotos({
+        aquariumName: selectedAquariumName,
+        category: selectedCategory,
+        sortOrder,
+      });
+
+      setPhotos(data);
+    } catch (error) {
+      setPhotos([]);
+      setError(error.message || "Не вдалося завантажити галерею");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedAquariumName, selectedCategory, sortOrder]);
+
+  useEffect(() => {
+    async function loadAquariums() {
+      try {
+        setError("");
+
+        const data = await getAquariumNamesForGallery();
+
+        setAquariums(data);
+      } catch (error) {
+        setError(error.message || "Не вдалося завантажити акваріуми");
+      }
+    }
+
+    loadAquariums();
+  }, []);
+
+  useEffect(() => {
+    loadPhotos();
+  }, [loadPhotos]);
+
+  const handleOpenPhoto = async (photo) => {
+    try {
+      if (!photo?.id) {
+        throw new Error("Gallery photo id is required");
+      }
+
+      setError("");
+
+      const fullPhoto = await getGalleryPhoto(photo.id);
+
+      setSelectedPhoto({
+        ...photo,
+        ...fullPhoto,
+        id: photo.id,
+      });
+    } catch (error) {
+      setError(error.message || "Не вдалося відкрити фото");
+    }
+  };
+
+  const handleUpload = async ({ file, aquariumId, category, signature }) => {
+    try {
+      if (!file) {
+        throw new Error("Оберіть фото");
+      }
+
+      if (!aquariumId) {
+        throw new Error("Оберіть акваріум");
+      }
+
+      setIsSaving(true);
+      setError("");
+
+      const imageId = await uploadGalleryImage(file);
+
+      await createGalleryPhoto({
+        image_id: imageId,
+        aquarium_id: aquariumId,
+        category,
+        signature,
+        created_at: new Date().toISOString(),
+      });
+
+      setIsUploadOpen(false);
+      await loadPhotos();
+    } catch (error) {
+      setError(error.message || "Не вдалося завантажити фото");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateSignature = async (signature) => {
+    try {
+      if (!selectedPhoto?.id) {
+        throw new Error("Gallery photo id is required");
+      }
+
+      setIsSaving(true);
+      setError("");
+
+      const updated = await updateGalleryPhoto(selectedPhoto.id, {
+        signature,
+      });
+
+      setSelectedPhoto((prev) => ({
+        ...prev,
+        ...updated,
+        id: prev.id,
+        signature,
+      }));
+
+      setPhotos((prev) =>
+        prev.map((photo) =>
+          photo.id === selectedPhoto.id
+            ? {
+                ...photo,
+                signature,
+              }
+            : photo
+        )
+      );
+    } catch (error) {
+      setError(error.message || "Не вдалося оновити фото");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteConfirmed = async () => {
+    try {
+      if (!deleteTarget?.id) {
+        throw new Error("Gallery photo id is required");
+      }
+
+      setIsDeleting(true);
+      setError("");
+
+      await deleteGalleryPhoto(deleteTarget.id);
+
+      setPhotos((prev) => prev.filter((photo) => photo.id !== deleteTarget.id));
+
+      setDeleteTarget(null);
+      setSelectedPhoto(null);
+
+      await loadPhotos();
+    } catch (error) {
+      setError(error.message || "Не вдалося видалити фото");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-white text-slate-950">
+      <Sidebar />
+
+      <section className="min-h-screen px-5 py-9 md:ml-[88px] md:px-10 lg:px-[54px]">
+        <div className="mx-auto max-w-[1080px]">
+          <header className="mb-8 flex items-start justify-between gap-5">
+            <div>
+              <h1 className="text-[24px] font-black tracking-[-0.02em] text-slate-950">
+                Особиста Галерея
+              </h1>
+
+              <p className="mt-2 text-[13px] font-medium text-slate-400">
+                Візуальна історія еволюції вашої екосистеми
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsUploadOpen(true)}
+              className="flex h-11 items-center gap-2 rounded-xl bg-[#635BFF] px-5 text-sm font-black text-white transition hover:bg-[#5147f5]"
+            >
+              <Plus size={18} />
+              Завантажити фото
+            </button>
+          </header>
+
+          {error && (
+            <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-6 rounded-[18px] border border-slate-100 bg-white p-4 shadow-[0_12px_34px_rgba(15,23,42,0.04)]">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative min-w-[220px]">
+                <select
+                  value={selectedAquariumName}
+                  onChange={(event) =>
+                    setSelectedAquariumName(event.target.value)
+                  }
+                  className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-9 text-sm font-black text-slate-700 outline-none focus:border-[#635BFF]"
+                >
+                  <option value="all">Усі екосистеми</option>
+
+                  {aquariums.map((aquarium) => (
+                    <option key={aquarium.id} value={aquarium.name}>
+                      {aquarium.name}
+                    </option>
+                  ))}
+                </select>
+
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+              </div>
+
+              <div className="relative min-w-[200px]">
+                <select
+                  value={selectedCategory}
+                  onChange={(event) =>
+                    setSelectedCategory(getCategoryValue(event.target.value))
+                  }
+                  className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-9 text-sm font-black text-slate-700 outline-none focus:border-[#635BFF]"
+                >
+                  <option value="all">Всі фотографії</option>
+
+                  {categories
+                    .filter((item) => item !== "Всі фотографії")
+                    .map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                </select>
+
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+              </div>
+
+              <div className="ml-auto flex rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setSortOrder("newest")}
+                  className={`h-8 rounded-lg px-3 text-xs font-black transition ${
+                    sortOrder === "newest"
+                      ? "bg-white text-slate-950 shadow-sm"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  Найновіші
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSortOrder("oldest")}
+                  className={`h-8 rounded-lg px-3 text-xs font-black transition ${
+                    sortOrder === "oldest"
+                      ? "bg-white text-slate-950 shadow-sm"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  Найстаріші
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex h-[300px] items-center justify-center rounded-[18px] border border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-3 text-sm font-bold text-slate-400">
+                <Loader2 size={20} className="animate-spin" />
+                Завантаження галереї...
+              </div>
+            </div>
+          ) : photos.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {photos.map((photo, index) => (
+                <GalleryCard
+                  key={photo.id || `${photo.imageUrl}-${index}`}
+                  photo={photo}
+                  index={index}
+                  onOpen={handleOpenPhoto}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+              <Camera size={34} className="mx-auto mb-3 text-slate-400" />
+
+              <p className="text-[16px] font-black text-slate-900">
+                Фото поки немає
+              </p>
+
+              <p className="mt-2 text-sm font-semibold text-slate-400">
+                Завантажте перше фото або змініть фільтри.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <AnimatePresence>
+        {isUploadOpen && (
+          <UploadPhotoModal
+            isOpen={isUploadOpen}
+            aquariums={aquariums}
+            isSaving={isSaving}
+            onClose={() => setIsUploadOpen(false)}
+            onSubmit={handleUpload}
+          />
+        )}
+
+        {selectedPhoto && (
+          <PhotoViewerModal
+            photo={selectedPhoto}
+            isSaving={isSaving}
+            isDeleting={isDeleting}
+            onClose={() => setSelectedPhoto(null)}
+            onEdit={handleUpdateSignature}
+            onDelete={() => setDeleteTarget(selectedPhoto)}
+          />
+        )}
+
+        {deleteTarget && (
+          <DeletePhotoModal
+            photo={deleteTarget}
+            isDeleting={isDeleting}
+            onCancel={() => setDeleteTarget(null)}
+            onConfirm={handleDeleteConfirmed}
+          />
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}
+
+export default Gallery;

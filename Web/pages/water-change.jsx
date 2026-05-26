@@ -1,5 +1,5 @@
-import { WaterChange } from "../components/WaterChange/WaterChange";
+import WaterChanges from "../components/WaterChanges/WaterChanges";
 
 export default function WaterChangePage() {
-  return <WaterChange />;
+  return <WaterChanges />;
 }
