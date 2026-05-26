@@ -36,20 +36,50 @@ export default async function handler(req, res) {
 
     if (!id) {
       return res.status(400).json({
-        message: "Equipment id is required",
+        message: "Aquarium id is required",
       });
     }
 
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
 
       return res.status(405).json({
         message: "Method not allowed",
       });
     }
 
-    const response = await fetch(`${API_URL}/equipment/${id}/service`, {
-      method: "POST",
+    const params = new URLSearchParams();
+
+    if (req.query.period) {
+      params.append("period", String(req.query.period));
+    }
+
+    if (req.query.date_from) {
+      params.append("date_from", String(req.query.date_from));
+    }
+
+    if (req.query.date_to) {
+      params.append("date_to", String(req.query.date_to));
+    }
+
+    const rawTypes = req.query.types;
+
+    if (Array.isArray(rawTypes)) {
+      rawTypes.forEach((type) => {
+        params.append("types", String(type));
+      });
+    } else if (rawTypes) {
+      params.append("types", String(rawTypes));
+    }
+
+    const queryString = params.toString();
+
+    const url = queryString
+      ? `${API_URL}/aquariums/${id}/timeline?${queryString}`
+      : `${API_URL}/aquariums/${id}/timeline`;
+
+    const response = await fetch(url, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: token,
@@ -60,7 +90,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося обслужити обладнання"),
+        message: getErrorMessage(data, "Не вдалося завантажити хронологію"),
         detail: data?.detail,
         backendStatus: response.status,
       });
@@ -68,10 +98,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error("Equipment service proxy error:", error);
+    console.error("Aquarium timeline proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Equipment service proxy server error",
+      message: error.message || "Aquarium timeline proxy server error",
     });
   }
 }

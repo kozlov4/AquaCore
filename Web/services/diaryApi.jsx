@@ -1,24 +1,22 @@
-import { uploadImage } from "./galleryApi";
-
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
     return data.detail[0]?.msg || fallbackMessage;
   }
 
-  if (typeof data?.detail === "string") {
-    return data.detail;
-  }
-
-  if (typeof data?.message === "string") {
-    return data.message;
-  }
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
 
   return fallbackMessage;
 }
 
 function getToken() {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
+
+  return (
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token")
+  );
 }
 
 function authHeaders() {
@@ -33,98 +31,165 @@ function authHeaders() {
   };
 }
 
-export const diaryTags = [
-  {
-    label: "🌿 Рослини",
-    value: "plants_fertilizers",
+const TAGS_TO_API = {
+  plants: "plants_fertilizers",
+  diseases: "diseases_health_issues",
+  behavior: "behavior_spawning",
+  equipment: "equipment",
+
+  "Рослини": "plants_fertilizers",
+  "Хвороба": "diseases_health_issues",
+  "Хвороби": "diseases_health_issues",
+  "Поведінка": "behavior_spawning",
+  "Обладнання": "equipment",
+
+  plants_fertilizers: "plants_fertilizers",
+  diseases_health_issues: "diseases_health_issues",
+  behavior_spawning: "behavior_spawning",
+  equipment: "equipment",
+};
+
+const TAGS_FROM_API = {
+  plants_fertilizers: {
+    key: "plants",
+    label: "Рослини",
+    badge: "🌿 Рослини",
     color: "green",
   },
-  {
-    label: "🏥 Хвороби",
-    value: "diseases_health_issues",
+  diseases_health_issues: {
+    key: "diseases",
+    label: "Хвороба",
+    badge: "🩺 Хвороба",
     color: "red",
   },
-  {
-    label: "✨ Поведінка",
-    value: "behavior_spawning",
-    color: "blue",
+  behavior_spawning: {
+    key: "behavior",
+    label: "Поведінка",
+    badge: "🐟 Поведінка",
+    color: "yellow",
   },
-  {
-    label: "⚙️ Обладнання",
-    value: "equipment",
+  equipment: {
+    key: "equipment",
+    label: "Обладнання",
+    badge: "⚙️ Обладнання",
     color: "gray",
   },
-];
+};
 
-export function getDiaryTagMeta(tag) {
+function toApiTag(value) {
+  return TAGS_TO_API[value] || "plants_fertilizers";
+}
+
+function fromApiTag(value) {
   return (
-    diaryTags.find((item) => item.value === tag) || {
-      label: "Запис",
-      value: tag,
-      color: "gray",
+    TAGS_FROM_API[value] || {
+      key: "plants",
+      label: "Рослини",
+      badge: "🌿 Рослини",
+      color: "green",
     }
   );
 }
 
-export function formatDiaryDate(value) {
+function toDateInput(value) {
   if (!value) return "";
 
-  try {
-    return new Intl.DateTimeFormat("uk-UA", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(value));
-  } catch {
-    return value;
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10);
   }
+
+  return date.toISOString().slice(0, 10);
 }
 
-export function toInputDate(value) {
-  if (!value) return new Date().toISOString().slice(0, 10);
+function formatDate(value) {
+  if (!value) return "";
 
-  try {
-    return new Date(value).toISOString().slice(0, 10);
-  } catch {
-    return new Date().toISOString().slice(0, 10);
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
   }
+
+  return date.toLocaleDateString("uk-UA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
-export function mapDiaryEntryFromApi(item) {
-  const tagMeta = getDiaryTagMeta(item.tag);
+function normalizeDiaryEntry(item) {
+  const tagInfo = fromApiTag(item.tag);
 
   return {
-    id: item.id,
-
-    createdAt: item.created_at,
-    date: formatDiaryDate(item.created_at),
-
-    title: item.title || "",
-    text: item.observation || "",
-    observation: item.observation || "",
-
-    aquariumId: item.aquarium_id || item.aquarium?.id || "",
-    aquarium: item.aquarium_name || item.aquarium?.name || "",
-    aquariumName: item.aquarium_name || item.aquarium?.name || "",
-
-    tag: item.tag,
-    tagLabel: tagMeta.label,
-    tagColor: tagMeta.color,
-
-    image: Boolean(item.cover_image_url),
-    imageUrl: item.cover_image_url || null,
-    coverImageUrl: item.cover_image_url || null,
-
-    pinned: Boolean(item.is_pinned),
-    isPinned: Boolean(item.is_pinned),
+    id: item.id || item.entry_id,
+    createdAt: item.created_at || item.date || "",
+    dateInput: toDateInput(item.created_at || item.date),
+    date: formatDate(item.created_at || item.date),
+    title: item.title || "Без назви",
+    observation: item.observation || item.text || item.description || "",
+    text: item.observation || item.text || item.description || "",
+    aquariumId: item.aquarium_id || item.aquariumId || item.aquarium?.id || "",
+    aquariumName:
+      item.aquarium_name ||
+      item.aquariumName ||
+      item.aquarium?.name ||
+      "Екосистема",
+    tag: item.tag || "plants_fertilizers",
+    tagKey: tagInfo.key,
+    tagLabel: tagInfo.label,
+    tagBadge: tagInfo.badge,
+    tagColor: tagInfo.color,
+    imageUrl: item.cover_image_url || item.image_url || item.imageUrl || "",
+    imageId: item.image_id || item.imageId || null,
+    isPinned: Boolean(item.is_pinned || item.pinned),
+    raw: item,
   };
 }
 
-export async function getDiaryEntries({
-  aquariumId = "all",
-  tag = "all",
-  search = "",
-} = {}) {
+function normalizeAquarium(item) {
+  return {
+    id: item.id || item.aquarium_id || item.aquariumId,
+    name: item.name || item.title || "Акваріум",
+  };
+}
+
+function buildDiaryPayload(payload) {
+  const date = payload.created_at || payload.date || payload.createdAt;
+
+  return {
+    created_at: date?.includes("T") ? date : `${date}T00:00:00`,
+    title: String(payload.title || "").trim(),
+    observation: String(payload.observation || payload.text || "").trim(),
+    aquarium_id: Number(payload.aquarium_id || payload.aquariumId),
+    tag: toApiTag(payload.tag || payload.tagKey),
+    image_id: payload.image_id || payload.imageId || null,
+    is_pinned: Boolean(payload.is_pinned || payload.isPinned),
+  };
+}
+
+export async function getAquariumNamesForDiary() {
+  const response = await fetch("/api/aquariums/names", {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося завантажити акваріуми"));
+  }
+
+  return Array.isArray(data)
+    ? data.map(normalizeAquarium).filter((item) => item.id)
+    : [];
+}
+
+export async function getDiaryEntries({ aquariumId = "all", tag = "all", search = "" } = {}) {
   const params = new URLSearchParams();
 
   if (aquariumId && aquariumId !== "all") {
@@ -132,87 +197,43 @@ export async function getDiaryEntries({
   }
 
   if (tag && tag !== "all") {
-    params.append("tag", tag);
+    params.append("tag", toApiTag(tag));
   }
 
   if (search.trim()) {
     params.append("search", search.trim());
   }
 
-  const response = await fetch(
-    `/api/diary${params.toString() ? `?${params.toString()}` : ""}`,
-    {
-      method: "GET",
-      headers: authHeaders(),
-    }
-  );
+  const queryString = params.toString();
 
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося завантажити щоденник"));
-  }
-
-  return Array.isArray(data) ? data.map(mapDiaryEntryFromApi) : [];
-}
-
-export async function getDiaryEntryById(id) {
-  const response = await fetch(`/api/diary/${id}`, {
+  const response = await fetch(`/api/diary${queryString ? `?${queryString}` : ""}`, {
     method: "GET",
-    headers: authHeaders(),
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
   });
 
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося відкрити запис"));
+    throw new Error(getErrorMessage(data, "Не вдалося завантажити записи"));
   }
 
-  return mapDiaryEntryFromApi(data);
+  return Array.isArray(data) ? data.map(normalizeDiaryEntry) : [];
 }
 
-export async function createDiaryEntry({
-  date,
-  title,
-  observation,
-  aquariumId,
-  tag,
-  file,
-  isPinned,
-}) {
-  let imageId = null;
-
-  if (file) {
-    const uploaded = await uploadImage(file);
-
-    imageId =
-      uploaded?.id ||
-      uploaded?.image_id ||
-      uploaded?.image?.id ||
-      uploaded?.data?.id;
-
-    if (!imageId) {
-      throw new Error("Backend не повернув image_id після завантаження фото");
-    }
-  }
-
-  const createdAt = new Date(date).toISOString();
+export async function createDiaryEntry(payload) {
+  const cleanPayload = buildDiaryPayload(payload);
 
   const response = await fetch("/api/diary", {
     method: "POST",
     headers: {
+      Accept: "application/json",
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify({
-      created_at: createdAt,
-      title,
-      observation,
-      aquarium_id: Number(aquariumId),
-      tag,
-      image_id: imageId,
-      is_pinned: Boolean(isPinned),
-    }),
+    body: JSON.stringify(cleanPayload),
   });
 
   const data = await response.json().catch(() => null);
@@ -221,66 +242,49 @@ export async function createDiaryEntry({
     throw new Error(getErrorMessage(data, "Не вдалося створити запис"));
   }
 
-  return data;
+  return normalizeDiaryEntry(data);
 }
 
-export async function updateDiaryEntry({
-  id,
-  date,
-  title,
-  observation,
-  aquariumId,
-  tag,
-  file,
-  isPinned,
-  removeImage = false,
-}) {
-  let imageId;
-  let shouldSendImageId = false;
-
-  if (removeImage) {
-    imageId = null;
-    shouldSendImageId = true;
+export async function getDiaryEntry(entryId) {
+  if (!entryId) {
+    throw new Error("Diary entry id is required");
   }
 
-  if (file) {
-    const uploaded = await uploadImage(file);
+  const response = await fetch(`/api/diary/${encodeURIComponent(entryId)}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
 
-    imageId =
-      uploaded?.id ||
-      uploaded?.image_id ||
-      uploaded?.image?.id ||
-      uploaded?.data?.id;
+  const data = await response.json().catch(() => null);
 
-    shouldSendImageId = true;
-
-    if (!imageId) {
-      throw new Error("Backend не повернув image_id після завантаження фото");
-    }
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося отримати запис"));
   }
 
-  const createdAt = new Date(date).toISOString();
+  return normalizeDiaryEntry({
+    id: entryId,
+    ...data,
+  });
+}
 
-  const body = {
-    created_at: createdAt,
-    title,
-    observation,
-    aquarium_id: Number(aquariumId),
-    tag,
-    is_pinned: Boolean(isPinned),
-  };
-
-  if (shouldSendImageId) {
-    body.image_id = imageId;
+export async function updateDiaryEntry(entryId, payload) {
+  if (!entryId) {
+    throw new Error("Diary entry id is required");
   }
 
-  const response = await fetch(`/api/diary/${id}`, {
+  const cleanPayload = buildDiaryPayload(payload);
+
+  const response = await fetch(`/api/diary/${encodeURIComponent(entryId)}`, {
     method: "PUT",
     headers: {
+      Accept: "application/json",
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(cleanPayload),
   });
 
   const data = await response.json().catch(() => null);
@@ -289,24 +293,29 @@ export async function updateDiaryEntry({
     throw new Error(getErrorMessage(data, "Не вдалося оновити запис"));
   }
 
-  return data;
+  return normalizeDiaryEntry({
+    id: entryId,
+    ...data,
+  });
 }
 
-export async function deleteDiaryEntry(id) {
-  const response = await fetch(`/api/diary/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-
-  if (response.status === 204) {
-    return true;
+export async function deleteDiaryEntry(entryId) {
+  if (!entryId) {
+    throw new Error("Diary entry id is required");
   }
 
-  const data = await response.json().catch(() => null);
+  const response = await fetch(`/api/diary/${encodeURIComponent(entryId)}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
 
   if (!response.ok) {
+    const data = await response.json().catch(() => null);
     throw new Error(getErrorMessage(data, "Не вдалося видалити запис"));
   }
 
-  return data;
+  return true;
 }

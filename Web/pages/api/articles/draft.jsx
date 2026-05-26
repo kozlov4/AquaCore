@@ -34,26 +34,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const params = new URLSearchParams();
-
-      if (req.query.aquarium_id && req.query.aquarium_id !== "all") {
-        params.append("aquarium_id", String(req.query.aquarium_id));
-      }
-
-      if (req.query.tag && req.query.tag !== "all") {
-        params.append("tag", String(req.query.tag));
-      }
-
-      if (req.query.search && String(req.query.search).trim()) {
-        params.append("search", String(req.query.search).trim());
-      }
-
-      const queryString = params.toString();
-      const url = queryString
-        ? `${API_URL}/diary?${queryString}`
-        : `${API_URL}/diary`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_URL}/articles/draft`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -65,7 +46,7 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося завантажити записи"),
+          message: getErrorMessage(data, "Не вдалося завантажити чернетки"),
           detail: data?.detail,
           backendStatus: response.status,
         });
@@ -75,7 +56,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const response = await fetch(`${API_URL}/diary`, {
+      const response = await fetch(`${API_URL}/articles/draft`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -89,13 +70,13 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося створити запис"),
+          message: getErrorMessage(data, "Не вдалося зберегти чернетку"),
           detail: data?.detail,
           backendStatus: response.status,
         });
       }
 
-      return res.status(200).json(data);
+      return res.status(201).json(data);
     }
 
     res.setHeader("Allow", ["GET", "POST"]);
@@ -104,10 +85,10 @@ export default async function handler(req, res) {
       message: "Method not allowed",
     });
   } catch (error) {
-    console.error("Diary proxy error:", error);
+    console.error("Article draft proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Diary proxy server error",
+      message: error.message || "Article draft proxy server error",
     });
   }
 }

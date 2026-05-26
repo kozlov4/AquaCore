@@ -25,14 +25,6 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
-
-      return res.status(405).json({
-        message: "Method not allowed",
-      });
-    }
-
     const token = req.headers.authorization;
 
     if (!token) {
@@ -41,25 +33,80 @@ export default async function handler(req, res) {
       });
     }
 
-    const response = await fetch(`${API_URL}/tasks`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: token,
-      },
-    });
+    if (req.method === "GET") {
+      const query = new URLSearchParams();
 
-    const data = await readResponse(response);
+      if (req.query.date_from) {
+        query.append("date_from", req.query.date_from);
+      }
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити завдання"),
-        detail: data?.detail,
-        backendStatus: response.status,
+      if (req.query.date_to) {
+        query.append("date_to", req.query.date_to);
+      }
+
+      if (req.query.aquarium_id) {
+        query.append("aquarium_id", req.query.aquarium_id);
+      }
+
+      if (req.query.is_completed) {
+        query.append("is_completed", req.query.is_completed);
+      }
+
+      const queryString = query.toString();
+      const url = queryString
+        ? `${API_URL}/tasks?${queryString}`
+        : `${API_URL}/tasks`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: token,
+        },
       });
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося завантажити завдання"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data);
     }
 
-    return res.status(200).json(Array.isArray(data) ? data : []);
+    if (req.method === "POST") {
+      const response = await fetch(`${API_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося створити завдання"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(201).json(data);
+    }
+
+    res.setHeader("Allow", ["GET", "POST"]);
+
+    return res.status(405).json({
+      message: "Method not allowed",
+    });
   } catch (error) {
     console.error("Tasks proxy error:", error);
 

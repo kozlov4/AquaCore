@@ -4,12 +4,23 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
     };
   }
+}
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
+
+  return fallbackMessage;
 }
 
 export default async function handler(req, res) {
@@ -30,53 +41,56 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const response = await fetch(`${API_URL}/diary/${id}/`, {
+      const response = await fetch(`${API_URL}/diary/${id}`, {
         method: "GET",
         headers: {
+          Accept: "application/json",
           Authorization: token,
         },
       });
 
       const data = await readResponse(response);
 
-      return res.status(response.status).json(data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося отримати запис"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data);
     }
 
     if (req.method === "PUT") {
-      const body = {
-        created_at: req.body.created_at,
-        aquarium_id: Number(req.body.aquarium_id),
-        tag: req.body.tag,
-        title: req.body.title,
-        observation: req.body.observation,
-        is_pinned: Boolean(req.body.is_pinned),
-      };
-
-      if (Object.prototype.hasOwnProperty.call(req.body, "image_id")) {
-        body.image_id = req.body.image_id;
-      }
-
-      const response = await fetch(`${API_URL}/diary/${id}/`, {
+      const response = await fetch(`${API_URL}/diary/${id}`, {
         method: "PUT",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(req.body),
       });
 
       const data = await readResponse(response);
 
-      console.log(`PUT /diary/${id} status:`, response.status);
-      console.log(`PUT /diary/${id} response:`, data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося оновити запис"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(200).json(data);
     }
 
     if (req.method === "DELETE") {
-      const response = await fetch(`${API_URL}/diary/${id}/`, {
+      const response = await fetch(`${API_URL}/diary/${id}`, {
         method: "DELETE",
         headers: {
+          Accept: "application/json",
           Authorization: token,
         },
       });
@@ -87,13 +101,25 @@ export default async function handler(req, res) {
 
       const data = await readResponse(response);
 
-      return res.status(response.status).json(data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося видалити запис"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data);
     }
+
+    res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
 
     return res.status(405).json({
       message: "Method not allowed",
     });
   } catch (error) {
+    console.error("Diary detail proxy error:", error);
+
     return res.status(500).json({
       message: error.message || "Diary detail proxy server error",
     });

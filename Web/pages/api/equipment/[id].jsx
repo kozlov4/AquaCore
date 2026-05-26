@@ -17,35 +17,10 @@ function getErrorMessage(data, fallbackMessage) {
     return data.detail[0]?.msg || fallbackMessage;
   }
 
-  if (typeof data?.detail === "string") {
-    return data.detail;
-  }
-
-  if (typeof data?.message === "string") {
-    return data.message;
-  }
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
 
   return fallbackMessage;
-}
-
-function toNullableNumber(value) {
-  if (value === "" || value === null || value === undefined) {
-    return null;
-  }
-
-  const numberValue = Number(value);
-
-  return Number.isNaN(numberValue) ? null : numberValue;
-}
-
-function normalizeEquipmentPayload(body) {
-  return {
-    category: String(body?.category || "").trim(),
-    name: String(body?.name || "").trim(),
-    installation_date: body?.installation_date,
-    specifications: String(body?.specifications || "").trim() || null,
-    maintenance_interval_days: toNullableNumber(body?.maintenance_interval_days),
-  };
 }
 
 export default async function handler(req, res) {
@@ -68,12 +43,20 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const params = new URLSearchParams();
 
-      if (req.query.equipment_category) {
-        params.append("equipment_category", String(req.query.equipment_category));
+      if (
+        req.query.equipment_category &&
+        req.query.equipment_category !== "all"
+      ) {
+        params.append(
+          "equipment_category",
+          String(req.query.equipment_category)
+        );
       }
 
+      const queryString = params.toString();
+
       const response = await fetch(
-        `${API_URL}/equipment/${id}${params.toString() ? `?${params.toString()}` : ""}`,
+        `${API_URL}/equipment/${id}${queryString ? `?${queryString}` : ""}`,
         {
           method: "GET",
           headers: {
@@ -85,32 +68,19 @@ export default async function handler(req, res) {
 
       const data = await readResponse(response);
 
-      return res.status(response.status).json(data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося завантажити обладнання"),
+          detail: data?.detail,
+          raw: data,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data);
     }
 
     if (req.method === "POST") {
-      const payload = normalizeEquipmentPayload(req.body);
-
-      if (!payload.category) {
-        return res.status(400).json({
-          message: "Категорія обладнання є обовʼязковою",
-        });
-      }
-
-      if (!payload.name) {
-        return res.status(400).json({
-          message: "Назва обладнання є обовʼязковою",
-        });
-      }
-
-      if (!payload.installation_date) {
-        return res.status(400).json({
-          message: "Дата встановлення є обовʼязковою",
-        });
-      }
-
-      console.log("POST /equipment payload:", payload);
-
       const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "POST",
         headers: {
@@ -118,24 +88,93 @@ export default async function handler(req, res) {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(req.body),
       });
 
       const data = await readResponse(response);
 
       if (!response.ok) {
-        console.error("Backend add equipment error:", data);
-
         return res.status(response.status).json({
           message: getErrorMessage(data, "Не вдалося додати обладнання"),
           detail: data?.detail,
+          raw: data,
+          backendStatus: response.status,
         });
       }
 
-      return res.status(response.status || 201).json(data);
+      return res.status(201).json(data);
     }
 
-    res.setHeader("Allow", ["GET", "POST"]);
+    if (req.method === "PATCH") {
+      const response = await fetch(`${API_URL}/equipment/${id}`, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося оновити обладнання"),
+          detail: data?.detail,
+          raw: data,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data);
+    }
+
+    if (req.method === "DELETE") {
+      const response = await fetch(`${API_URL}/equipment/${id}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: token,
+        },
+      });
+
+      const text = await response.text();
+
+      let data = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = {
+          message: text || "Empty response from backend",
+        };
+      }
+
+      console.log("DELETE /equipment backend status:", response.status);
+      console.log("DELETE /equipment backend response:", data || text);
+
+      if (response.status === 204) {
+        return res.status(204).end();
+      }
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message:
+            data?.message ||
+            data?.detail ||
+            text ||
+            "Не вдалося видалити обладнання",
+          detail: data?.detail,
+          raw: data || text,
+          backendStatus: response.status,
+        });
+      }
+
+      return res.status(200).json(data || { success: true });
+    }
+
+    res.setHeader("Allow", ["GET", "POST", "PATCH", "DELETE"]);
 
     return res.status(405).json({
       message: "Method not allowed",

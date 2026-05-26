@@ -1,9 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 const API_URL = "https://aquacore.onrender.com";
 
 async function readResponse(response) {
@@ -41,26 +35,37 @@ export default async function handler(req, res) {
 
     if (req.method !== "POST") {
       res.setHeader("Allow", ["POST"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
     }
 
-    const response = await fetch(`${API_URL}/upload-image`, {
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+    if (items.length === 0) {
+      return res.status(400).json({
+        message: "items is required",
+      });
+    }
+
+    const response = await fetch(`${API_URL}/compatibility/analyze`, {
       method: "POST",
       headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: token,
-        "content-type": req.headers["content-type"],
       },
-      body: req,
-      duplex: "half",
+      body: JSON.stringify({
+        items,
+      }),
     });
 
     const data = await readResponse(response);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити фото"),
+        message: getErrorMessage(data, "Не вдалося виконати аналіз сумісності"),
         detail: data?.detail,
         backendStatus: response.status,
       });
@@ -68,10 +73,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error("Upload image proxy error:", error);
+    console.error("Compatibility analyze proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Upload image proxy server error",
+      message: error.message || "Compatibility analyze proxy server error",
     });
   }
 }

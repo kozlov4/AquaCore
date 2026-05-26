@@ -51,8 +51,8 @@ export default async function handler(req, res) {
   description: String(body.description || "").trim(),
   due_date: body.due_date,
   recurrence: body.recurrence || "none",
-  category: body.category || "Власне",
-  task_type: body.task_type || "custom",
+  category: body.category || "Власне завдання",
+  task_type: body.task_type || "Власне завдання",
 };
 
     if (!payload.aquarium_id) {

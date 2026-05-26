@@ -1,9 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 const API_URL = "https://aquacore.onrender.com";
 
 async function readResponse(response) {
@@ -39,28 +33,53 @@ export default async function handler(req, res) {
       });
     }
 
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
     }
 
-    const response = await fetch(`${API_URL}/upload-image`, {
-      method: "POST",
+    const { aquarium_id, metric, period } = req.query;
+
+    if (!aquarium_id) {
+      return res.status(400).json({
+        message: "aquarium_id is required",
+      });
+    }
+
+    if (!metric) {
+      return res.status(400).json({
+        message: "metric is required",
+      });
+    }
+
+    if (!period) {
+      return res.status(400).json({
+        message: "period is required",
+      });
+    }
+
+    const params = new URLSearchParams({
+      aquarium_id: String(aquarium_id),
+      metric: String(metric),
+      period: String(period),
+    });
+
+    const response = await fetch(`${API_URL}/tests/analytics?${params.toString()}`, {
+      method: "GET",
       headers: {
+        Accept: "application/json",
         Authorization: token,
-        "content-type": req.headers["content-type"],
       },
-      body: req,
-      duplex: "half",
     });
 
     const data = await readResponse(response);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити фото"),
+        message: getErrorMessage(data, "Не вдалося завантажити аналітику"),
         detail: data?.detail,
         backendStatus: response.status,
       });
@@ -68,10 +87,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error("Upload image proxy error:", error);
+    console.error("Tests analytics proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Upload image proxy server error",
+      message: error.message || "Tests analytics proxy server error",
     });
   }
 }

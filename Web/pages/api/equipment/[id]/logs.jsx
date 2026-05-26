@@ -1,9 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 const API_URL = "https://aquacore.onrender.com";
 
 async function readResponse(response) {
@@ -32,6 +26,7 @@ function getErrorMessage(data, fallbackMessage) {
 export default async function handler(req, res) {
   try {
     const token = req.headers.authorization;
+    const { id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -39,39 +34,46 @@ export default async function handler(req, res) {
       });
     }
 
+    if (!id) {
+      return res.status(400).json({
+        message: "Equipment id is required",
+      });
+    }
+
     if (req.method !== "POST") {
       res.setHeader("Allow", ["POST"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
     }
 
-    const response = await fetch(`${API_URL}/upload-image`, {
+    const response = await fetch(`${API_URL}/equipment/${id}/logs`, {
       method: "POST",
       headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: token,
-        "content-type": req.headers["content-type"],
       },
-      body: req,
-      duplex: "half",
+      body: JSON.stringify(req.body),
     });
 
     const data = await readResponse(response);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити фото"),
+        message: getErrorMessage(data, "Не вдалося зафіксувати проблему"),
         detail: data?.detail,
         backendStatus: response.status,
       });
     }
 
-    return res.status(200).json(data);
+    return res.status(201).json(data);
   } catch (error) {
-    console.error("Upload image proxy error:", error);
+    console.error("Equipment logs proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Upload image proxy server error",
+      message: error.message || "Equipment logs proxy server error",
     });
   }
 }

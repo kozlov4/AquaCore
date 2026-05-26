@@ -7,12 +7,20 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Edit3,
   MoreVertical,
   Plus,
+  Trash2,
+  X,
 } from "lucide-react";
 
 import { Sidebar } from "../Profile/Sidebar";
-import { getTasks, updateTaskStatus } from "../../services/tasksApi";
+import {
+  getTasks,
+  updateTaskStatus,
+  updateTask,
+  deleteTask,
+} from "../../services/tasksApi";
 import { CreateTaskModal } from "./CreateTaskModal";
 
 const monthNames = [
@@ -173,7 +181,15 @@ function CalendarMini({ selectedDate, setSelectedDate }) {
   );
 }
 
-function TaskItem({ task, selectedDate, onToggle, isUpdating }) {
+function TaskItem({
+  task,
+  selectedDate,
+  onToggle,
+  onEdit,
+  onDelete,
+  isUpdating,
+}) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const overdue = isTaskOverdue(task, selectedDate);
 
   return (
@@ -243,12 +259,43 @@ function TaskItem({ task, selectedDate, onToggle, isUpdating }) {
         )}
       </div>
 
-      <button
-        type="button"
-        className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#98a2b3] hover:bg-[#f4f6fb] hover:text-[#111827]"
-      >
-        <MoreVertical size={17} />
-      </button>
+      <div className="relative mt-1">
+        <button
+          type="button"
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#98a2b3] hover:bg-[#f4f6fb] hover:text-[#111827]"
+        >
+          <MoreVertical size={17} />
+        </button>
+
+        {isMenuOpen && (
+          <div className="absolute right-0 top-10 z-40 w-44 overflow-hidden rounded-xl border border-[#edf0f5] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.12)]">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                onEdit(task);
+              }}
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-bold text-[#475467] transition hover:bg-[#f8fafc] hover:text-[#111827]"
+            >
+              <Edit3 size={15} />
+              Редагувати
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                onDelete(task);
+              }}
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-bold text-red-500 transition hover:bg-red-50"
+            >
+              <Trash2 size={15} />
+              Видалити
+            </button>
+          </div>
+        )}
+      </div>
     </article>
   );
 }
@@ -261,6 +308,13 @@ export function Tasks() {
   const [tasksError, setTasksError] = useState("");
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const [editingTask, setEditingTask] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editRepeat, setEditRepeat] = useState("Не повторювати");
+  const [isEditSaving, setIsEditSaving] = useState(false);
 
   useEffect(() => {
     async function loadTasks() {
@@ -304,7 +358,12 @@ export function Tasks() {
 
   const handleToggleTask = async (task) => {
     try {
+      if (!task?.id) {
+        throw new Error("Task id is required");
+      }
+
       setUpdatingTaskId(task.id);
+      setTasksError("");
 
       const nextStatus = !task.isCompleted;
 
@@ -327,6 +386,82 @@ export function Tasks() {
       );
     } finally {
       setUpdatingTaskId(null);
+    }
+  };
+
+  const handleOpenEdit = (task) => {
+    setEditingTask(task);
+    setEditTitle(task.title || "");
+    setEditDescription(task.description || "");
+    setEditDueDate(task.dueDate ? String(task.dueDate).slice(0, 10) : "");
+    setEditRepeat(task.repeat || "Не повторювати");
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      if (!editingTask?.id) {
+        throw new Error("Task id is required");
+      }
+
+      if (!editTitle.trim()) {
+        throw new Error("Введіть назву завдання");
+      }
+
+      if (!editDueDate) {
+        throw new Error("Оберіть дату виконання");
+      }
+
+      setIsEditSaving(true);
+      setTasksError("");
+
+      const updatedTask = await updateTask(editingTask.id, {
+        aquarium_id: editingTask.aquariumId,
+        task_type:
+          editingTask.taskType ||
+          editingTask.category ||
+          "Власне завдання",
+        title: editTitle.trim(),
+        notes: editDescription.trim(),
+        due_date: editDueDate,
+        repeat_type: editRepeat || "Не повторювати",
+      });
+
+      setTasks((prev) =>
+        prev.map((item) => (item.id === editingTask.id ? updatedTask : item))
+      );
+
+      setEditingTask(null);
+    } catch (error) {
+      setTasksError(error.message || "Не вдалося оновити завдання");
+    } finally {
+      setIsEditSaving(false);
+    }
+  };
+
+  const handleDeleteTask = async (task) => {
+    try {
+      if (!task?.id) {
+        throw new Error("Task id is required");
+      }
+
+      const confirmed = window.confirm(`Видалити завдання "${task.title}"?`);
+
+      if (!confirmed) return;
+
+      setTasksError("");
+
+      const previousTasks = tasks;
+
+      setTasks((prev) => prev.filter((item) => item.id !== task.id));
+
+      try {
+        await deleteTask(task.id);
+      } catch (error) {
+        setTasks(previousTasks);
+        throw error;
+      }
+    } catch (error) {
+      setTasksError(error.message || "Не вдалося видалити завдання");
     }
   };
 
@@ -454,6 +589,8 @@ export function Tasks() {
                       task={task}
                       selectedDate={selectedDate}
                       onToggle={handleToggleTask}
+                      onEdit={handleOpenEdit}
+                      onDelete={handleDeleteTask}
                       isUpdating={updatingTaskId === task.id}
                     />
                   ))}
@@ -478,6 +615,105 @@ export function Tasks() {
           </div>
         </div>
       </section>
+
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-[#111827]">
+                  Редагувати завдання
+                </h2>
+
+                <p className="mt-1 text-sm font-semibold text-[#98a2b3]">
+                  Змініть назву, опис або дату виконання.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingTask(null)}
+                disabled={isEditSaving}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f4f6fb] text-[#98a2b3] transition hover:bg-[#edf0f5] hover:text-[#111827]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="mb-2 block text-[13px] font-black text-[#475467]">
+              Назва завдання
+            </label>
+
+            <input
+              value={editTitle}
+              onChange={(event) => setEditTitle(event.target.value)}
+              disabled={isEditSaving}
+              className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+              placeholder="Наприклад: Підміна води 30%"
+            />
+
+            <label className="mb-2 block text-[13px] font-black text-[#475467]">
+              Опис
+            </label>
+
+            <input
+              value={editDescription}
+              onChange={(event) => setEditDescription(event.target.value)}
+              disabled={isEditSaving}
+              className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+              placeholder="Додатковий опис завдання"
+            />
+
+            <label className="mb-2 block text-[13px] font-black text-[#475467]">
+              Дата виконання
+            </label>
+
+            <input
+              type="date"
+              value={editDueDate}
+              onChange={(event) => setEditDueDate(event.target.value)}
+              disabled={isEditSaving}
+              className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+            />
+
+            <label className="mb-2 block text-[13px] font-black text-[#475467]">
+              Повторювати
+            </label>
+
+            <select
+              value={editRepeat}
+              onChange={(event) => setEditRepeat(event.target.value)}
+              disabled={isEditSaving}
+              className="mb-6 h-11 w-full rounded-xl border border-[#e3e9f2] bg-white px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+            >
+              <option value="Не повторювати">Не повторювати</option>
+              <option value="Щодня">Щодня</option>
+              <option value="Щотижня">Щотижня</option>
+              <option value="Щомісяця">Щомісяця</option>
+            </select>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingTask(null)}
+                disabled={isEditSaving}
+                className="h-11 rounded-xl border border-[#e3e9f2] px-5 text-sm font-black text-[#475467] transition hover:bg-[#f8fafc]"
+              >
+                Скасувати
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isEditSaving}
+                className="h-11 rounded-xl bg-[#635bff] px-5 text-sm font-black text-white transition hover:bg-[#544cf0] disabled:opacity-60"
+              >
+                {isEditSaving ? "Збереження..." : "Зберегти"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CreateTaskModal
         isOpen={isCreateModalOpen}

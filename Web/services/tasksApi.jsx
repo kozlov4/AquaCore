@@ -31,12 +31,49 @@ function authHeaders() {
   };
 }
 
+const TASK_TYPE_TO_API = {
+  water_change: "Підміна води",
+  maintenance: "Обслуговування",
+  tests: "Тести води",
+  plants: "Рослини",
+  custom: "Власне завдання",
+
+  "Підміна води": "Підміна води",
+  Обслуговування: "Обслуговування",
+  "Тести води": "Тести води",
+  Тести: "Тести води",
+  Рослини: "Рослини",
+  "Власне завдання": "Власне завдання",
+  Власне: "Власне завдання",
+};
+
+const REPEAT_TO_API = {
+  none: "Не повторювати",
+  daily: "Щодня",
+  weekly: "Щотижня",
+  monthly: "Щомісяця",
+
+  "Не повторювати": "Не повторювати",
+  Щодня: "Щодня",
+  Щотижня: "Щотижня",
+  Щомісяця: "Щомісяця",
+};
+
+function toApiTaskType(value) {
+  return TASK_TYPE_TO_API[value] || "Власне завдання";
+}
+
+function toApiRepeatType(value) {
+  return REPEAT_TO_API[value] || "Не повторювати";
+}
+
 function normalizeTask(item) {
   const rawStatus = String(
     item.status || item.task_status || item.state || ""
   ).toLowerCase();
 
   const isCompleted =
+    item.is_completed === true ||
     item.is_done === true ||
     item.completed === true ||
     item.done === true ||
@@ -48,7 +85,7 @@ function normalizeTask(item) {
   return {
     id: item.id || item.task_id,
     title: item.title || item.name || "Без назви",
-    description: item.description || item.notes || "",
+    description: item.notes || item.description || "",
     aquariumName:
       item.aquarium_name ||
       item.aquarium?.name ||
@@ -66,8 +103,9 @@ function normalizeTask(item) {
       item.execution_date ||
       item.deadline ||
       null,
-    category: item.category || item.type || "Завдання",
-    repeat: item.repeat || item.recurrence || item.repeat_type || "none",
+    category: item.task_type || item.category || item.type || "Завдання",
+    taskType: item.task_type || item.category || item.type || "Власне завдання",
+    repeat: item.repeat_type || item.repeat || item.recurrence || "Не повторювати",
     isCompleted,
     isOverdue: item.is_overdue || false,
     raw: item,
@@ -85,6 +123,17 @@ function normalizeAquarium(item) {
       item.capacity ||
       null,
     raw: item,
+  };
+}
+
+function buildTaskPayload(payload) {
+  return {
+    aquarium_id: payload.aquarium_id ? Number(payload.aquarium_id) : null,
+    task_type: toApiTaskType(payload.task_type || payload.taskType || payload.category),
+    title: String(payload.title || "").trim(),
+    notes: String(payload.notes ?? payload.description ?? "").trim(),
+    due_date: payload.due_date || payload.dueDate,
+    repeat_type: toApiRepeatType(payload.repeat_type || payload.repeat || payload.recurrence),
   };
 }
 
@@ -119,9 +168,7 @@ export async function updateTaskStatus(taskId, isCompleted) {
       ...authHeaders(),
     },
     body: JSON.stringify({
-      is_done: Boolean(isCompleted),
-      completed: Boolean(isCompleted),
-      status: isCompleted ? "done" : "active",
+      is_completed: Boolean(isCompleted),
     }),
   });
 
@@ -131,7 +178,7 @@ export async function updateTaskStatus(taskId, isCompleted) {
     throw new Error(getErrorMessage(data, "Не вдалося змінити статус завдання"));
   }
 
-  return data;
+  return normalizeTask(data);
 }
 
 export async function getAquariumNamesForTasks() {
@@ -149,21 +196,15 @@ export async function getAquariumNamesForTasks() {
     throw new Error(getErrorMessage(data, "Не вдалося завантажити акваріуми"));
   }
 
-  return Array.isArray(data) ? data.map(normalizeAquarium).filter((item) => item.id) : [];
+  return Array.isArray(data)
+    ? data.map(normalizeAquarium).filter((item) => item.id)
+    : [];
 }
 
 export async function createTask(payload) {
-  const cleanPayload = {
-    aquarium_id: Number(payload.aquarium_id),
-    title: String(payload.title || "").trim(),
-    description: String(payload.description || "").trim(),
-    due_date: payload.due_date,
-    recurrence: payload.recurrence || "none",
-    category: payload.category || "Власне",
-    task_type: payload.task_type || "custom",
-  };
+  const cleanPayload = buildTaskPayload(payload);
 
-  const response = await fetch("/api/tasks/create", {
+  const response = await fetch("/api/tasks", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -175,15 +216,56 @@ export async function createTask(payload) {
 
   const data = await response.json().catch(() => null);
 
-  console.log("Create task response:", {
-    status: response.status,
-    data,
-    sentPayload: cleanPayload,
-  });
-
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося створити завдання"));
   }
 
   return normalizeTask(data);
+}
+
+export async function updateTask(taskId, payload) {
+  if (!taskId) {
+    throw new Error("Task id is required");
+  }
+
+  const cleanPayload = buildTaskPayload(payload);
+
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(cleanPayload),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося оновити завдання"));
+  }
+
+  return normalizeTask(data);
+}
+
+export async function deleteTask(taskId) {
+  if (!taskId) {
+    throw new Error("Task id is required");
+  }
+
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(getErrorMessage(data, "Не вдалося видалити завдання"));
+  }
+
+  return true;
 }

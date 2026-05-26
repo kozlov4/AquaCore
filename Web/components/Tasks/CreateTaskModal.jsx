@@ -22,6 +22,7 @@ const templates = [
   {
     label: "Підміна води",
     value: "water_change",
+    taskType: "Підміна води",
     icon: Droplets,
     title: "Підміна води 30%",
     description: "",
@@ -30,6 +31,7 @@ const templates = [
   {
     label: "Обслуговування",
     value: "maintenance",
+    taskType: "Обслуговування",
     icon: Wrench,
     title: "Перевірити роботу фільтрів",
     description: "",
@@ -38,14 +40,16 @@ const templates = [
   {
     label: "Тести",
     value: "tests",
+    taskType: "Тести води",
     icon: TestTube2,
     title: "Перевірити параметри води",
     description: "",
-    category: "Тести",
+    category: "Тести води",
   },
   {
     label: "Рослини",
     value: "plants",
+    taskType: "Рослини",
     icon: Leaf,
     title: "Підрізати рослини",
     description: "",
@@ -54,10 +58,11 @@ const templates = [
   {
     label: "Власне",
     value: "custom",
+    taskType: "Власне завдання",
     icon: Lightbulb,
     title: "",
     description: "",
-    category: "Власне",
+    category: "Власне завдання",
   },
 ];
 
@@ -179,14 +184,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreated }) {
       }
 
       const payload = buildTaskPayload({
-  aquariumId: selectedAquariumId,
-  title,
-  description,
-  dueDate,
-  repeat,
-  category: selectedTemplate.category,
-  taskType: selectedTemplate.value,
-});
+        aquariumId: selectedAquariumId,
+        title,
+        description,
+        dueDate,
+        repeat,
+        category: selectedTemplate.category,
+        taskType: selectedTemplate.taskType,
+      });
 
       const createdTask = await createTask(payload);
 

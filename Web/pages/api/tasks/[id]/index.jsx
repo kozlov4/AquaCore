@@ -26,6 +26,7 @@ function getErrorMessage(data, fallbackMessage) {
 export default async function handler(req, res) {
   try {
     const token = req.headers.authorization;
+    const { id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -33,28 +34,15 @@ export default async function handler(req, res) {
       });
     }
 
-    if (req.method === "GET") {
-      const params = new URLSearchParams();
+    if (!id) {
+      return res.status(400).json({
+        message: "Task id is required",
+      });
+    }
 
-      if (req.query.aquarium_id && req.query.aquarium_id !== "all") {
-        params.append("aquarium_id", String(req.query.aquarium_id));
-      }
-
-      if (req.query.tag && req.query.tag !== "all") {
-        params.append("tag", String(req.query.tag));
-      }
-
-      if (req.query.search && String(req.query.search).trim()) {
-        params.append("search", String(req.query.search).trim());
-      }
-
-      const queryString = params.toString();
-      const url = queryString
-        ? `${API_URL}/diary?${queryString}`
-        : `${API_URL}/diary`;
-
-      const response = await fetch(url, {
-        method: "GET",
+    if (req.method === "DELETE") {
+      const response = await fetch(`${API_URL}/tasks/${id}`, {
+        method: "DELETE",
         headers: {
           Accept: "application/json",
           Authorization: token,
@@ -65,18 +53,18 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося завантажити записи"),
+          message: getErrorMessage(data, "Не вдалося видалити завдання"),
           detail: data?.detail,
           backendStatus: response.status,
         });
       }
 
-      return res.status(200).json(data);
+      return res.status(204).end();
     }
 
-    if (req.method === "POST") {
-      const response = await fetch(`${API_URL}/diary`, {
-        method: "POST",
+    if (req.method === "PUT") {
+      const response = await fetch(`${API_URL}/tasks/${id}`, {
+        method: "PUT",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
@@ -89,7 +77,7 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося створити запис"),
+          message: getErrorMessage(data, "Не вдалося оновити завдання"),
           detail: data?.detail,
           backendStatus: response.status,
         });
@@ -98,16 +86,16 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    res.setHeader("Allow", ["GET", "POST"]);
+    res.setHeader("Allow", ["DELETE", "PUT"]);
 
     return res.status(405).json({
       message: "Method not allowed",
     });
   } catch (error) {
-    console.error("Diary proxy error:", error);
+    console.error("Task by id proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Diary proxy server error",
+      message: error.message || "Task by id proxy server error",
     });
   }
 }
