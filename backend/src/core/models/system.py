@@ -92,7 +92,6 @@ class Feedback(Base):
     rate: Mapped[int] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime)
-    is_published: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped["User"] = relationship(back_populates="feedback")
 

@@ -17,7 +17,6 @@ async def get_feedbacks(
 ):
     stmt = (
         select(Feedback)
-        .where(Feedback.is_published == True)
         .options(joinedload(Feedback.user).joinedload(User.avatar))
     )
 
@@ -59,7 +58,6 @@ async def upsert_feedback(
             rate=feedback_in.rate,
             description=feedback_in.description,
             created_at=datetime.utcnow(),
-            is_published=False,
         )
         session.add(feedback)
 
