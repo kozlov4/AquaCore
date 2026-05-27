@@ -14,7 +14,9 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -34,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     const token = req.headers.authorization;
-    const { id, speciesId } = req.query;
+    const { aquarium_id, species_id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -42,48 +44,44 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!id) {
+    if (!aquarium_id) {
       return res.status(400).json({
-        message: "Aquarium id is required",
+        message: "aquarium_id is required",
       });
     }
 
-    if (!speciesId) {
+    if (!species_id) {
       return res.status(400).json({
-        message: "Species id is required",
+        message: "species_id is required",
       });
     }
 
-    const response = await fetch(
-      `${API_URL}/aquariums/${id}/check-compatibility/${speciesId}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: token,
-        },
-      }
-    );
+    const backendUrl = `${API_URL}/aquariums/${aquarium_id}/check-compatibility/${species_id}`;
+
+    console.log("CHECK COMPATIBILITY PROXY URL:", backendUrl);
+
+    const response = await fetch(backendUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: token,
+      },
+    });
 
     const data = await readResponse(response);
 
-    console.log(
-      `GET /aquariums/${id}/check-compatibility/${speciesId} status:`,
-      response.status
-    );
-    console.log(
-      `GET /aquariums/${id}/check-compatibility/${speciesId} response:`,
-      data
-    );
+    console.log("CHECK COMPATIBILITY BACKEND STATUS:", response.status);
+    console.log("CHECK COMPATIBILITY BACKEND RESPONSE:", data);
 
     if (!response.ok) {
       return res.status(response.status).json({
         message: getErrorMessage(data, "Не вдалося перевірити сумісність"),
         detail: data?.detail,
+        backendStatus: response.status,
       });
     }
 
-    return res.status(response.status).json(data);
+    return res.status(200).json(data);
   } catch (error) {
     console.error("Check compatibility proxy error:", error);
 

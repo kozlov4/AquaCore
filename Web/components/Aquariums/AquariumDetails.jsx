@@ -1,14 +1,12 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/router";
-
 import { Sidebar } from "../Profile/Sidebar";
 import { AddResidentModal } from "./AddResidentModal";
 import { AddEquipmentModal } from "./AddEquipmentModal";
 import { useAquariumDetails } from "../../hooks/useAquariumDetails";
-
 import { AquariumHero } from "./AquariumDetailsParts/AquariumHero";
 import { AquariumTabs } from "./AquariumDetailsParts/AquariumTabs";
 import { PopulationTab } from "./AquariumDetailsParts/PopulationTab";
@@ -25,10 +23,10 @@ export function AquariumDetails() {
     : "Населення";
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] text-[#111827]">
+    <div className="min-h-screen bg-[#f5f7fb]">
       <Sidebar />
 
-      <section className="min-h-screen px-4 py-6 md:ml-[280px] md:px-8 lg:px-10">
+      <main className="ml-[280px] px-8 py-8">
         <motion.button
           type="button"
           onClick={() => router.back()}
@@ -42,77 +40,51 @@ export function AquariumDetails() {
 
         <AquariumHero />
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
-          <AquariumTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            setActiveTab={aquarium.setActiveTab}
-          />
+        <AquariumTabs
+          tabs={tabs}
+          activeTab={activeTab}
+          setActiveTab={aquarium.setActiveTab}
+        />
 
-          <div className="p-5 md:p-6">
-            {aquarium.equipmentError && (
-              <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
-                {aquarium.equipmentError}
-              </div>
-            )}
+        <div className="mt-6">
+          {activeTab === "Населення" && (
+            <PopulationTab
+              population={aquarium.population}
+              residents={aquarium.residents}
+              isLoading={aquarium.isPopulationLoading}
+              error={aquarium.populationError}
+              onReload={aquarium.reloadPopulation}
+              onAddResident={() => aquarium.setIsAddResidentOpen(true)}
+            />
+          )}
 
-            {aquarium.isEquipmentLoading && activeTab === "Обладнання" && (
-              <div className="mb-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
-                Завантаження обладнання...
-              </div>
-            )}
-
-            <AnimatePresence mode="wait">
-              {activeTab === "Населення" && (
-                <motion.div
-                  key="population"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  <PopulationTab
-                    residents={aquarium.residents}
-                    onAddResident={() => aquarium.setIsAddResidentOpen(true)}
-                  />
-                </motion.div>
-              )}
-
-              {activeTab === "Обладнання" && (
-                <motion.div
-                  key="equipment"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  <EquipmentTab
-                    equipment={aquarium.equipment}
-                    onAddEquipment={() => aquarium.setIsAddEquipmentOpen(true)}
-                    onServiceEquipment={aquarium.handleServiceEquipment}
-                    isServiceLoading={aquarium.isServiceLoading}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {activeTab === "Обладнання" && (
+            <EquipmentTab
+              equipment={aquarium.equipment}
+              isLoading={aquarium.isEquipmentLoading}
+              error={aquarium.equipmentError}
+              onReload={aquarium.reloadEquipment}
+              onAddEquipment={() => aquarium.setIsAddEquipmentOpen(true)}
+              onServiceEquipment={aquarium.handleServiceEquipment}
+              servicingEquipmentId={aquarium.servicingEquipmentId}
+            />
+          )}
         </div>
-      </section>
 
-      <AddResidentModal
-  isOpen={aquarium.isAddResidentOpen}
-  onClose={() => aquarium.setIsAddResidentOpen(false)}
-  onSave={aquarium.handleAddResident}
-  isSaving={aquarium.isResidentSaving}
-/>
+        <AddResidentModal
+          isOpen={aquarium.isAddResidentOpen}
+          aquariumId={aquarium.aquariumId}
+          onClose={() => aquarium.setIsAddResidentOpen(false)}
+          onSave={aquarium.handleAddResident}
+        />
 
-      <AddEquipmentModal
-        isOpen={aquarium.isAddEquipmentOpen}
-        onClose={() => aquarium.setIsAddEquipmentOpen(false)}
-        onSave={aquarium.handleAddEquipment}
-        isSaving={aquarium.isEquipmentSaving}
-      />
-    </main>
+        <AddEquipmentModal
+          isOpen={aquarium.isAddEquipmentOpen}
+          onClose={() => aquarium.setIsAddEquipmentOpen(false)}
+          onSave={aquarium.handleAddEquipment}
+        />
+      </main>
+    </div>
   );
 }
 

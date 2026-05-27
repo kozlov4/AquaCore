@@ -1,10 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
+
 import { Sidebar } from "../Profile/Sidebar";
+
 import { FeedbackModal } from "./FeedbackModal";
 import { FeedbackSuccessModal } from "./FeedbackSuccessModal";
+import { ReviewDetailsModal } from "./ReviewDetailsModal";
+
 import { useReviews } from "../../hooks/useReviews";
+
 import { ReviewsHeader } from "./ReviewsParts/ReviewsHeader";
 import { ReviewsGrid } from "./ReviewsParts/ReviewsGrid";
 import { ReviewsFilter } from "./ReviewsParts/ReviewsFilter";
@@ -12,6 +18,16 @@ import { ReviewsFooter } from "./ReviewsParts/ReviewsFooter";
 
 export function Reviews() {
   const reviews = useReviews();
+
+  const [selectedReview, setSelectedReview] = useState(null);
+
+  const handleOpenReviewDetails = (review) => {
+    setSelectedReview(review);
+  };
+
+  const handleCloseReviewDetails = () => {
+    setSelectedReview(null);
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-white">
@@ -46,7 +62,10 @@ export function Reviews() {
           )}
 
           <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
-            <ReviewsGrid reviews={reviews.reviews} />
+            <ReviewsGrid
+              reviews={reviews.reviews}
+              onOpenReview={handleOpenReviewDetails}
+            />
 
             {reviews.showAll && (
               <ReviewsFilter
@@ -75,6 +94,12 @@ export function Reviews() {
       <FeedbackSuccessModal
         isOpen={reviews.isSuccessOpen}
         onClose={() => reviews.setIsSuccessOpen(false)}
+      />
+
+      <ReviewDetailsModal
+        isOpen={Boolean(selectedReview)}
+        review={selectedReview}
+        onClose={handleCloseReviewDetails}
       />
     </div>
   );

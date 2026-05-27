@@ -14,7 +14,9 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -44,64 +46,37 @@ export default async function handler(req, res) {
 
     if (!id) {
       return res.status(400).json({
-        message: "Aquarium id is required",
+        message: "Equipment id is required",
       });
     }
 
-    const payload = {
-      species_id: Number(req.body?.species_id),
-      quantity: Number(req.body?.quantity),
-      settlement_date: req.body?.settlement_date,
-    };
-
-    if (!payload.species_id) {
-      return res.status(400).json({
-        message: "species_id is required",
-      });
-    }
-
-    if (!payload.quantity || payload.quantity <= 0) {
-      return res.status(400).json({
-        message: "quantity must be greater than 0",
-      });
-    }
-
-    if (!payload.settlement_date) {
-      return res.status(400).json({
-        message: "settlement_date is required",
-      });
-    }
-
-    const response = await fetch(`${API_URL}/aquariums/${id}/inhabitants`, {
+    const response = await fetch(`${API_URL}/equipment/${id}/service`, {
       method: "POST",
       headers: {
         Accept: "application/json",
-        "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(payload),
     });
 
     const data = await readResponse(response);
 
-    console.log(`POST /aquariums/${id}/inhabitants status:`, response.status);
-    console.log(`POST /aquariums/${id}/inhabitants payload:`, payload);
-    console.log(`POST /aquariums/${id}/inhabitants response:`, data);
+    console.log(`POST /equipment/${id}/service status:`, response.status);
+    console.log(`POST /equipment/${id}/service response:`, data);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося заселити рибу"),
+        message: getErrorMessage(data, "Не вдалося обслужити обладнання"),
         detail: data?.detail,
-        sentPayload: payload,
+        backendStatus: response.status,
       });
     }
 
-    return res.status(response.status).json(data);
+    return res.status(200).json(data);
   } catch (error) {
-    console.error("Add inhabitant proxy error:", error);
+    console.error("Service equipment proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Add inhabitant proxy server error",
+      message: error.message || "Service equipment proxy server error",
     });
   }
 }

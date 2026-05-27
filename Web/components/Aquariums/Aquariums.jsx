@@ -17,6 +17,9 @@ import { useAquariumsApi } from "../../hooks/useAquariumsApi";
 export function Aquariums() {
   const aquariums = useAquariumsApi();
 
+  const hasAquariums =
+    Array.isArray(aquariums.aquariums) && aquariums.aquariums.length > 0;
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-white">
       <Sidebar />
@@ -47,8 +50,6 @@ export function Aquariums() {
                 Керуйте акваріумами, параметрами води та доглядом.
               </p>
             </div>
-
-            
           </motion.header>
 
           {aquariums.aquariumsError && (
@@ -63,56 +64,60 @@ export function Aquariums() {
             </p>
           )}
 
-          {!aquariums.isLoading && aquariums.aquariums.length === 0 ? (
+          {!aquariums.isLoading && !hasAquariums ? (
             <EmptyAquariums
               onCreate={aquariums.openCreateModal}
               onAdd={aquariums.openCreateModal}
             />
           ) : (
-            <motion.section
-              layout
-              className="
-                grid grid-cols-1 gap-6
-                md:grid-cols-2
-                xl:grid-cols-3
-              "
-            >
-              {aquariums.aquariums.map((aquarium, index) => (
-                <AquariumCard
-                  key={aquarium.id}
-                  aquarium={aquarium}
-                  index={index}
-                  onOpenWaterParams={() =>
-                    aquariums.openWaterParamsModal(aquarium)
-                  }
-                  onOpenTask={() => aquariums.openTaskModal(aquarium)}
-                  onOpenSettings={() => aquariums.openSettingsModal(aquarium)}
-                />
-              ))}
-            </motion.section>
+            !aquariums.isLoading && (
+              <motion.section
+                layout
+                className="
+                  grid grid-cols-1 gap-6
+                  md:grid-cols-2
+                  xl:grid-cols-3
+                "
+              >
+                {aquariums.aquariums.map((aquarium, index) => (
+                  <AquariumCard
+                    key={aquarium.id}
+                    aquarium={aquarium}
+                    index={index}
+                    onOpenWaterParams={() =>
+                      aquariums.openWaterParamsModal(aquarium)
+                    }
+                    onOpenTask={() => aquariums.openTaskModal(aquarium)}
+                    onOpenSettings={() => aquariums.openSettingsModal(aquarium)}
+                  />
+                ))}
+              </motion.section>
+            )
           )}
         </div>
       </main>
 
-      <motion.button
-        type="button"
-        onClick={aquariums.openCreateModal}
-        whileHover={{
-          scale: 1.12,
-          rotate: 90,
-          boxShadow: "0 22px 48px rgba(109,93,251,0.42)",
-        }}
-        whileTap={{ scale: 0.92 }}
-        className="
-          fixed bottom-24 right-5 z-30
-          flex h-14 w-14 items-center justify-center
-          rounded-full bg-gradient-to-br from-[#6D5DFB] via-[#7C3AED] to-[#9333EA]
-          text-white shadow-[0_18px_40px_rgba(109,93,251,0.35)]
-          lg:bottom-10 lg:right-12 lg:h-16 lg:w-16
-        "
-      >
-        <Plus size={26} />
-      </motion.button>
+      {hasAquariums && (
+        <motion.button
+          type="button"
+          onClick={aquariums.openCreateModal}
+          whileHover={{
+            scale: 1.12,
+            rotate: 90,
+            boxShadow: "0 22px 48px rgba(109,93,251,0.42)",
+          }}
+          whileTap={{ scale: 0.92 }}
+          className="
+            fixed bottom-24 right-5 z-30
+            flex h-14 w-14 items-center justify-center
+            rounded-full bg-gradient-to-br from-[#6D5DFB] via-[#7C3AED] to-[#9333EA]
+            text-white shadow-[0_18px_40px_rgba(109,93,251,0.35)]
+            lg:bottom-10 lg:right-12 lg:h-16 lg:w-16
+          "
+        >
+          <Plus size={26} />
+        </motion.button>
+      )}
 
       <AnimatePresence>
         {aquariums.isAddOpen && (
@@ -127,28 +132,28 @@ export function Aquariums() {
       </AnimatePresence>
 
       <WaterParamsModal
-  isOpen={aquariums.isWaterParamsOpen}
-  onClose={aquariums.closeWaterParamsModal}
-  onSave={aquariums.saveWaterParams}
-  isSaving={aquariums.isSaving}
-/>
+        isOpen={aquariums.isWaterParamsOpen}
+        onClose={aquariums.closeWaterParamsModal}
+        onSave={aquariums.saveWaterParams}
+        isSaving={aquariums.isSaving}
+      />
 
       <TaskModal
-  isOpen={aquariums.isTaskOpen}
-  aquarium={aquariums.selectedAquarium}
-  onClose={aquariums.closeTaskModal}
-  onSave={aquariums.saveTask}
-  isSaving={aquariums.isSaving}
-/>
+        isOpen={aquariums.isTaskOpen}
+        aquarium={aquariums.selectedAquarium}
+        onClose={aquariums.closeTaskModal}
+        onSave={aquariums.saveTask}
+        isSaving={aquariums.isSaving}
+      />
 
-     <AquariumSettingsModal
-  isOpen={aquariums.isSettingsOpen}
-  aquarium={aquariums.selectedAquarium}
-  onClose={aquariums.closeSettingsModal}
-  onSave={aquariums.saveSettingsAquarium}
-  onDelete={aquariums.deleteSelectedAquarium}
-  isSaving={aquariums.isSaving}
-/>
+      <AquariumSettingsModal
+        isOpen={aquariums.isSettingsOpen}
+        aquarium={aquariums.selectedAquarium}
+        onClose={aquariums.closeSettingsModal}
+        onSave={aquariums.saveSettingsAquarium}
+        onDelete={aquariums.deleteSelectedAquarium}
+        isSaving={aquariums.isSaving}
+      />
 
       <DeleteAquariumModal
         aquarium={aquariums.deletingAquarium}

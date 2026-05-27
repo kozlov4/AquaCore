@@ -1,6 +1,8 @@
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -31,97 +33,123 @@ function authHeaders() {
   };
 }
 
-function normalizeAquarium(item) {
-  return {
-    id: item.id || item.aquarium_id || item.aquariumId,
-    name: item.name || item.title || "Акваріум",
-  };
+function formatEquipmentDate(value) {
+  if (!value) return "Дата не вказана";
+
+  try {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Дата не вказана";
+    }
+
+    return new Intl.DateTimeFormat("uk-UA", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return "Дата не вказана";
+  }
 }
 
-function formatDate(value) {
-  if (!value) return "—";
+function getEquipmentIcon(category, name) {
+  const value = `${category || ""} ${name || ""}`.toLowerCase();
 
-  const date = new Date(value);
+  if (
+    value.includes("фільтр") ||
+    value.includes("фильтр") ||
+    value.includes("filter") ||
+    value.includes("filtration")
+  ) {
+    return "⚙️";
+  }
 
-  if (Number.isNaN(date.getTime())) return String(value);
+  if (
+    value.includes("світ") ||
+    value.includes("свет") ||
+    value.includes("light") ||
+    value.includes("lamp") ||
+    value.includes("led") ||
+    value.includes("chihiros")
+  ) {
+    return "💡";
+  }
 
-  return date.toLocaleDateString("uk-UA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  if (
+    value.includes("обігр") ||
+    value.includes("нагрев") ||
+    value.includes("heater") ||
+    value.includes("heating")
+  ) {
+    return "🌡️";
+  }
+
+  if (
+    value.includes("co2") ||
+    value.includes("co₂") ||
+    value.includes("вугле") ||
+    value.includes("угле")
+  ) {
+    return "🫧";
+  }
+
+  if (
+    value.includes("компрес") ||
+    value.includes("aerator") ||
+    value.includes("air") ||
+    value.includes("аера")
+  ) {
+    return "💨";
+  }
+
+  return "🔧";
 }
 
-function toDateInput(value) {
-  if (!value) return new Date().toISOString().slice(0, 10);
+function formatMaintenanceInterval(days) {
+  if (!days) return "Інтервал не задано";
 
-  const date = new Date(value);
+  const value = Number(days);
 
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  if (value === 1) return "кожен день";
+  if (value > 1 && value < 5) return `кожні ${value} дні`;
 
-  return date.toISOString().slice(0, 10);
+  return `кожні ${value} днів`;
 }
 
-function normalizeEquipmentLog(item) {
-  return {
-    id: item.id || `${item.log_date}-${item.log_type}`,
-    logType: item.log_type || "Планове обслуговування",
-    logDate: item.log_date || "",
-    dateLabel: formatDate(item.log_date),
-    description: item.description || "",
-    isResolved: item.is_resolved !== false,
-    raw: item,
-  };
-}
-
-function normalizeEquipment(item) {
-  const logs = Array.isArray(item.logs) ? item.logs.map(normalizeEquipmentLog) : [];
+export function mapEquipmentFromApi(item) {
+  const category = item.category || item.equipment_category || "Інше";
+  const name = item.name || item.model || "Без назви";
 
   return {
     id: item.id || item.equipment_id,
-    category: item.category || "Інше",
-    name: item.name || "Без назви",
+    category,
+    name,
+    icon: getEquipmentIcon(category, name),
+
     installationDate: item.installation_date || "",
-    installationDateLabel: formatDate(item.installation_date),
+    installationDateFormatted: formatEquipmentDate(item.installation_date),
+
     specifications: item.specifications || "",
-    maintenanceIntervalDays:
-      item.maintenance_interval_days === null ||
-      item.maintenance_interval_days === undefined
-        ? null
-        : Number(item.maintenance_interval_days),
-    daysUntilMaintenance:
-      item.days_until_maintenance === null ||
-      item.days_until_maintenance === undefined
-        ? null
-        : Number(item.days_until_maintenance),
-    logs,
+    maintenanceIntervalDays: item.maintenance_interval_days || null,
+    maintenanceIntervalText: formatMaintenanceInterval(
+      item.maintenance_interval_days
+    ),
+
+    daysUntilMaintenance: item.days_until_maintenance,
+    logs: Array.isArray(item.logs) ? item.logs : [],
+
+    desc: item.specifications || "Характеристики не вказані",
     raw: item,
   };
 }
 
-function normalizeAlert(data) {
-  return {
-    needsAttentionCount: Number(data?.needs_attention_count || 0),
-    message: data?.message || "",
-    equipmentId: data?.equipment_id || null,
-    raw: data,
-  };
-}
+export async function getAquariumEquipment(aquariumId) {
+  if (!aquariumId) {
+    throw new Error("Aquarium id is required");
+  }
 
-function buildEquipmentPayload(payload) {
-  return {
-    category: payload.category || "Інше",
-    name: String(payload.name || "").trim(),
-    installation_date: payload.installationDate || payload.installation_date,
-    specifications: payload.specifications || null,
-    maintenance_interval_days: payload.maintenanceIntervalDays
-      ? Number(payload.maintenanceIntervalDays)
-      : null,
-  };
-}
-
-export async function getAquariumNamesForEquipment() {
-  const response = await fetch("/api/aquariums/names", {
+  const response = await fetch(`/api/equipment/${aquariumId}`, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -132,193 +160,81 @@ export async function getAquariumNamesForEquipment() {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося завантажити акваріуми"));
-  }
-
-  return Array.isArray(data)
-    ? data.map(normalizeAquarium).filter((item) => item.id)
-    : [];
-}
-
-export async function getEquipmentList(aquariumId, category = "all") {
-  if (!aquariumId) {
-    throw new Error("Оберіть акваріум");
-  }
-
-  const params = new URLSearchParams();
-
-  if (category && category !== "all") {
-    params.append("equipment_category", category);
-  }
-
-  const queryString = params.toString();
-
-  const response = await fetch(
-    `/api/equipment/${encodeURIComponent(aquariumId)}${
-      queryString ? `?${queryString}` : ""
-    }`,
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        ...authHeaders(),
-      },
-    }
-  );
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося завантажити обладнання"));
   }
 
-  return Array.isArray(data) ? data.map(normalizeEquipment) : [];
+  return Array.isArray(data) ? data.map(mapEquipmentFromApi) : [];
 }
 
-export async function getEquipmentAlertStatus(aquariumId) {
+export async function addEquipmentToAquarium(aquariumId, payload) {
   if (!aquariumId) {
-    throw new Error("Оберіть акваріум");
+    throw new Error("Aquarium id is required");
   }
 
-  const response = await fetch(
-    `/api/equipment/${encodeURIComponent(aquariumId)}/alerts/status`,
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        ...authHeaders(),
-      },
-    }
-  );
+  const cleanPayload = {
+    category: String(payload.category || "").trim(),
+    name: String(payload.name || "").trim(),
+    installation_date: payload.installation_date,
+    specifications: payload.specifications
+      ? String(payload.specifications).trim()
+      : null,
+    maintenance_interval_days:
+      payload.maintenance_interval_days === null ||
+      payload.maintenance_interval_days === undefined ||
+      payload.maintenance_interval_days === ""
+        ? null
+        : Number(payload.maintenance_interval_days),
+  };
 
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося завантажити сповіщення"));
-  }
-
-  return normalizeAlert(data);
-}
-
-export async function createEquipment(aquariumId, payload) {
-  if (!aquariumId) {
-    throw new Error("Оберіть акваріум");
-  }
-
-  const response = await fetch(`/api/equipment/${encodeURIComponent(aquariumId)}`, {
+  const response = await fetch(`/api/equipment/${aquariumId}`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify(buildEquipmentPayload(payload)),
+    body: JSON.stringify(cleanPayload),
   });
 
   const data = await response.json().catch(() => null);
+
+  console.log("ADD EQUIPMENT FRONTEND:", {
+    status: response.status,
+    data,
+    sentPayload: cleanPayload,
+  });
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося додати обладнання"));
   }
 
-  return normalizeEquipment(data);
+  return mapEquipmentFromApi(data);
 }
 
-export async function updateEquipment(equipmentId, payload) {
+export async function serviceEquipment(equipmentId) {
   if (!equipmentId) {
     throw new Error("Equipment id is required");
   }
 
-  const response = await fetch(`/api/equipment/${encodeURIComponent(equipmentId)}`, {
-    method: "PATCH",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify(buildEquipmentPayload(payload)),
-  });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося оновити обладнання"));
-  }
-
-  return normalizeEquipment(data);
-}
-
-export async function deleteEquipment(equipmentId) {
-  if (!equipmentId) {
-    throw new Error("Equipment id is required");
-  }
-
-  const response = await fetch(`/api/equipment/${encodeURIComponent(equipmentId)}`, {
-    method: "DELETE",
+  const response = await fetch(`/api/equipment/${equipmentId}/service`, {
+    method: "POST",
     headers: {
       Accept: "application/json",
       ...authHeaders(),
     },
   });
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => null);
-    throw new Error(getErrorMessage(data, "Не вдалося видалити обладнання"));
-  }
-
-  return true;
-}
-
-export async function quickServiceEquipment(equipmentId) {
-  if (!equipmentId) {
-    throw new Error("Equipment id is required");
-  }
-
-  const response = await fetch(
-    `/api/equipment/${encodeURIComponent(equipmentId)}/service`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        ...authHeaders(),
-      },
-    }
-  );
-
   const data = await response.json().catch(() => null);
+
+  console.log("SERVICE EQUIPMENT FRONTEND:", {
+    status: response.status,
+    data,
+    equipmentId,
+  });
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося обслужити обладнання"));
   }
 
   return data;
-}
-
-export async function addEquipmentLog(equipmentId, payload) {
-  if (!equipmentId) {
-    throw new Error("Equipment id is required");
-  }
-
-  const response = await fetch(`/api/equipment/${encodeURIComponent(equipmentId)}/logs`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify({
-      log_type: payload.logType || payload.log_type || "Планове обслуговування",
-      log_date: payload.logDate || payload.log_date,
-      description: payload.description || null,
-      is_resolved: Boolean(payload.isResolved ?? payload.is_resolved ?? true),
-    }),
-  });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося зафіксувати проблему"));
-  }
-
-  return normalizeEquipmentLog(data);
 }

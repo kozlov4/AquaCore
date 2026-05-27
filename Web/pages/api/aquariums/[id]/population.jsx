@@ -25,8 +25,8 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
 
       return res.status(405).json({
         message: "Method not allowed",
@@ -48,60 +48,32 @@ export default async function handler(req, res) {
       });
     }
 
-    const payload = {
-      species_id: Number(req.body?.species_id),
-      quantity: Number(req.body?.quantity),
-      settlement_date: req.body?.settlement_date,
-    };
-
-    if (!payload.species_id) {
-      return res.status(400).json({
-        message: "species_id is required",
-      });
-    }
-
-    if (!payload.quantity || payload.quantity <= 0) {
-      return res.status(400).json({
-        message: "quantity must be greater than 0",
-      });
-    }
-
-    if (!payload.settlement_date) {
-      return res.status(400).json({
-        message: "settlement_date is required",
-      });
-    }
-
-    const response = await fetch(`${API_URL}/aquariums/${id}/inhabitants`, {
-      method: "POST",
+    const response = await fetch(`${API_URL}/aquariums/${id}/population`, {
+      method: "GET",
       headers: {
         Accept: "application/json",
-        "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(payload),
     });
 
     const data = await readResponse(response);
 
-    console.log(`POST /aquariums/${id}/inhabitants status:`, response.status);
-    console.log(`POST /aquariums/${id}/inhabitants payload:`, payload);
-    console.log(`POST /aquariums/${id}/inhabitants response:`, data);
+    console.log(`GET /aquariums/${id}/population status:`, response.status);
+    console.log(`GET /aquariums/${id}/population response:`, data);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося заселити рибу"),
+        message: getErrorMessage(data, "Не вдалося завантажити населення"),
         detail: data?.detail,
-        sentPayload: payload,
       });
     }
 
     return res.status(response.status).json(data);
   } catch (error) {
-    console.error("Add inhabitant proxy error:", error);
+    console.error("Population proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Add inhabitant proxy server error",
+      message: error.message || "Population proxy server error",
     });
   }
 }
