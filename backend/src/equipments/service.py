@@ -55,14 +55,16 @@ async def create_equipment(
 
     if not aquarium:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Акваріум не знайден"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Акваріум не знайдено",
         )
 
     if aquarium.user_id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Ви не можете додавати не в свій акваріум",
+            detail="У вас немає прав додавати обладнання до цього акваріума",
         )
+
     new_eq = Equipment(aquarium_id=aquarium_id, **data.model_dump())
     session.add(new_eq)
 
@@ -76,8 +78,16 @@ async def create_equipment(
     )
 
     await session.commit()
-    await session.refresh(new_eq)
-    return new_eq
+
+    stmt = (
+        select(Equipment)
+        .where(Equipment.id == new_eq.id)
+        .options(selectinload(Equipment.logs))
+    )
+
+    result = await session.execute(stmt)
+
+    return result.scalar_one()
 
 
 async def update_equipment(
