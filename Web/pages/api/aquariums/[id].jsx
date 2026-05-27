@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const response = await fetch(`${API_URL}/aquariums/my-aquariums`, {
+      const detailResponse = await fetch(`${API_URL}/aquariums/${id}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -54,20 +54,41 @@ export default async function handler(req, res) {
         },
       });
 
-      const data = await readResponse(response);
+      const detailData = await readResponse(detailResponse);
 
-      if (!response.ok) {
-        return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося завантажити акваріуми"),
-          detail: data?.detail,
-          backendStatus: response.status,
+      console.log(`GET /aquariums/${id} status:`, detailResponse.status);
+      console.log(`GET /aquariums/${id} response:`, detailData);
+
+      if (detailResponse.ok) {
+        return res.status(200).json(detailData);
+      }
+
+      const listResponse = await fetch(`${API_URL}/aquariums/my-aquariums`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: token,
+        },
+      });
+
+      const listData = await readResponse(listResponse);
+
+      console.log("GET /aquariums/my-aquariums status:", listResponse.status);
+      console.log("GET /aquariums/my-aquariums response:", listData);
+
+      if (!listResponse.ok) {
+        return res.status(listResponse.status).json({
+          message: getErrorMessage(
+            listData,
+            "Не вдалося завантажити акваріуми"
+          ),
+          detail: listData?.detail,
+          backendStatus: listResponse.status,
         });
       }
 
-      const aquariums = Array.isArray(data) ? data : [];
-      const aquarium = aquariums.find(
-        (item) => String(item.id) === String(id)
-      );
+      const aquariums = Array.isArray(listData) ? listData : [];
+      const aquarium = aquariums.find((item) => String(item.id) === String(id));
 
       if (!aquarium) {
         return res.status(404).json({
@@ -88,7 +109,9 @@ export default async function handler(req, res) {
         type: req.body.type,
         created_at: req.body.created_at,
         image_id:
-          req.body.image_id === undefined ? undefined : req.body.image_id || null,
+          req.body.image_id === undefined
+            ? undefined
+            : req.body.image_id || null,
       };
 
       Object.keys(body).forEach((key) => {
