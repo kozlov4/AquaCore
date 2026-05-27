@@ -1,5 +1,28 @@
 const API_URL = "https://aquacore.onrender.com";
 
+async function readResponse(response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return {
+      message: text || "Empty response from backend",
+    };
+  }
+}
+
+function getRedirectUrl(data) {
+  return (
+    data?.authorization_url ||
+    data?.auth_url ||
+    data?.url ||
+    data?.redirect_url ||
+    data?.redirectUrl ||
+    null
+  );
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
@@ -24,45 +47,15 @@ export default async function handler(req, res) {
       return res.redirect(location);
     }
 
-    const text = await response.text();
-
-    let data = null;
-
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = {
-        message: text || "Empty response from backend",
-      };
-    }
-
-    const redirectUrl =
-      data?.authorization_url ||
-      data?.auth_url ||
-      data?.url ||
-      data?.redirect_url ||
-      data?.redirectUrl;
+    const data = await readResponse(response);
+    const redirectUrl = getRedirectUrl(data);
 
     if (redirectUrl) {
       return res.redirect(redirectUrl);
     }
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        message:
-          data?.message ||
-          data?.detail ||
-          "Не вдалося почати Google авторизацію",
-        detail: data?.detail,
-        backendStatus: response.status,
-        raw: data,
-      });
-    }
-
-    return res.status(200).json(data);
+    return res.status(response.status).json(data);
   } catch (error) {
-    console.error("Google login proxy error:", error);
-
     return res.status(500).json({
       message: error.message || "Google login proxy server error",
     });

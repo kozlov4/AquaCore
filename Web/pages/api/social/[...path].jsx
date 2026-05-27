@@ -38,14 +38,13 @@ export default async function handler(req, res) {
 
     if (!allowedMethods.includes(req.method)) {
       res.setHeader("Allow", allowedMethods);
+
       return res.status(405).json({
         message: "Method Not Allowed",
       });
     }
 
-    const backendUrl = `${API_URL}/social/${path}`;
-
-    const response = await fetch(backendUrl, {
+    const response = await fetch(`${API_URL}/social/${path}`, {
       method: req.method,
       headers: {
         Authorization: token,
@@ -64,6 +63,7 @@ export default async function handler(req, res) {
         message: getErrorMessage(data, "Backend request failed"),
         backendStatus: response.status,
         detail: data?.detail,
+        raw: data,
       });
     }
 

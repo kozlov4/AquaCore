@@ -2,76 +2,93 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Loader2 } from "lucide-react";
-import { googleCallbackLogin } from "../../services/authApi";
+
+function saveGoogleTokensFromQuery(query) {
+  const accessToken =
+    query.access_token || query.accessToken || query.token || query.access;
+
+  const refreshToken =
+    query.refresh_token || query.refreshToken || query.refresh;
+
+  const tokenType = query.token_type || query.tokenType || "Bearer";
+
+  if (!accessToken) {
+    throw new Error("Access token відсутній");
+  }
+
+  localStorage.setItem("access_token", String(accessToken));
+  localStorage.setItem("accessToken", String(accessToken));
+  localStorage.setItem("token", String(accessToken));
+  localStorage.setItem("token_type", String(tokenType));
+
+  if (refreshToken) {
+    localStorage.setItem("refresh_token", String(refreshToken));
+    localStorage.setItem("refreshToken", String(refreshToken));
+  }
+
+  if (query.email) {
+    localStorage.setItem("user_email", String(query.email));
+  }
+
+  if (query.name) {
+    localStorage.setItem("user_name", String(query.name));
+  }
+
+  if (query.nickname) {
+    localStorage.setItem("user_nickname", String(query.nickname));
+  }
+}
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function finishGoogleLogin() {
-      try {
-        if (!router.isReady) return;
+    if (!router.isReady) return;
 
-        const { code, error: googleError } = router.query;
+    try {
+      const { error: googleError } = router.query;
 
-        if (googleError) {
-          setError(String(googleError));
-          return;
-        }
-
-        if (!code) {
-          setError("Google code відсутній");
-          return;
-        }
-
-        await googleCallbackLogin(code);
-
-        router.replace("/dashboard");
-      } catch (error) {
-        setError(error.message || "Помилка Google авторизації");
+      if (googleError) {
+        setError(String(googleError));
+        return;
       }
-    }
 
-    finishGoogleLogin();
+      saveGoogleTokensFromQuery(router.query);
+
+      router.replace("/dashboard");
+    } catch (error) {
+      setError(error.message || "Помилка Google авторизації");
+    }
   }, [router.isReady, router.query, router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f8fafc] px-4">
-      <section className="w-full max-w-[430px] rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+    <main className="flex min-h-screen items-center justify-center bg-[#f8f9ff] px-4">
+      <section className="w-full max-w-[460px] rounded-[28px] bg-white px-8 py-10 text-center shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
         {!error ? (
           <>
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f3f0ff] text-[#635BFF]">
-              <Loader2 size={30} className="animate-spin" />
-            </div>
+            <div className="mx-auto mb-5 h-12 w-12 animate-spin rounded-full border-4 border-[#e5e7eb] border-t-[#635BFF]" />
 
-            <h1 className="text-[24px] font-black text-slate-950">
+            <h1 className="text-2xl font-black text-[#111827]">
               Авторизація через Google
             </h1>
 
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-              Зачекайте, ми завершуємо вхід у ваш акаунт AquaCore...
+            <p className="mt-3 text-sm text-[#6b7280]">
+              Зачекайте, ми завершуємо вхід у ваш акаунт...
             </p>
           </>
         ) : (
           <>
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
-              !
-            </div>
-
-            <h1 className="text-[24px] font-black text-slate-950">
+            <h1 className="text-2xl font-black text-[#111827]">
               Помилка входу
             </h1>
 
-            <p className="mt-3 text-sm font-semibold leading-6 text-red-500">
-              {error}
-            </p>
+            <p className="mt-3 text-sm text-[#dc2626]">{error}</p>
 
             <button
               type="button"
               onClick={() => router.push("/signIn")}
-              className="mt-6 h-11 rounded-xl bg-[#635BFF] px-6 text-sm font-black text-white transition hover:bg-[#5147f5]"
+              className="mt-6 rounded-xl bg-[#635BFF] px-6 py-3 text-sm font-black text-white transition hover:bg-[#5148e8]"
             >
               Повернутись до входу
             </button>

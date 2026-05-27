@@ -33,12 +33,18 @@ export default async function handler(req, res) {
       });
     }
 
-    const { code } = req.query;
+    const { code, error } = req.query;
+
+    if (error) {
+      return res.redirect(
+        `/google/callback?error=${encodeURIComponent(String(error))}`
+      );
+    }
 
     if (!code) {
-      return res.status(400).json({
-        message: "Google code is required",
-      });
+      return res.redirect(
+        `/google/callback?error=${encodeURIComponent("Google code is required")}`
+      );
     }
 
     const params = new URLSearchParams({
@@ -58,20 +64,59 @@ export default async function handler(req, res) {
     const data = await readResponse(response);
 
     if (!response.ok) {
-      return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завершити Google авторизацію"),
-        detail: data?.detail,
-        backendStatus: response.status,
-        raw: data,
-      });
+      const errorMessage = getErrorMessage(
+        data,
+        "Не вдалося завершити Google авторизацію"
+      );
+
+      return res.redirect(
+        `/google/callback?error=${encodeURIComponent(errorMessage)}`
+      );
     }
 
-    return res.status(200).json(data);
-  } catch (error) {
-    console.error("Google callback proxy error:", error);
+    const accessToken =
+      data?.access_token || data?.accessToken || data?.token || data?.access;
 
-    return res.status(500).json({
-      message: error.message || "Google callback proxy server error",
+    const refreshToken =
+      data?.refresh_token || data?.refreshToken || data?.refresh;
+
+    const tokenType = data?.token_type || data?.tokenType || "Bearer";
+
+    if (!accessToken) {
+      return res.redirect(
+        `/google/callback?error=${encodeURIComponent(
+          "Backend не повернув access_token"
+        )}`
+      );
+    }
+
+    const redirectParams = new URLSearchParams({
+      access_token: accessToken,
+      token_type: tokenType,
     });
+
+    if (refreshToken) {
+      redirectParams.set("refresh_token", refreshToken);
+    }
+
+    if (data?.email) {
+      redirectParams.set("email", data.email);
+    }
+
+    if (data?.name) {
+      redirectParams.set("name", data.name);
+    }
+
+    if (data?.nickname) {
+      redirectParams.set("nickname", data.nickname);
+    }
+
+    return res.redirect(`/google/callback?${redirectParams.toString()}`);
+  } catch (error) {
+    return res.redirect(
+      `/google/callback?error=${encodeURIComponent(
+        error.message || "Google callback proxy server error"
+      )}`
+    );
   }
 }
