@@ -129,7 +129,7 @@ export function Aquariums() {
       <WaterParamsModal
   isOpen={aquariums.isWaterParamsOpen}
   onClose={aquariums.closeWaterParamsModal}
-  onSave={aquariums.saveWaterParamsLocally}
+  onSave={aquariums.saveWaterParams}
   isSaving={aquariums.isSaving}
 />
 

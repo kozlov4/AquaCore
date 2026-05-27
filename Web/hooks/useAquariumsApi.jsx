@@ -10,10 +10,11 @@ import {
   updateAquarium,
 } from "../services/aquariumsApi";
 
+import { createWaterTest } from "../services/testsApi";
+
 export function useAquariumsApi() {
   const [aquariums, setAquariums] = useState([]);
   const [aquariumNames, setAquariumNames] = useState([]);
-
   const [selectedAquarium, setSelectedAquarium] = useState(null);
   const [editingAquarium, setEditingAquarium] = useState(null);
   const [deletingAquarium, setDeletingAquarium] = useState(null);
@@ -25,7 +26,6 @@ export function useAquariumsApi() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
   const [aquariumsError, setAquariumsError] = useState("");
 
   const loadAquariums = useCallback(async () => {
@@ -196,9 +196,7 @@ export function useAquariumsApi() {
 
       await deleteAquarium(id);
 
-      setAquariums((prev) =>
-        prev.filter((aquarium) => aquarium.id !== id)
-      );
+      setAquariums((prev) => prev.filter((aquarium) => aquarium.id !== id));
 
       setIsSettingsOpen(false);
       setSelectedAquarium(null);
@@ -214,28 +212,50 @@ export function useAquariumsApi() {
     }
   };
 
-  const saveWaterParamsLocally = (params) => {
-    if (!selectedAquarium?.id) return;
+  const saveWaterParams = async (params) => {
+    try {
+      if (!selectedAquarium?.id) {
+        throw new Error("Не обрано акваріум для тесту");
+      }
 
-    setAquariums((prev) =>
-      prev.map((aquarium) =>
-        aquarium.id === selectedAquarium.id
-          ? {
-              ...aquarium,
-              lastTest: "Останній тест: сьогодні",
-              params: `pH ${params.ph} · GH ${params.gh} · KH ${params.kh}`,
-            }
-          : aquarium
-      )
-    );
+      setIsSaving(true);
+      setAquariumsError("");
 
-    setIsWaterParamsOpen(false);
+      await createWaterTest(selectedAquarium.id, params);
+
+      setAquariums((prev) =>
+        prev.map((aquarium) =>
+          aquarium.id === selectedAquarium.id
+            ? {
+                ...aquarium,
+                lastTest: {
+                  days_ago: 0,
+                  ph: params.ph,
+                  gh: params.gh,
+                  kh: params.kh,
+                },
+                params: `pH ${params.ph || "—"} · GH ${
+                  params.gh || "—"
+                } · KH ${params.kh || "—"}`,
+              }
+            : aquarium
+        )
+      );
+
+      setIsWaterParamsOpen(false);
+
+      await loadAquariums();
+    } catch (error) {
+      setAquariumsError(error.message || "Не вдалося створити тест води");
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return {
     aquariums,
     aquariumNames,
-
     selectedAquarium,
     editingAquarium,
     deletingAquarium,
@@ -247,7 +267,6 @@ export function useAquariumsApi() {
 
     isLoading,
     isSaving,
-
     aquariumsError,
 
     loadAquariums,
@@ -274,6 +293,10 @@ export function useAquariumsApi() {
     confirmDeleteAquarium,
     deleteSelectedAquarium,
 
-    saveWaterParamsLocally,
+    saveWaterParams,
+
+    // залишив стару назву, щоб нічого не зламалось,
+    // якщо вона вже використовується в Aquariums.jsx
+    saveWaterParamsLocally: saveWaterParams,
   };
 }
