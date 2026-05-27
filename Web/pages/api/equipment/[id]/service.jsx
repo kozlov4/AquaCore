@@ -14,7 +14,9 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -25,6 +27,14 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", ["POST"]);
+
+      return res.status(405).json({
+        message: "Method not allowed",
+      });
+    }
+
     const token = req.headers.authorization;
     const { id } = req.query;
 
@@ -40,14 +50,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
-
-      return res.status(405).json({
-        message: "Method not allowed",
-      });
-    }
-
     const response = await fetch(`${API_URL}/equipment/${id}/service`, {
       method: "POST",
       headers: {
@@ -57,6 +59,9 @@ export default async function handler(req, res) {
     });
 
     const data = await readResponse(response);
+
+    console.log(`POST /equipment/${id}/service status:`, response.status);
+    console.log(`POST /equipment/${id}/service response:`, data);
 
     if (!response.ok) {
       return res.status(response.status).json({

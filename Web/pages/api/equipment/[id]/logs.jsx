@@ -14,7 +14,9 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -25,6 +27,14 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", ["POST"]);
+
+      return res.status(405).json({
+        message: "Method not allowed",
+      });
+    }
+
     const token = req.headers.authorization;
     const { id } = req.query;
 
@@ -40,13 +50,14 @@ export default async function handler(req, res) {
       });
     }
 
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
-
-      return res.status(405).json({
-        message: "Method not allowed",
-      });
-    }
+    const payload = {
+      log_type: String(req.body?.log_type || "").trim(),
+      log_date: req.body?.log_date,
+      description: req.body?.description
+        ? String(req.body.description).trim()
+        : null,
+      is_resolved: Boolean(req.body?.is_resolved),
+    };
 
     const response = await fetch(`${API_URL}/equipment/${id}/logs`, {
       method: "POST",
@@ -55,20 +66,25 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(payload),
     });
 
     const data = await readResponse(response);
 
+    console.log(`POST /equipment/${id}/logs status:`, response.status);
+    console.log(`POST /equipment/${id}/logs payload:`, payload);
+    console.log(`POST /equipment/${id}/logs response:`, data);
+
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося зафіксувати проблему"),
+        message: getErrorMessage(data, "Не вдалося додати запис"),
         detail: data?.detail,
         backendStatus: response.status,
+        sentPayload: payload,
       });
     }
 
-    return res.status(201).json(data);
+    return res.status(response.status || 201).json(data);
   } catch (error) {
     console.error("Equipment logs proxy error:", error);
 

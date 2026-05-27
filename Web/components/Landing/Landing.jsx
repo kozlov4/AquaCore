@@ -14,7 +14,7 @@ const features = [
     title: "Аналітичний моніторинг",
     text: "Фіксуйте показники води (pH, аміак, нітрити) та відслідковуйте їх зміни на динамічних графіках. ",
     button: "Розпочати моніторинг...",
-    image: "/images/landing/analytics.png",
+    image: "/images/landing/graphic.jpg",
     href: "/analytics",
     reverse: false,
   },
@@ -22,7 +22,7 @@ const features = [
     title: "Перевірка сумісності",
     text: "Доступ до великої бази риб та рослин. Алгоритм автоматично перевірить біологічну сумісність видів перед їх додаванням до акваріума.",
     button: "Перевірити своїх рибок...",
-    image: "/images/landing/compatibility.png",
+    image: "/images/landing/critic.jpg",
     href: "/compatibility",
     reverse: true,
   },
@@ -30,7 +30,7 @@ const features = [
     title: "Банк калькуляторів",
     text: "Вбудовані інструменти для швидкого розрахунку об'єму, маси ґрунту, дозування добрив та концентрації CO2",
     button: "Відкрити інструменти...",
-    image: "/images/landing/calculators.png",
+    image: "/images/landing/calc.jpg",
     href: "/calculators",
     reverse: false,
   },
@@ -38,7 +38,7 @@ const features = [
     title: "Розумний планувальник",
     text: "Створюйте нагадування про рутинні задачі: підміну води, годування чи очищення фільтрів. Більше жодних пропущених процедур.",
     button: "Налаштувати графік...",
-    image: "/images/landing/tasks.png",
+    image: "/images/landing/plan.jpg",
     href: "/tasks",
     reverse: true,
   },
@@ -46,7 +46,7 @@ const features = [
     title: "Спільнота та Блоги",
     text: "Зберігайте історію у приватній галереї, ведіть щоденник спостережень та публікуйте власні статті у відкритій Базі Знань.",
     button: "Обмінюйтеся емоціями...",
-    image: "/images/landing/community.png",
+    image: "/images/landing/chats.jpg",
     href: "/feed",
     reverse: false,
   },
@@ -54,7 +54,7 @@ const features = [
     title: "Профілі акваріумів",
     text: "Створюйте віртуальні копії своїх резервуарів із детальною специфікацією габаритів та встановленого обладнання.",
     button: "Створити профіль...",
-    image: "/images/landing/profile.png",
+    image: "/images/landing/aqa.jpg",
     href: "/aquariums",
     reverse: true,
   },
@@ -122,7 +122,7 @@ const fadeSide = (direction = "left") => ({
 
 function LandingHeader() {
   return (
-    <header className="h-[76px] bg-white px-[30px] grid grid-cols-[180px_1fr_230px] items-center max-lg:h-auto max-lg:grid-cols-[120px_1fr] max-lg:gap-[18px] max-lg:px-5 max-lg:py-5 max-md:flex max-md:flex-col">
+    <header className="h-[76px] bg-[#ffffff] px-[30px] grid grid-cols-[180px_1fr_230px] items-center max-lg:h-auto max-lg:grid-cols-[120px_1fr] max-lg:gap-[18px] max-lg:px-5 max-lg:py-5 max-md:flex max-md:flex-col">
       <Link href="/" className="inline-flex w-fit items-center" aria-label="AquaCore">
         <img
           src="/images/Logo.svg"
@@ -136,7 +136,7 @@ function LandingHeader() {
           Чому саме <span className="text-[#7957ff]">AquaCore</span>
         </a>
 
-        <a href="#species" className="transition-colors duration-300 hover:text-[#7957ff]">
+        <a href="/reviews" className="transition-colors duration-300 hover:text-[#7957ff]">
           Відгуки
         </a>
 
@@ -412,7 +412,7 @@ export function Landing() {
   return (
     <main
       id="top"
-      className="mx-auto min-h-screen w-[min(100%,1450px)] overflow-hidden bg-white text-[#252932]"
+      className="mx-auto min-h-screen w-[100%] overflow-hidden bg-white text-[#252932]"
     >
       <LandingHeader />
       <HeroSection />

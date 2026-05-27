@@ -14,11 +14,14 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
   if (typeof data?.message === "string") return data.message;
+  if (typeof data?.error === "string") return data.error;
 
   return fallbackMessage;
 }
@@ -49,6 +52,7 @@ export default async function handler(req, res) {
           message: getErrorMessage(data, "Не вдалося завантажити чернетки"),
           detail: data?.detail,
           backendStatus: response.status,
+          backendResponse: data,
         });
       }
 
@@ -56,6 +60,16 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
+      const payload = {
+        title: String(req.body?.title || "").trim(),
+        excerpt: String(req.body?.excerpt || "").trim(),
+        content: String(req.body?.content || "").trim(),
+        category_id: Number(req.body?.category_id),
+        image_id: Number(req.body?.image_id),
+      };
+
+      console.log("POST /articles/draft proxy sent payload:", payload);
+
       const response = await fetch(`${API_URL}/articles/draft`, {
         method: "POST",
         headers: {
@@ -63,20 +77,27 @@ export default async function handler(req, res) {
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify(payload),
       });
 
       const data = await readResponse(response);
+
+      console.log("POST /articles/draft proxy response:", {
+        status: response.status,
+        data,
+      });
 
       if (!response.ok) {
         return res.status(response.status).json({
           message: getErrorMessage(data, "Не вдалося зберегти чернетку"),
           detail: data?.detail,
           backendStatus: response.status,
+          backendResponse: data,
+          sentPayload: payload,
         });
       }
 
-      return res.status(201).json(data);
+      return res.status(response.status || 201).json(data);
     }
 
     res.setHeader("Allow", ["GET", "POST"]);

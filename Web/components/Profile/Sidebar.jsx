@@ -85,7 +85,7 @@ const menuGroups = [
       },
       {
         label: "База Знань",
-        href: "/knowledge-base",
+        href: "/articles",
         icon: "/images/Book.svg",
       },
       {

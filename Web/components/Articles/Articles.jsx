@@ -6,12 +6,13 @@ import {
   BookOpen,
   ChevronLeft,
   Edit3,
-  FileText,
+  ImagePlus,
   Loader2,
   MoreVertical,
   Plus,
   Search,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -249,18 +250,84 @@ function ArticleEditorModal({
   );
   const [content, setContent] = useState(initialData?.content || "");
 
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(
+    initialData?.coverImageUrl || ""
+  );
+  const [localError, setLocalError] = useState("");
+
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || "");
       setSubtitle(initialData.subtitle || initialData.excerpt || "");
       setCategory(initialData.categoryId || categories[0]?.id || "");
       setContent(initialData.content || "");
+      setCoverFile(null);
+      setCoverPreview(initialData.coverImageUrl || "");
+      setLocalError("");
     } else {
+      setTitle("");
+      setSubtitle("");
+      setContent("");
       setCategory(categories[0]?.id || "");
+      setCoverFile(null);
+      setCoverPreview("");
+      setLocalError("");
     }
   }, [initialData, categories]);
 
+  useEffect(() => {
+    if (!coverFile) return;
+
+    const objectUrl = URL.createObjectURL(coverFile);
+    setCoverPreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [coverFile]);
+
   if (!isOpen) return null;
+
+  const validateCover = (file) => {
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Обкладинка має бути у форматі PNG, JPG, JPEG або WEBP");
+    }
+
+    const maxSizeBytes = 10 * 1024 * 1024;
+
+    if (file.size > maxSizeBytes) {
+      throw new Error("Файл обкладинки має бути не більше 10 МБ");
+    }
+  };
+
+  const handleCoverChange = (event) => {
+    try {
+      setLocalError("");
+
+      const file = event.target.files?.[0];
+
+      if (!file) return;
+
+      validateCover(file);
+      setCoverFile(file);
+    } catch (error) {
+      setCoverFile(null);
+      setLocalError(error.message || "Не вдалося вибрати обкладинку");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const removeCover = () => {
+    setCoverFile(null);
+    setCoverPreview("");
+  };
 
   const payload = {
     title,
@@ -268,7 +335,8 @@ function ArticleEditorModal({
     excerpt: subtitle,
     categoryId: category,
     content,
-    imageId: initialData?.imageId || 1,
+    existingImageId: initialData?.imageId || null,
+    coverFile,
   };
 
   return (
@@ -293,10 +361,11 @@ function ArticleEditorModal({
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={onClose}
               disabled={isSaving}
-              className="h-10 rounded-xl px-4 text-sm font-black text-slate-500 hover:bg-slate-50"
+              className="h-10 rounded-xl px-4 text-sm font-black text-slate-500 hover:bg-slate-50 disabled:opacity-60"
             >
-              Попередній перегляд
+              Скасувати
             </button>
 
             <button
@@ -312,13 +381,58 @@ function ArticleEditorModal({
         </div>
 
         <div className="p-7">
-          <div className="mb-5 flex h-[170px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400">
-            <FileText size={28} />
-            <p className="mt-2 text-sm font-black">Додати головну обкладинку</p>
-            <p className="mt-1 text-xs font-semibold">
-              Зараз стаття створюється з image_id = 1
-            </p>
-          </div>
+          <label className="relative mb-5 flex h-[190px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 transition hover:border-[#635BFF] hover:bg-[#f8f7ff]">
+            {coverPreview ? (
+              <>
+                <img
+                  src={coverPreview}
+                  alt="Обкладинка статті"
+                  className="h-full w-full object-cover"
+                />
+
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition hover:opacity-100">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-lg">
+                    <ImagePlus size={15} />
+                    Замінити обкладинку
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#635BFF] shadow-sm">
+                  <Upload size={22} />
+                </div>
+
+                <p className="text-sm font-black text-slate-700">
+                  Додати головну обкладинку
+                </p>
+
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  PNG, JPG, JPEG або WEBP до 10 МБ
+                </p>
+              </>
+            )}
+
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              className="hidden"
+              onChange={handleCoverChange}
+              disabled={isSaving}
+            />
+          </label>
+
+          {coverPreview && (
+            <button
+              type="button"
+              onClick={removeCover}
+              disabled={isSaving}
+              className="mb-5 inline-flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-xs font-black text-red-500 transition hover:bg-red-100 disabled:opacity-60"
+            >
+              <Trash2 size={14} />
+              Видалити обкладинку
+            </button>
+          )}
 
           <div className="mb-5">
             <p className="mb-3 text-[12px] font-black uppercase text-slate-400">
@@ -367,12 +481,14 @@ function ArticleEditorModal({
             >
               B
             </button>
+
             <button
               type="button"
               className="rounded-lg px-3 py-2 text-sm font-black italic hover:bg-white"
             >
               I
             </button>
+
             <button
               type="button"
               className="rounded-lg px-3 py-2 text-sm font-black hover:bg-white"
@@ -385,9 +501,15 @@ function ArticleEditorModal({
             value={content}
             onChange={(event) => setContent(event.target.value)}
             disabled={isSaving}
-            placeholder="Почніть писати свою історію тут..."
+            placeholder="Почніть писати свою статтю тут..."
             className="min-h-[380px] w-full resize-none rounded-2xl border border-slate-200 px-5 py-4 text-[16px] font-medium leading-8 text-slate-700 outline-none focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
           />
+
+          {localError && (
+            <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+              {localError}
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
@@ -409,6 +531,7 @@ function DraftsModal({ isOpen, drafts, isLoading, onClose, onCreate, onEdit }) {
             <h2 className="text-lg font-black text-slate-950">
               Написання статті
             </h2>
+
             <p className="text-xs font-semibold text-slate-400">
               Оберіть дію або продовжіть чернетку
             </p>
@@ -454,9 +577,11 @@ function DraftsModal({ isOpen, drafts, isLoading, onClose, onCreate, onEdit }) {
                   <p className="text-xs font-black text-[#635BFF]">
                     {draft.category}
                   </p>
+
                   <h3 className="mt-1 text-sm font-black text-slate-950">
                     {draft.title}
                   </h3>
+
                   <p className="mt-2 text-xs font-semibold text-slate-400">
                     Продовжити редагування
                   </p>
@@ -487,6 +612,7 @@ function DeleteArticleModal({ article, isDeleting, onCancel, onConfirm }) {
         <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-6 py-5">
           <div className="flex items-center gap-3">
             <AlertTriangle size={24} className="text-red-500" />
+
             <h2 className="text-xl font-black text-red-700">
               Видалення статті
             </h2>
@@ -571,6 +697,7 @@ export function Articles() {
       const data = await getArticles({
         search,
         category: selectedCategory,
+        targetType: activeTab,
       });
 
       setArticles(data);
@@ -580,7 +707,7 @@ export function Articles() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, selectedCategory]);
+  }, [search, selectedCategory, activeTab]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -616,6 +743,12 @@ export function Articles() {
     const timeout = setTimeout(loadArticles, 250);
     return () => clearTimeout(timeout);
   }, [loadArticles]);
+
+  useEffect(() => {
+    if (activeTab === "drafts") {
+      loadDrafts();
+    }
+  }, [activeTab, loadDrafts]);
 
   const visibleArticles = useMemo(() => {
     if (activeTab === "drafts") return drafts;
@@ -693,6 +826,10 @@ export function Articles() {
 
     if (!payload.categoryId) {
       throw new Error("Оберіть рубрику");
+    }
+
+    if (!payload.coverFile && !payload.existingImageId) {
+      throw new Error("Додайте обкладинку статті");
     }
   };
 
@@ -840,6 +977,7 @@ export function Articles() {
                   ["official", "Офіційні"],
                   ["community", "Спільнота"],
                   ["mine", "Мої статті"],
+                  ["drafts", "Чернетки"],
                 ].map(([key, label]) => (
                   <button
                     key={key}
@@ -887,7 +1025,7 @@ export function Articles() {
             ))}
           </div>
 
-          {isLoading ? (
+          {isLoading || (activeTab === "drafts" && isDraftsLoading) ? (
             <div className="flex h-[320px] items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
               <Loader2 size={22} className="mr-3 animate-spin text-slate-400" />
               <span className="text-sm font-bold text-slate-400">
@@ -905,7 +1043,10 @@ export function Articles() {
                   onEdit={openEdit}
                   onDelete={setDeleteTarget}
                   showActions={
-                    activeTab === "mine" || article.isMine || article.isDraft
+                    activeTab === "mine" ||
+                    activeTab === "drafts" ||
+                    article.isMine ||
+                    article.isDraft
                   }
                 />
               ))}
@@ -913,9 +1054,11 @@ export function Articles() {
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
               <BookOpen size={34} className="mx-auto mb-3 text-slate-400" />
+
               <p className="text-[16px] font-black text-slate-900">
                 Статей не знайдено
               </p>
+
               <p className="mt-2 text-sm font-semibold text-slate-400">
                 Спробуйте змінити пошук, рубрику або створіть нову статтю.
               </p>

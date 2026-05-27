@@ -1,10 +1,13 @@
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
   if (typeof data?.message === "string") return data.message;
+  if (typeof data?.error === "string") return data.error;
 
   return fallbackMessage;
 }
@@ -45,6 +48,52 @@ function formatDate(value) {
   });
 }
 
+function extractImageId(data) {
+  return (
+    data?.id ||
+    data?.image_id ||
+    data?.imageId ||
+    data?.image?.id ||
+    data?.data?.id ||
+    data?.data?.image_id ||
+    null
+  );
+}
+
+async function uploadArticleCover(file) {
+  if (!file) return null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/upload-image", {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+    },
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => null);
+
+  console.log("UPLOAD ARTICLE COVER FRONTEND:", {
+    status: response.status,
+    data,
+  });
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося завантажити обкладинку"));
+  }
+
+  const imageId = extractImageId(data);
+
+  if (!imageId) {
+    throw new Error("Backend не повернув image_id після завантаження обкладинки");
+  }
+
+  return imageId;
+}
+
 function normalizeCategory(item) {
   if (typeof item === "string") {
     return {
@@ -57,8 +106,17 @@ function normalizeCategory(item) {
   return {
     id: item.id || item.category_id || item.slug || item.name,
     name: item.name || item.title || item.slug || "Категорія",
-    slug: item.slug || item.name || item.id,
+    slug: item.slug || item.name || String(item.id || ""),
+    raw: item,
   };
+}
+
+function normalizeTargetType(targetType) {
+  if (!targetType || targetType === "all") return "Всі статті";
+  if (targetType === "official") return "Офіційні";
+  if (targetType === "community") return "Спільнота";
+
+  return String(targetType);
 }
 
 export function normalizeArticle(item) {
@@ -84,37 +142,39 @@ export function normalizeArticle(item) {
     "";
 
   const rawAuthor =
-    item.author ||
-    item.user ||
-    item.author_name ||
-    item.authorName ||
-    null;
+    item.author || item.user || item.author_name || item.authorName || null;
 
   const authorName =
     typeof rawAuthor === "object" && rawAuthor !== null
       ? rawAuthor.name || rawAuthor.username || rawAuthor.email || "Автор"
       : rawAuthor || "Автор";
 
+  const content = item.content || item.body || item.text || "";
+  const excerpt =
+    item.excerpt ||
+    item.description ||
+    item.preview ||
+    String(content || "").slice(0, 180);
+
   return {
     id: item.id || item.article_id,
+
     title: item.title || "Без назви",
     subtitle: item.subtitle || item.description || "",
-    content: item.content || item.body || item.text || "",
-    excerpt:
-      item.excerpt ||
-      item.description ||
-      item.preview ||
-      String(item.content || item.body || item.text || "").slice(0, 180),
+    content,
+    excerpt,
 
     category: String(categoryName),
     categoryId,
 
-    imageId: item.image_id || item.imageId || null,
+    imageId: item.image_id || item.imageId || item.image?.id || null,
     coverImageUrl:
       item.cover_image_url ||
       item.coverImageUrl ||
       item.image_url ||
       item.imageUrl ||
+      item.image?.url ||
+      item.image?.image_url ||
       "",
 
     authorName: String(authorName),
@@ -126,42 +186,64 @@ export function normalizeArticle(item) {
         : ""),
 
     views: item.views || item.views_count || item.reads || 0,
+
     status: item.status || (item.is_draft ? "draft" : "published"),
     isOfficial: Boolean(item.is_official || item.official),
     isMine: Boolean(item.is_mine || item.is_author || item.mine),
     isDraft: Boolean(item.is_draft || item.status === "draft"),
+
     createdAt: item.created_at || item.createdAt || item.published_at || "",
     updatedAt: item.updated_at || item.updatedAt || "",
     dateLabel: formatDate(
       item.created_at || item.createdAt || item.published_at || item.updated_at
     ),
+
     raw: item,
   };
 }
 
-function buildArticlePayload(payload) {
+async function buildArticlePayload(payload) {
   const title = String(payload.title || "").trim();
-  const subtitle = String(payload.subtitle || "").trim();
   const content = String(payload.content || "").trim();
-
   const excerpt =
-    String(payload.excerpt || "").trim() || subtitle || content.slice(0, 180);
+    String(payload.excerpt || payload.subtitle || "").trim() ||
+    content.slice(0, 180);
 
-  const categoryId = Number(
-    payload.category_id || payload.categoryId || payload.category
-  );
+  const rawCategoryId =
+    payload.category_id || payload.categoryId || payload.category;
 
-  const imageId = Number(
-    payload.image_id || payload.imageId || payload.coverImageId || 1
-  );
+  const categoryIdNumber = Number(rawCategoryId);
 
-  return {
+  if (!rawCategoryId || Number.isNaN(categoryIdNumber)) {
+    throw new Error("Оберіть коректну рубрику статті");
+  }
+
+  let imageId =
+    payload.image_id ||
+    payload.imageId ||
+    payload.coverImageId ||
+    payload.existingImageId ||
+    null;
+
+  if (payload.coverFile) {
+    imageId = await uploadArticleCover(payload.coverFile);
+  }
+
+  if (!imageId) {
+    throw new Error("Додайте обкладинку статті");
+  }
+
+  const cleanPayload = {
     title,
     excerpt,
     content,
-    category_id: categoryId,
-    image_id: imageId,
+    category_id: categoryIdNumber,
+    image_id: Number(imageId),
   };
+
+  console.log("ARTICLE PAYLOAD READY:", cleanPayload);
+
+  return cleanPayload;
 }
 
 export async function getArticleCategories() {
@@ -182,15 +264,27 @@ export async function getArticleCategories() {
   return Array.isArray(data) ? data.map(normalizeCategory) : [];
 }
 
-export async function getArticles({ search = "", category = "all" } = {}) {
+export async function getArticles({
+  search = "",
+  category = "all",
+  targetType = "all",
+} = {}) {
   const params = new URLSearchParams();
 
-  if (search.trim()) {
-    params.append("search", search.trim());
+  const searchValue = String(search || "").trim();
+
+  if (searchValue) {
+    params.append("search_text", searchValue);
   }
 
   if (category && category !== "all") {
-    params.append("category", category);
+    params.append("category_ids", String(category));
+  }
+
+  const backendTargetType = normalizeTargetType(targetType);
+
+  if (backendTargetType && backendTargetType !== "Всі статті") {
+    params.append("target_type", backendTargetType);
   }
 
   const queryString = params.toString();
@@ -259,7 +353,7 @@ export async function getArticle(articleId) {
 }
 
 export async function createArticle(payload) {
-  const cleanPayload = buildArticlePayload(payload);
+  const cleanPayload = await buildArticlePayload(payload);
 
   const response = await fetch("/api/articles", {
     method: "POST",
@@ -273,6 +367,12 @@ export async function createArticle(payload) {
 
   const data = await response.json().catch(() => null);
 
+  console.log("CREATE ARTICLE FRONTEND:", {
+    status: response.status,
+    sentPayload: cleanPayload,
+    data,
+  });
+
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося опублікувати статтю"));
   }
@@ -281,7 +381,7 @@ export async function createArticle(payload) {
 }
 
 export async function createDraftArticle(payload) {
-  const cleanPayload = buildArticlePayload(payload);
+  const cleanPayload = await buildArticlePayload(payload);
 
   const response = await fetch("/api/articles/draft", {
     method: "POST",
@@ -295,6 +395,12 @@ export async function createDraftArticle(payload) {
 
   const data = await response.json().catch(() => null);
 
+  console.log("CREATE DRAFT ARTICLE FRONTEND:", {
+    status: response.status,
+    sentPayload: cleanPayload,
+    data,
+  });
+
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося зберегти чернетку"));
   }
@@ -307,7 +413,7 @@ export async function updateArticle(articleId, payload) {
     throw new Error("Article id is required");
   }
 
-  const cleanPayload = buildArticlePayload(payload);
+  const cleanPayload = await buildArticlePayload(payload);
 
   const response = await fetch(`/api/articles/${encodeURIComponent(articleId)}`, {
     method: "PUT",
@@ -346,6 +452,7 @@ export async function deleteArticle(articleId) {
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
+
     throw new Error(getErrorMessage(data, "Не вдалося видалити статтю"));
   }
 
