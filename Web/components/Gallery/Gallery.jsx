@@ -3,13 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Camera,
+  Check,
   ChevronDown,
-  Grid2X2,
-  Image as ImageIcon,
   Loader2,
   Pencil,
   Plus,
-  Search,
   Trash2,
   Upload,
   X,
@@ -37,6 +35,152 @@ const categories = [
 
 function getCategoryValue(value) {
   return value === "Всі фотографії" ? "all" : value;
+}
+
+function getCategoryIcon(category) {
+  const value = String(category || "").toLowerCase();
+
+  if (value.includes("всі")) return "🖼️";
+  if (value.includes("рослин")) return "🌿";
+  if (value.includes("жител")) return "🐠";
+  if (value.includes("загальний")) return "🌊";
+  if (value.includes("інше")) return "✨";
+
+  return "🖼️";
+}
+
+function getAquariumIcon(value) {
+  if (!value || value === "all") return "🌐";
+  return "🐟";
+}
+
+function PrettyDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder,
+  getIcon,
+  disabled = false,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedOption =
+    options.find((option) => String(option.value) === String(value)) ||
+    options[0];
+
+  const selectedLabel = selectedOption?.label || placeholder;
+  const selectedIcon = selectedOption ? getIcon?.(selectedOption) || "✨" : "✨";
+
+  return (
+    <div className="relative w-full min-w-[220px]">
+      {label && (
+        <p className="mb-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+          {label}
+        </p>
+      )}
+
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`
+          group flex h-12 w-full items-center justify-between gap-3
+          rounded-2xl border border-slate-200 bg-white px-4
+          text-left shadow-[0_10px_30px_rgba(15,23,42,0.04)]
+          transition
+          hover:border-[#635BFF]/50 hover:shadow-[0_16px_38px_rgba(99,91,255,0.12)]
+          focus:border-[#635BFF] focus:outline-none focus:ring-4 focus:ring-[#635BFF]/10
+          ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+        `}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#635BFF]/10 text-base">
+            {selectedIcon}
+          </span>
+
+          <span className="min-w-0 truncate text-sm font-black text-slate-800">
+            {selectedLabel || placeholder}
+          </span>
+        </span>
+
+        <ChevronDown
+          size={18}
+          className={`shrink-0 text-slate-400 transition duration-200 group-hover:text-[#635BFF] ${
+            isOpen ? "rotate-180 text-[#635BFF]" : ""
+          }`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Закрити меню"
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 z-30 cursor-default"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.96 }}
+              transition={{ duration: 0.16 }}
+              className="
+                absolute left-0 top-[calc(100%+10px)] z-40
+                w-full overflow-hidden rounded-2xl border border-slate-100
+                bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.16)]
+              "
+            >
+              <div className="max-h-[260px] overflow-y-auto pr-1">
+                {options.map((option) => {
+                  const active = String(option.value) === String(value);
+                  const optionIcon = getIcon?.(option) || "✨";
+
+                  return (
+                    <button
+                      key={String(option.value)}
+                      type="button"
+                      onClick={() => {
+                        onChange(option.value);
+                        setIsOpen(false);
+                      }}
+                      className={`
+                        flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3
+                        text-left transition
+                        ${
+                          active
+                            ? "bg-[#635BFF] text-white shadow-[0_10px_24px_rgba(99,91,255,0.22)]"
+                            : "text-slate-700 hover:bg-[#f8f7ff] hover:text-[#635BFF]"
+                        }
+                      `}
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-base ${
+                            active ? "bg-white/20" : "bg-slate-100"
+                          }`}
+                        >
+                          {optionIcon}
+                        </span>
+
+                        <span className="min-w-0 truncate text-sm font-black">
+                          {option.label}
+                        </span>
+                      </span>
+
+                      {active && <Check size={17} className="shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 function GalleryCard({ photo, index, onOpen }) {
@@ -67,6 +211,7 @@ function GalleryCard({ photo, index, onOpen }) {
         <p className="text-sm font-black text-white">
           {photo.signature || "Без опису"}
         </p>
+
         <p className="mt-1 text-xs font-bold text-white/70">
           {photo.aquariumName}
         </p>
@@ -343,7 +488,11 @@ function PhotoViewerModal({
               disabled={isDeleting}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition hover:bg-red-500 hover:text-white disabled:opacity-60"
             >
-              {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+              {isDeleting ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Trash2 size={18} />
+              )}
             </button>
 
             <button
@@ -462,10 +611,6 @@ export function Gallery() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
-
-  const selectedAquarium = useMemo(() => {
-    return aquariums.find((item) => item.name === selectedAquariumName);
-  }, [aquariums, selectedAquariumName]);
 
   const loadPhotos = useCallback(async () => {
     try {
@@ -620,6 +765,31 @@ export function Gallery() {
     }
   };
 
+  const aquariumOptions = [
+    {
+      value: "all",
+      label: "Усі екосистеми",
+    },
+    ...aquariums.map((aquarium) => ({
+      value: aquarium.name,
+      label: aquarium.name,
+      aquarium,
+    })),
+  ];
+
+  const categoryOptions = [
+    {
+      value: "all",
+      label: "Всі фотографії",
+    },
+    ...categories
+      .filter((item) => item !== "Всі фотографії")
+      .map((category) => ({
+        value: getCategoryValue(category),
+        label: category,
+      })),
+  ];
+
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <Sidebar />
@@ -653,80 +823,56 @@ export function Gallery() {
             </div>
           )}
 
-          <div className="mb-6 rounded-[18px] border border-slate-100 bg-white p-4 shadow-[0_12px_34px_rgba(15,23,42,0.04)]">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative min-w-[220px]">
-                <select
-                  value={selectedAquariumName}
-                  onChange={(event) =>
-                    setSelectedAquariumName(event.target.value)
-                  }
-                  className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-9 text-sm font-black text-slate-700 outline-none focus:border-[#635BFF]"
-                >
-                  <option value="all">Усі екосистеми</option>
+          <div className="mb-7 rounded-[24px] border border-slate-100 bg-white p-4 shadow-[0_16px_45px_rgba(15,23,42,0.05)]">
+            <div className="grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+              <PrettyDropdown
+                label="Екосистема"
+                value={selectedAquariumName}
+                placeholder="Усі екосистеми"
+                options={aquariumOptions}
+                onChange={setSelectedAquariumName}
+                getIcon={(option) => getAquariumIcon(option.value)}
+              />
 
-                  {aquariums.map((aquarium) => (
-                    <option key={aquarium.id} value={aquarium.name}>
-                      {aquarium.name}
-                    </option>
-                  ))}
-                </select>
+              <PrettyDropdown
+                label="Категорія фото"
+                value={selectedCategory}
+                placeholder="Всі фотографії"
+                options={categoryOptions}
+                onChange={setSelectedCategory}
+                getIcon={(option) => getCategoryIcon(option.label)}
+              />
 
-                <ChevronDown
-                  size={16}
-                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-              </div>
+              <div>
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                  Сортування
+                </p>
 
-              <div className="relative min-w-[200px]">
-                <select
-                  value={selectedCategory}
-                  onChange={(event) =>
-                    setSelectedCategory(getCategoryValue(event.target.value))
-                  }
-                  className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-9 text-sm font-black text-slate-700 outline-none focus:border-[#635BFF]"
-                >
-                  <option value="all">Всі фотографії</option>
+                <div className="flex h-12 rounded-2xl bg-slate-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder("newest")}
+                    className={`rounded-xl px-4 text-xs font-black transition ${
+                      sortOrder === "newest"
+                        ? "bg-white text-slate-950 shadow-sm"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    Найновіші
+                  </button>
 
-                  {categories
-                    .filter((item) => item !== "Всі фотографії")
-                    .map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                </select>
-
-                <ChevronDown
-                  size={16}
-                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-              </div>
-
-              <div className="ml-auto flex rounded-xl bg-slate-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => setSortOrder("newest")}
-                  className={`h-8 rounded-lg px-3 text-xs font-black transition ${
-                    sortOrder === "newest"
-                      ? "bg-white text-slate-950 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                  }`}
-                >
-                  Найновіші
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSortOrder("oldest")}
-                  className={`h-8 rounded-lg px-3 text-xs font-black transition ${
-                    sortOrder === "oldest"
-                      ? "bg-white text-slate-950 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                  }`}
-                >
-                  Найстаріші
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder("oldest")}
+                    className={`rounded-xl px-4 text-xs font-black transition ${
+                      sortOrder === "oldest"
+                        ? "bg-white text-slate-950 shadow-sm"
+                        : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    Найстаріші
+                  </button>
+                </div>
               </div>
             </div>
           </div>

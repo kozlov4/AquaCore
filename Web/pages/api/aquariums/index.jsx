@@ -4,12 +4,23 @@ async function readResponse(response) {
   const text = await response.text();
 
   try {
-    return JSON.parse(text);
+    return text ? JSON.parse(text) : {};
   } catch {
     return {
       message: text || "Empty response from backend",
     };
   }
+}
+
+function getErrorMessage(data, fallbackMessage) {
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail[0]?.msg || fallbackMessage;
+  }
+
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
+
+  return fallbackMessage;
 }
 
 export default async function handler(req, res) {
@@ -23,46 +34,54 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const response = await fetch(`${API_URL}/aquariums/my-aquariums/`, {
+      const response = await fetch(`${API_URL}/aquariums/my-aquariums`, {
         method: "GET",
         headers: {
+          Accept: "application/json",
           Authorization: token,
         },
       });
 
       const data = await readResponse(response);
 
-      console.log("GET /aquariums/my-aquariums status:", response.status);
-      console.log("GET /aquariums/my-aquariums response:", data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося завантажити акваріуми"),
+          detail: data?.detail,
+          backendStatus: response.status,
+          raw: data,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(200).json(data);
     }
 
     if (req.method === "POST") {
-      const body = {
-        name: req.body.name,
-        volume: Number(req.body.volume),
-        type: req.body.type,
-        created_at: req.body.created_at,
-        image_id: req.body.image_id || null,
-      };
-
-      const response = await fetch(`${API_URL}/aquariums/`, {
+      const response = await fetch(`${API_URL}/aquariums`, {
         method: "POST",
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: token,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(req.body),
       });
 
       const data = await readResponse(response);
 
-      console.log("POST /aquariums status:", response.status);
-      console.log("POST /aquariums response:", data);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося створити акваріум"),
+          detail: data?.detail,
+          backendStatus: response.status,
+          raw: data,
+        });
+      }
 
-      return res.status(response.status).json(data);
+      return res.status(201).json(data);
     }
+
+    res.setHeader("Allow", ["GET", "POST"]);
 
     return res.status(405).json({
       message: "Method not allowed",

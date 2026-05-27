@@ -41,6 +41,7 @@ export default async function handler(req, res) {
 
     if (req.method !== "POST") {
       res.setHeader("Allow", ["POST"]);
+
       return res.status(405).json({
         message: "Method not allowed",
       });
@@ -63,6 +64,7 @@ export default async function handler(req, res) {
         message: getErrorMessage(data, "Не вдалося завантажити фото"),
         detail: data?.detail,
         backendStatus: response.status,
+        raw: data,
       });
     }
 

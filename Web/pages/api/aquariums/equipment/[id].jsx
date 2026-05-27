@@ -21,7 +21,6 @@ function getErrorMessage(data, fallbackMessage) {
 
   if (typeof data?.detail === "string") return data.detail;
   if (typeof data?.message === "string") return data.message;
-  if (typeof data?.error === "string") return data.error;
 
   return fallbackMessage;
 }
@@ -29,6 +28,7 @@ function getErrorMessage(data, fallbackMessage) {
 export default async function handler(req, res) {
   try {
     const token = req.headers.authorization;
+    const { id, equipment_category } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -36,8 +36,18 @@ export default async function handler(req, res) {
       });
     }
 
+    if (!id) {
+      return res.status(400).json({
+        message: "Aquarium id is required",
+      });
+    }
+
     if (req.method === "GET") {
-      const response = await fetch(`${API_URL}/articles/draft`, {
+      const query = equipment_category
+        ? `?equipment_category=${encodeURIComponent(equipment_category)}`
+        : "";
+
+      const response = await fetch(`${API_URL}/equipment/${id}${query}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -47,12 +57,14 @@ export default async function handler(req, res) {
 
       const data = await readResponse(response);
 
+      console.log(`GET /equipment/${id} status:`, response.status);
+      console.log(`GET /equipment/${id} response:`, data);
+
       if (!response.ok) {
         return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося завантажити чернетки"),
+          message: getErrorMessage(data, "Не вдалося завантажити обладнання"),
           detail: data?.detail,
           backendStatus: response.status,
-          backendResponse: data,
         });
       }
 
@@ -60,17 +72,42 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
+      const body = req.body || {};
+
       const payload = {
-        title: String(req.body?.title || "").trim(),
-        excerpt: String(req.body?.excerpt || "").trim(),
-        content: String(req.body?.content || "").trim(),
-        category_id: Number(req.body?.category_id),
-        image_id: Number(req.body?.image_id),
+        category: String(body.category || "").trim(),
+        name: String(body.name || "").trim(),
+        installation_date: body.installation_date,
+        specifications: body.specifications
+          ? String(body.specifications).trim()
+          : null,
+        maintenance_interval_days:
+          body.maintenance_interval_days === null ||
+          body.maintenance_interval_days === undefined ||
+          body.maintenance_interval_days === ""
+            ? null
+            : Number(body.maintenance_interval_days),
       };
 
-      console.log("POST /articles/draft proxy sent payload:", payload);
+      if (!payload.category) {
+        return res.status(400).json({
+          message: "category is required",
+        });
+      }
 
-      const response = await fetch(`${API_URL}/articles/draft`, {
+      if (!payload.name) {
+        return res.status(400).json({
+          message: "name is required",
+        });
+      }
+
+      if (!payload.installation_date) {
+        return res.status(400).json({
+          message: "installation_date is required",
+        });
+      }
+
+      const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -82,17 +119,15 @@ export default async function handler(req, res) {
 
       const data = await readResponse(response);
 
-      console.log("POST /articles/draft proxy response:", {
-        status: response.status,
-        data,
-      });
+      console.log(`POST /equipment/${id} status:`, response.status);
+      console.log(`POST /equipment/${id} payload:`, payload);
+      console.log(`POST /equipment/${id} response:`, data);
 
       if (!response.ok) {
         return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося зберегти чернетку"),
+          message: getErrorMessage(data, "Не вдалося додати обладнання"),
           detail: data?.detail,
           backendStatus: response.status,
-          backendResponse: data,
           sentPayload: payload,
         });
       }
@@ -106,10 +141,10 @@ export default async function handler(req, res) {
       message: "Method not allowed",
     });
   } catch (error) {
-    console.error("Article draft proxy error:", error);
+    console.error("Equipment proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Article draft proxy server error",
+      message: error.message || "Equipment proxy server error",
     });
   }
 }

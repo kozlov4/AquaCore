@@ -25,39 +25,33 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    const token = req.headers.authorization;
-    const { aquarium_id } = req.query;
-
-    if (!token) {
-      return res.status(401).json({
-        message: "Authorization token is missing",
-      });
-    }
-
-    if (!aquarium_id) {
-      return res.status(400).json({
-        message: "Aquarium id is required",
-      });
-    }
-
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
 
       return res.status(405).json({
         message: "Method not allowed",
       });
     }
 
+    const { code } = req.query;
+
+    if (!code) {
+      return res.status(400).json({
+        message: "Google code is required",
+      });
+    }
+
+    const params = new URLSearchParams({
+      code: String(code),
+    });
+
     const response = await fetch(
-      `${API_URL}/tests?aquarium_id=${encodeURIComponent(aquarium_id)}`,
+      `${API_URL}/google/callback?${params.toString()}`,
       {
-        method: "POST",
+        method: "GET",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: token,
         },
-        body: JSON.stringify(req.body),
       }
     );
 
@@ -65,19 +59,19 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося створити тест води"),
+        message: getErrorMessage(data, "Не вдалося завершити Google авторизацію"),
         detail: data?.detail,
         backendStatus: response.status,
         raw: data,
       });
     }
 
-    return res.status(201).json(data);
+    return res.status(200).json(data);
   } catch (error) {
-    console.error("Create water test proxy error:", error);
+    console.error("Google callback proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Create water test proxy server error",
+      message: error.message || "Google callback proxy server error",
     });
   }
 }

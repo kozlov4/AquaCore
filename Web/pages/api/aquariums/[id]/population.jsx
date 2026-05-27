@@ -14,9 +14,7 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail
-      .map((item) => item?.msg || JSON.stringify(item))
-      .join("; ");
+    return data.detail[0]?.msg || fallbackMessage;
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -27,8 +25,8 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
 
       return res.status(405).json({
         message: "Method not allowed",
@@ -46,12 +44,12 @@ export default async function handler(req, res) {
 
     if (!id) {
       return res.status(400).json({
-        message: "Equipment id is required",
+        message: "Aquarium id is required",
       });
     }
 
-    const response = await fetch(`${API_URL}/equipment/${id}/service`, {
-      method: "POST",
+    const response = await fetch(`${API_URL}/aquariums/${id}/population`, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: token,
@@ -60,23 +58,22 @@ export default async function handler(req, res) {
 
     const data = await readResponse(response);
 
-    console.log(`POST /equipment/${id}/service status:`, response.status);
-    console.log(`POST /equipment/${id}/service response:`, data);
+    console.log(`GET /aquariums/${id}/population status:`, response.status);
+    console.log(`GET /aquariums/${id}/population response:`, data);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося обслужити обладнання"),
+        message: getErrorMessage(data, "Не вдалося завантажити населення"),
         detail: data?.detail,
-        backendStatus: response.status,
       });
     }
 
-    return res.status(response.status || 200).json(data);
+    return res.status(response.status).json(data);
   } catch (error) {
-    console.error("Equipment service proxy error:", error);
+    console.error("Population proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Equipment service proxy server error",
+      message: error.message || "Population proxy server error",
     });
   }
 }

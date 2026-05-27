@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 
-export function ReviewCard({ review, index }) {
+export function ReviewCard({ review, index, onOpen }) {
   const rating = review.rating || 5;
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onOpen}
       initial={{ opacity: 0, y: 35 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -19,11 +21,13 @@ export function ReviewCard({ review, index }) {
         y: -8,
         scale: 1.015,
       }}
+      whileTap={{ scale: 0.98 }}
       className="
         group cursor-pointer rounded-2xl border border-transparent
-        bg-white p-5 transition-all duration-300
+        bg-white p-5 text-left transition-all duration-300
         hover:border-gray-200
         hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]
+        focus:outline-none focus:ring-4 focus:ring-[#5B4CF6]/15
       "
     >
       <div className="mb-5 flex items-center gap-4 border-b border-gray-100 pb-5 sm:mb-6">
@@ -62,9 +66,20 @@ export function ReviewCard({ review, index }) {
         ))}
       </div>
 
-      <p className="max-w-none text-sm leading-7 text-[#171827]/80 sm:text-base lg:max-w-[310px]">
+      <p
+        className="
+          max-w-none whitespace-pre-line break-words
+          text-sm leading-7 text-[#171827]/80
+          sm:text-base lg:max-w-[310px]
+          line-clamp-5
+        "
+      >
         {review.text}
       </p>
-    </motion.div>
+
+      <span className="mt-4 inline-flex text-sm font-black text-[#5B4CF6] transition group-hover:translate-x-1">
+        Переглянути детальніше →
+      </span>
+    </motion.button>
   );
 }

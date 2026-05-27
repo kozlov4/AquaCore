@@ -2,7 +2,7 @@
 
 import { ReviewCard } from "../ReviewCard";
 
-export function ReviewsGrid({ reviews }) {
+export function ReviewsGrid({ reviews, onOpenReview }) {
   return (
     <section
       className="
@@ -12,7 +12,12 @@ export function ReviewsGrid({ reviews }) {
       "
     >
       {reviews.map((review, index) => (
-        <ReviewCard key={review.id} review={review} index={index} />
+        <ReviewCard
+          key={review.id}
+          review={review}
+          index={index}
+          onOpen={() => onOpenReview?.(review)}
+        />
       ))}
     </section>
   );

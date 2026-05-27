@@ -3,7 +3,7 @@
 export function LandingFooter() {
   return (
     <footer className="bg-[#101724]">
-      <div className="mx-auto flex max-w-[1180px] items-center justify-center gap-10 px-6 py-10 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+      <div className="mx-auto flex w-[100%] items-center justify-center gap-10 px-6 py-10 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
         <a className="transition hover:text-white" href="#">
           AquaCore
         </a>

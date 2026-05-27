@@ -155,33 +155,132 @@ function DiaryFormModal({
   onSubmit,
 }) {
   const [date, setDate] = useState(initialData?.dateInput || getTodayInput());
+
   const [aquariumId, setAquariumId] = useState(
     initialData?.aquariumId || aquariums[0]?.id || ""
   );
+
   const [entryTitle, setEntryTitle] = useState(initialData?.title || "");
   const [observation, setObservation] = useState(initialData?.text || "");
   const [tagKey, setTagKey] = useState(initialData?.tagKey || "plants");
   const [isPinned, setIsPinned] = useState(Boolean(initialData?.isPinned));
 
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(initialData?.imageUrl || "");
+  const [removeImage, setRemoveImage] = useState(false);
+  const [localError, setLocalError] = useState("");
+
+  useEffect(() => {
+    setDate(initialData?.dateInput || getTodayInput());
+    setAquariumId(initialData?.aquariumId || aquariums[0]?.id || "");
+    setEntryTitle(initialData?.title || "");
+    setObservation(initialData?.text || "");
+    setTagKey(initialData?.tagKey || "plants");
+    setIsPinned(Boolean(initialData?.isPinned));
+
+    setFile(null);
+    setPreviewUrl(initialData?.imageUrl || "");
+    setRemoveImage(false);
+    setLocalError("");
+  }, [initialData, aquariums]);
+
+  useEffect(() => {
+    if (!file) return;
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  const validateImage = (selectedFile) => {
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(selectedFile.type)) {
+      throw new Error("Можна завантажувати тільки PNG, JPG, JPEG або WEBP");
+    }
+
+    const maxSizeBytes = 10 * 1024 * 1024;
+
+    if (selectedFile.size > maxSizeBytes) {
+      throw new Error("Фото має бути не більше 10 МБ");
+    }
+  };
+
+  const handleFileChange = (event) => {
+    try {
+      setLocalError("");
+
+      const selectedFile = event.target.files?.[0];
+
+      if (!selectedFile) return;
+
+      validateImage(selectedFile);
+
+      setFile(selectedFile);
+      setRemoveImage(false);
+    } catch (error) {
+      setFile(null);
+      setLocalError(error.message || "Не вдалося вибрати фото");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFile(null);
+    setPreviewUrl("");
+    setRemoveImage(true);
+  };
+
   const handleSubmit = () => {
+    setLocalError("");
+
+    if (!date) {
+      setLocalError("Оберіть дату");
+      return;
+    }
+
+    if (!aquariumId) {
+      setLocalError("Оберіть одну з екосистем");
+      return;
+    }
+
+    if (!entryTitle.trim()) {
+      setLocalError("Введіть короткий заголовок");
+      return;
+    }
+
+    if (!observation.trim()) {
+      setLocalError("Опишіть спостереження");
+      return;
+    }
+
     onSubmit({
       date,
       aquariumId,
-      title: entryTitle,
-      observation,
+      title: entryTitle.trim(),
+      observation: observation.trim(),
       tagKey,
       isPinned,
       imageId: initialData?.imageId || null,
+      file,
+      removeImage,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 px-4 py-5 backdrop-blur-sm">
       <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        initial={{ opacity: 0, y: 22, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 24, scale: 0.98 }}
-        className="w-full max-w-[470px] overflow-hidden rounded-2xl bg-white shadow-2xl"
+        exit={{ opacity: 0, y: 22, scale: 0.98 }}
+        className="mx-auto w-full max-w-[560px] overflow-hidden rounded-[22px] bg-white shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 className="text-[18px] font-black text-[#111827]">{title}</h2>
@@ -190,14 +289,14 @@ function DiaryFormModal({
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="text-[#98a2b3] hover:text-[#111827]"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-[#98a2b3] transition hover:bg-slate-100 hover:text-[#111827] disabled:opacity-50"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="space-y-4 px-5 py-5">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="max-h-[calc(100vh-150px)] overflow-y-auto px-5 py-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-[12px] font-black text-[#475467]">
                 Дата
@@ -208,7 +307,7 @@ function DiaryFormModal({
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
                 disabled={isSaving}
-                className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-bold outline-none transition focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+                className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-black outline-none transition focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10 disabled:bg-slate-100"
               />
             </div>
 
@@ -222,17 +321,15 @@ function DiaryFormModal({
                   value={aquariumId}
                   onChange={(event) => setAquariumId(event.target.value)}
                   disabled={isSaving}
-                  className="h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 pr-8 text-sm font-bold outline-none transition focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+                  className="h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 pr-9 text-sm font-black outline-none transition focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10 disabled:bg-slate-100"
                 >
-                  {aquariums.length === 0 ? (
-                    <option value="">Акваріуми відсутні</option>
-                  ) : (
-                    aquariums.map((aquarium) => (
-                      <option key={aquarium.id} value={aquarium.id}>
-                        {aquarium.name}
-                      </option>
-                    ))
-                  )}
+                  <option value="">Оберіть екосистему</option>
+
+                  {aquariums.map((aquarium) => (
+                    <option key={aquarium.id} value={aquarium.id}>
+                      {aquarium.name}
+                    </option>
+                  ))}
                 </select>
 
                 <ChevronDown
@@ -241,84 +338,126 @@ function DiaryFormModal({
                 />
               </div>
             </div>
-          </div>
 
-          <div>
-            <label className="mb-2 block text-[12px] font-black text-[#475467]">
-              Короткий заголовок
-            </label>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-[12px] font-black text-[#475467]">
+                Короткий заголовок
+              </label>
 
-            <input
-              value={entryTitle}
-              onChange={(event) => setEntryTitle(event.target.value)}
-              disabled={isSaving}
-              placeholder="Напр. Змінив режим освітлення"
-              className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-[12px] font-black text-[#475467]">
-              Спостереження
-            </label>
-
-            <textarea
-              value={observation}
-              onChange={(event) => setObservation(event.target.value)}
-              disabled={isSaving}
-              placeholder="Опишіть детально, що ви помітили або змінили..."
-              className="h-[110px] w-full resize-none rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
-            />
-          </div>
-
-          <div>
-            <p className="mb-2 text-[12px] font-black text-[#475467]">
-              Категорія
-            </p>
-
-            <div className="flex flex-wrap gap-2">
-              {editTags.map((tag) => (
-                <button
-                  key={tag.key}
-                  type="button"
-                  onClick={() => setTagKey(tag.key)}
-                  disabled={isSaving}
-                  className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${
-                    tagKey === tag.key
-                      ? "border-[#635BFF] bg-[#635BFF]/10 text-[#635BFF]"
-                      : "border-slate-200 text-slate-600 hover:border-[#635BFF]/40"
-                  }`}
-                >
-                  {tag.label}
-                </button>
-              ))}
+              <input
+                value={entryTitle}
+                onChange={(event) => setEntryTitle(event.target.value)}
+                disabled={isSaving}
+                placeholder="Напр. Змінив режим освітлення"
+                className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-semibold outline-none transition placeholder:text-slate-400 focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10 disabled:bg-slate-100"
+              />
             </div>
-          </div>
 
-          <div>
-            <p className="mb-2 text-[12px] font-black text-[#475467]">
-              Прикріпити фото
-            </p>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-[12px] font-black text-[#475467]">
+                Спостереження
+              </label>
 
-            <button
-              type="button"
-              disabled
-              className="flex h-[95px] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 opacity-75"
-            >
-              <div className="mb-1 rounded-full bg-white p-2 shadow-sm">
-                <Upload size={18} />
+              <textarea
+                value={observation}
+                onChange={(event) => setObservation(event.target.value)}
+                disabled={isSaving}
+                placeholder="Опишіть детально, що ви помітили або змінили..."
+                className="h-[105px] w-full resize-none rounded-xl border border-slate-300 px-3 py-3 text-sm font-semibold leading-6 outline-none transition placeholder:text-slate-400 focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10 disabled:bg-slate-100"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <p className="mb-2 text-[12px] font-black text-[#475467]">
+                Категорія
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {editTags.map((tag) => (
+                  <button
+                    key={tag.key}
+                    type="button"
+                    onClick={() => setTagKey(tag.key)}
+                    disabled={isSaving}
+                    className={`rounded-xl border px-3 py-2 text-xs font-black transition disabled:opacity-60 ${
+                      tagKey === tag.key
+                        ? "border-[#635BFF] bg-[#635BFF]/10 text-[#635BFF]"
+                        : "border-slate-200 text-slate-500 hover:border-[#635BFF]/40 hover:text-[#635BFF]"
+                    }`}
+                  >
+                    {tag.label}
+                  </button>
+                ))}
               </div>
-              <span className="text-xs font-bold">
-                Завантаження фото можна підключити через /upload-image
-              </span>
-              <span className="mt-0.5 text-[10px] text-slate-400">
-                зараз запис створюється без нового фото
-              </span>
-            </button>
+            </div>
+
+            <div className="md:col-span-2">
+              <p className="mb-2 text-[12px] font-black text-[#475467]">
+                Прикріпити фото
+              </p>
+
+              <label className="relative flex min-h-[115px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 transition hover:border-[#635BFF] hover:bg-[#635BFF]/5">
+                {previewUrl ? (
+                  <>
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="h-full min-h-[115px] w-full object-cover"
+                    />
+
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition hover:opacity-100">
+                      <span className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-lg">
+                        Натисніть, щоб замінити фото
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#635BFF] shadow-sm">
+                      <Upload size={19} />
+                    </div>
+
+                    <span className="text-xs font-black text-slate-700">
+                      Натисніть для завантаження фото
+                    </span>
+
+                    <span className="mt-1 text-[11px] font-semibold text-slate-400">
+                      PNG, JPG, JPEG або WEBP до 10 МБ
+                    </span>
+                  </>
+                )}
+
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  disabled={isSaving}
+                />
+              </label>
+
+              {previewUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  disabled={isSaving}
+                  className="mt-2 inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-500 transition hover:bg-red-100 disabled:opacity-60"
+                >
+                  <Trash2 size={14} />
+                  Видалити фото
+                </button>
+              )}
+            </div>
+
+            {localError && (
+              <div className="md:col-span-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+                {localError}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-slate-50 px-5 py-4">
+        <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-600">
             <input
               type="checkbox"
@@ -330,24 +469,37 @@ function DiaryFormModal({
             📌 Закріпити зверху
           </label>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="text-sm font-black text-slate-600 transition hover:text-slate-950"
+              className="text-sm font-black text-slate-500 transition hover:text-slate-950 disabled:opacity-50"
             >
               Скасувати
             </button>
 
-            <button
+            <motion.button
               type="button"
               onClick={handleSubmit}
               disabled={isSaving}
-              className="rounded-xl bg-[#635BFF] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#5147f5] disabled:opacity-60"
+              whileHover={
+                isSaving
+                  ? {}
+                  : {
+                      y: -2,
+                      boxShadow: "0 12px 24px rgba(99,91,255,0.28)",
+                    }
+              }
+              whileTap={isSaving ? {} : { scale: 0.96 }}
+              className={`rounded-xl px-5 py-2.5 text-sm font-black text-white transition ${
+                isSaving
+                  ? "cursor-not-allowed bg-[#635BFF]/60"
+                  : "cursor-pointer bg-[#635BFF] hover:bg-[#5147f5]"
+              }`}
             >
               {isSaving ? "Збереження..." : "Зберегти запис"}
-            </button>
+            </motion.button>
           </div>
         </div>
       </motion.div>

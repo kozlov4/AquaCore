@@ -1,186 +1,124 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-
 import {
-  addEquipment,
-  getEquipment,
+  getAquariumPopulation,
+  addInhabitantToAquarium,
+} from "../services/aquariumsApi";
+import {
+  getAquariumEquipment,
+  addEquipmentToAquarium,
   serviceEquipment,
 } from "../services/equipmentApi";
 
-import { addSpeciesToAquarium } from "../services/speciesApi";
-
 export function useAquariumDetails() {
   const router = useRouter();
-  const aquariumId = router.query.id;
+
+  const aquariumId = useMemo(() => {
+    const id = router.query?.id;
+
+    if (Array.isArray(id)) return id[0];
+
+    return id || "";
+  }, [router.query?.id]);
 
   const [activeTab, setActiveTab] = useState("Населення");
 
   const [isAddResidentOpen, setIsAddResidentOpen] = useState(false);
   const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
 
-  const [residents, setResidents] = useState([]);
+  const [population, setPopulation] = useState({
+    totalSpecies: 0,
+    totalIndividuals: 0,
+    compatibilityStatus: "unknown",
+    compatibilityText: "Населення ще не завантажено.",
+    aggressiveResidents: [],
+    inhabitants: [],
+  });
+
+  const [isPopulationLoading, setIsPopulationLoading] = useState(false);
+  const [populationError, setPopulationError] = useState("");
+
   const [equipment, setEquipment] = useState([]);
-
-  const [isResidentSaving, setIsResidentSaving] = useState(false);
-  const [residentError, setResidentError] = useState("");
-
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
-  const [isEquipmentSaving, setIsEquipmentSaving] = useState(false);
-  const [isServiceLoading, setIsServiceLoading] = useState(false);
-
   const [equipmentError, setEquipmentError] = useState("");
+  const [servicingEquipmentId, setServicingEquipmentId] = useState(null);
+
+  const loadPopulation = useCallback(async () => {
+    if (!aquariumId) return;
+
+    try {
+      setIsPopulationLoading(true);
+      setPopulationError("");
+
+      const data = await getAquariumPopulation(aquariumId);
+
+      setPopulation(data);
+    } catch (error) {
+      setPopulationError(error.message || "Не вдалося завантажити населення");
+    } finally {
+      setIsPopulationLoading(false);
+    }
+  }, [aquariumId]);
 
   const loadEquipment = useCallback(async () => {
-    if (!router.isReady || !aquariumId) return;
+    if (!aquariumId) return;
 
     try {
       setIsEquipmentLoading(true);
       setEquipmentError("");
 
-      const data = await getEquipment(aquariumId);
+      const data = await getAquariumEquipment(aquariumId);
 
-      setEquipment(Array.isArray(data) ? data : []);
+      setEquipment(data);
     } catch (error) {
-      setEquipment([]);
       setEquipmentError(error.message || "Не вдалося завантажити обладнання");
     } finally {
       setIsEquipmentLoading(false);
     }
-  }, [router.isReady, aquariumId]);
+  }, [aquariumId]);
 
   useEffect(() => {
-    if (router.isReady && aquariumId) {
-      loadEquipment();
-    }
-  }, [router.isReady, aquariumId, loadEquipment]);
+    loadPopulation();
+    loadEquipment();
+  }, [loadPopulation, loadEquipment]);
 
   const handleAddResident = async (resident) => {
-    if (!aquariumId) {
-      throw new Error("Не передано id акваріума");
-    }
+    await addInhabitantToAquarium({
+      aquariumId,
+      speciesId: resident.speciesId,
+      quantity: resident.quantity,
+      settlementDate: resident.settlementDate,
+    });
 
-    const species = resident?.species;
-
-    if (!species?.id) {
-      throw new Error("Не обрано вид для заселення");
-    }
-
-    const count = Number(resident?.count || resident?.quantity || 1);
-    const date = resident?.date || resident?.settlement_date;
-    const ignoreWarnings = Boolean(
-      resident?.ignoreWarnings || resident?.ignore_warnings
-    );
-
-    if (!count || count <= 0) {
-      throw new Error("Кількість має бути більшою за 0");
-    }
-
-    if (!date) {
-      throw new Error("Оберіть дату заселення");
-    }
-
-    try {
-      setIsResidentSaving(true);
-      setResidentError("");
-
-      const createdResident = await addSpeciesToAquarium({
-        aquariumId,
-        speciesId: species.id,
-        quantity: count,
-        settlementDate: date,
-        ignoreWarnings,
-      });
-
-      setResidents((prev) => [
-        ...prev,
-        {
-          id: createdResident?.id || Date.now(),
-          name: species.name || "Новий житель",
-          latin: species.latin || species.scientific_name || "",
-          count: `≈ ${count} шт`,
-          icon: species.icon || species.emoji || "🐟",
-          speciesId: species.id,
-          settlementDate: date,
-        },
-      ]);
-
-      setIsAddResidentOpen(false);
-    } catch (error) {
-      setResidentError(error.message || "Не вдалося додати жителя");
-      throw error;
-    } finally {
-      setIsResidentSaving(false);
-    }
+    await loadPopulation();
   };
 
   const handleAddEquipment = async (device) => {
-    if (!aquariumId) {
-      throw new Error("Не передано id акваріума");
-    }
+    await addEquipmentToAquarium(aquariumId, {
+      category: device.category,
+      name: device.name,
+      installation_date: device.installationDate,
+      specifications: device.specifications,
+      maintenance_interval_days: device.maintenanceIntervalDays,
+    });
 
-    try {
-      setIsEquipmentSaving(true);
-      setEquipmentError("");
-
-      await addEquipment(aquariumId, device);
-
-      setIsAddEquipmentOpen(false);
-
-      await loadEquipment();
-    } catch (error) {
-      setEquipmentError(error.message || "Не вдалося додати обладнання");
-      throw error;
-    } finally {
-      setIsEquipmentSaving(false);
-    }
+    await loadEquipment();
   };
 
-  const handleServiceEquipment = async (device) => {
-    const equipmentId = device?.id;
-
-    if (!equipmentId) {
-      throw new Error("Не передано id обладнання");
-    }
-
+  const handleServiceEquipment = async (equipmentId) => {
     try {
-      setIsServiceLoading(true);
+      setServicingEquipmentId(equipmentId);
       setEquipmentError("");
 
       await serviceEquipment(equipmentId);
-
       await loadEquipment();
     } catch (error) {
       setEquipmentError(error.message || "Не вдалося обслужити обладнання");
-      throw error;
     } finally {
-      setIsServiceLoading(false);
+      setServicingEquipmentId(null);
     }
-  };
-
-  const openAddResidentModal = () => {
-    setResidentError("");
-    setIsAddResidentOpen(true);
-  };
-
-  const closeAddResidentModal = () => {
-    if (isResidentSaving) return;
-
-    setResidentError("");
-    setIsAddResidentOpen(false);
-  };
-
-  const openAddEquipmentModal = () => {
-    setEquipmentError("");
-    setIsAddEquipmentOpen(true);
-  };
-
-  const closeAddEquipmentModal = () => {
-    if (isEquipmentSaving) return;
-
-    setEquipmentError("");
-    setIsAddEquipmentOpen(false);
   };
 
   return {
@@ -191,37 +129,24 @@ export function useAquariumDetails() {
 
     isAddResidentOpen,
     setIsAddResidentOpen,
-    openAddResidentModal,
-    closeAddResidentModal,
 
     isAddEquipmentOpen,
     setIsAddEquipmentOpen,
-    openAddEquipmentModal,
-    closeAddEquipmentModal,
 
-    residents,
-    setResidents,
+    population,
+    residents: population.inhabitants,
+    isPopulationLoading,
+    populationError,
+    reloadPopulation: loadPopulation,
 
     equipment,
-    setEquipment,
-
-    isResidentSaving,
-    residentError,
-    setResidentError,
-
     isEquipmentLoading,
-    isEquipmentSaving,
-    isServiceLoading,
-
     equipmentError,
-    setEquipmentError,
-
-    loadEquipment,
+    reloadEquipment: loadEquipment,
+    servicingEquipmentId,
 
     handleAddResident,
     handleAddEquipment,
     handleServiceEquipment,
   };
 }
-
-export default useAquariumDetails;
