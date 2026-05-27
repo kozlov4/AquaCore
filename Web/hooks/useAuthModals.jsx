@@ -68,7 +68,7 @@ export function useAuthModals() {
         password,
       });
 
-      router.push("/dashboard");
+      router.push("/aquariums");
     } catch (error) {
       setAuthError(error.message || "Помилка входу");
     } finally {
@@ -117,7 +117,7 @@ export function useAuthModals() {
         password,
       });
 
-      router.push("/dashboard");
+      router.push("/aquariums");
     } catch (error) {
       setAuthError(error.message || "Помилка реєстрації");
     } finally {

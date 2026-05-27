@@ -40,23 +40,63 @@ function getPopulationText(aquarium) {
   }
 
   if (typeof population === "object") {
-    if (population.total_count !== undefined) {
-      return population.total_count > 0
-        ? `${population.total_count} жителів`
-        : "Жителів ще немає";
+    const totalQuantity =
+      population.total_quantity ??
+      population.total_count ??
+      population.count ??
+      0;
+
+    const speciesNames = Array.isArray(population.species_names)
+      ? population.species_names
+      : [];
+
+    if (totalQuantity > 0 && speciesNames.length > 0) {
+      return `${totalQuantity} особин: ${speciesNames.join(", ")}`;
     }
 
-    if (population.count !== undefined) {
-      return population.count > 0
-        ? `${population.count} жителів`
-        : "Жителів ще немає";
+    if (totalQuantity > 0) {
+      return `${totalQuantity} жителів`;
     }
   }
 
   return "Жителів ще немає";
 }
 
+function formatParam(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  return String(value);
+}
+
+function formatTestDate(value) {
+  if (!value) {
+    return "є дані тесту";
+  }
+
+  try {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return new Intl.DateTimeFormat("uk-UA", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return String(value);
+  }
+}
+
 function getLastTestText(aquarium) {
+  if (aquarium.lastTestText) {
+    return aquarium.lastTestText;
+  }
+
   const lastTest = aquarium.lastTest || aquarium.last_test;
 
   if (!lastTest) {
@@ -79,33 +119,43 @@ function getLastTestText(aquarium) {
     if (typeof lastTest.days_ago === "number") {
       return `${lastTest.days_ago} днів тому`;
     }
+
+    const testDate =
+      lastTest.test_date ||
+      lastTest.created_at ||
+      lastTest.date ||
+      lastTest.createdAt ||
+      null;
+
+    return formatTestDate(testDate);
   }
 
   return "Тестів ще немає";
 }
 
-function formatParam(value) {
-  if (value === null || value === undefined || value === "") {
-    return "—";
-  }
-
-  return value;
-}
-
 function getParamsText(aquarium) {
   const lastTest = aquarium.lastTest || aquarium.last_test;
 
-  if (aquarium.params && typeof aquarium.params === "string") {
+  if (lastTest && typeof lastTest === "object") {
+    return [
+      `pH ${formatParam(lastTest.ph)}`,
+      `GH ${formatParam(lastTest.gh)}`,
+      `KH ${formatParam(lastTest.kh)}`,
+      `NH3 ${formatParam(lastTest.nh3)}`,
+      `NO2 ${formatParam(lastTest.no2)}`,
+      `NO3 ${formatParam(lastTest.no3)}`,
+    ].join(" · ");
+  }
+
+  if (
+    aquarium.params &&
+    typeof aquarium.params === "string" &&
+    !aquarium.params.includes("pH —")
+  ) {
     return aquarium.params;
   }
 
-  if (lastTest && typeof lastTest === "object") {
-    return `pH ${formatParam(lastTest.ph)} · GH ${formatParam(
-      lastTest.gh
-    )} · KH ${formatParam(lastTest.kh)}`;
-  }
-
-  return "pH — · GH — · KH —";
+  return "pH — · GH — · KH — · NH3 — · NO2 — · NO3 —";
 }
 
 export function AquariumCard({

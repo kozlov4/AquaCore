@@ -3,11 +3,15 @@
 import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
+
 import { Sidebar } from "../Profile/Sidebar";
+
 import { AddResidentModal } from "./AddResidentModal";
 import { AddEquipmentModal } from "./AddEquipmentModal";
+
 import { useAquariumDetails } from "../../hooks/useAquariumDetails";
 import { AquariumHero } from "./AquariumDetailsParts/AquariumHero";
+
 import { AquariumTabs } from "./AquariumDetailsParts/AquariumTabs";
 import { PopulationTab } from "./AquariumDetailsParts/PopulationTab";
 import { EquipmentTab } from "./AquariumDetailsParts/EquipmentTab";
@@ -16,6 +20,7 @@ const tabs = ["Населення", "Обладнання"];
 
 export function AquariumDetails() {
   const router = useRouter();
+
   const aquarium = useAquariumDetails();
 
   const activeTab = tabs.includes(aquarium.activeTab)
@@ -26,7 +31,7 @@ export function AquariumDetails() {
     <div className="min-h-screen bg-[#f5f7fb]">
       <Sidebar />
 
-      <main className="ml-[280px] px-8 py-8">
+      <main className="px-4 py-6 pb-24 md:ml-[210px] md:px-8 md:py-8">
         <motion.button
           type="button"
           onClick={() => router.back()}
@@ -38,7 +43,16 @@ export function AquariumDetails() {
           Назад до акваріумів
         </motion.button>
 
-        <AquariumHero />
+        {aquarium.aquariumError && (
+          <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">
+            {aquarium.aquariumError}
+          </div>
+        )}
+
+        <AquariumHero
+          aquarium={aquarium.aquarium}
+          isLoading={aquarium.isAquariumLoading}
+        />
 
         <AquariumTabs
           tabs={tabs}

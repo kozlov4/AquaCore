@@ -45,10 +45,46 @@ export default async function handler(req, res) {
       });
     }
 
+    if (req.method === "GET") {
+      const response = await fetch(`${API_URL}/aquariums/my-aquariums`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: token,
+        },
+      });
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          message: getErrorMessage(data, "Не вдалося завантажити акваріуми"),
+          detail: data?.detail,
+          backendStatus: response.status,
+        });
+      }
+
+      const aquariums = Array.isArray(data) ? data : [];
+      const aquarium = aquariums.find(
+        (item) => String(item.id) === String(id)
+      );
+
+      if (!aquarium) {
+        return res.status(404).json({
+          message: "Акваріум не знайдено",
+        });
+      }
+
+      return res.status(200).json(aquarium);
+    }
+
     if (req.method === "PUT") {
       const body = {
         name: req.body.name,
-        volume: Number(req.body.volume),
+        volume:
+          req.body.volume === undefined || req.body.volume === ""
+            ? undefined
+            : Number(req.body.volume),
         type: req.body.type,
         created_at: req.body.created_at,
         image_id:
@@ -77,6 +113,8 @@ export default async function handler(req, res) {
         return res.status(response.status).json({
           message: getErrorMessage(data, "Не вдалося оновити акваріум"),
           detail: data?.detail,
+          backendStatus: response.status,
+          sentPayload: body,
         });
       }
 
@@ -102,13 +140,14 @@ export default async function handler(req, res) {
         return res.status(response.status).json({
           message: getErrorMessage(data, "Не вдалося видалити акваріум"),
           detail: data?.detail,
+          backendStatus: response.status,
         });
       }
 
       return res.status(response.status).json(data);
     }
 
-    res.setHeader("Allow", ["PUT", "DELETE"]);
+    res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
 
     return res.status(405).json({
       message: "Method not allowed",

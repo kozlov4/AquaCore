@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
 
+import { getAccessToken } from "../../services/apiClient";
+
 const menuGroups = [
   {
     title: "Акваріуми",
@@ -96,16 +98,7 @@ const menuGroups = [
       },
     ],
   },
-  {
-    title: "Соціальна мережа",
-    items: [
-      {
-        label: "Спільнота",
-        href: "/feed",
-        icon: "/images/Community.svg",
-      },
-    ],
-  },
+
   {
     title: "Підтримка",
     items: [
@@ -146,17 +139,7 @@ const mobileMainItems = [
   },
 ];
 
-const guestPagesWithoutSidebar = ["/calculators", "/reviews"];
-
-function getAccessToken() {
-  if (typeof window === "undefined") return null;
-
-  return (
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("token")
-  );
-}
+const pagesWithoutSidebarForGuests = ["/calculators", "/reviews"];
 
 function SidebarIcon({ src, alt, size = 22 }) {
   return (
@@ -216,24 +199,26 @@ export function Sidebar() {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    setIsAuthorized(Boolean(getAccessToken()));
+    const token = getAccessToken();
+
+    setIsAuthorized(Boolean(token));
     setIsAuthChecked(true);
-  }, []);
+  }, [router.pathname]);
 
   const isDashboardActive =
     router.pathname === "/dashboard" ||
     router.pathname.startsWith("/dashboard/");
 
-  const shouldHideSidebarForGuest =
+  const shouldHideForGuest =
     isAuthChecked &&
     !isAuthorized &&
-    guestPagesWithoutSidebar.includes(router.pathname);
+    pagesWithoutSidebarForGuests.includes(router.pathname);
 
   if (!isAuthChecked) {
     return null;
   }
 
-  if (shouldHideSidebarForGuest) {
+  if (shouldHideForGuest) {
     return null;
   }
 
@@ -257,22 +242,6 @@ export function Sidebar() {
             <span className="bg-gradient-to-r from-[#7665ff] via-[#b66fd5] to-[#f0a2ce] bg-clip-text text-[17px] font-extrabold uppercase tracking-[0.04em] text-transparent">
               Aqua Core
             </span>
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className={`mb-[21px] flex h-[43px] items-center gap-[13px] rounded-[9px] px-[10px] text-[13px] font-medium text-[#111827] transition-all duration-200 ${
-              isDashboardActive
-                ? "bg-[#efa7d2]"
-                : "bg-[#efa7d2] hover:bg-[#e99ccc]"
-            }`}
-          >
-            <SidebarIcon
-              src="/images/Menu.svg"
-              alt="Панель управління"
-              size={27}
-            />
-            <span>Панель управління</span>
           </Link>
 
           <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto pr-[2px]">

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+
 import { createOrUpdateFeedback, getFeedbacks } from "../services/feedbackApi";
-import { isUserAuthorized } from "../services/authStorage";
+import { getAccessToken } from "../services/apiClient";
 
 const sortMap = {
   "Нові спочатку": "newest",
@@ -71,12 +72,14 @@ export function useReviews() {
   const handleOpenFeedback = () => {
     setAuthMessage("");
 
-    if (!isUserAuthorized()) {
+    const token = getAccessToken();
+
+    if (!token) {
       setAuthMessage("Щоб залишити відгук, потрібно увійти в акаунт.");
 
       setTimeout(() => {
         router.push("/signIn");
-      }, 900);
+      }, 800);
 
       return;
     }
@@ -85,7 +88,9 @@ export function useReviews() {
   };
 
   const handleCreateFeedback = async ({ rating, text }) => {
-    if (!isUserAuthorized()) {
+    const token = getAccessToken();
+
+    if (!token) {
       throw new Error("Щоб залишити відгук, потрібно увійти в акаунт");
     }
 
@@ -98,6 +103,11 @@ export function useReviews() {
     setIsSuccessOpen(true);
 
     await loadReviews();
+  };
+
+  const handleFeedbackSuccess = () => {
+    setIsFeedbackOpen(false);
+    setIsSuccessOpen(true);
   };
 
   const visibleReviews = useMemo(() => {
@@ -129,5 +139,6 @@ export function useReviews() {
     loadReviews,
     handleOpenFeedback,
     handleCreateFeedback,
+    handleFeedbackSuccess,
   };
 }

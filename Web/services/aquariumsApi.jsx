@@ -72,6 +72,60 @@ export function toInputDate(value) {
   }
 }
 
+function formatWaterValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  return String(value);
+}
+
+function getLastTestDateText(lastTest) {
+  if (!lastTest || typeof lastTest !== "object") {
+    return "Тестів ще немає";
+  }
+
+  if (lastTest.days_ago === 0) {
+    return "сьогодні";
+  }
+
+  if (lastTest.days_ago === 1) {
+    return "1 день тому";
+  }
+
+  if (typeof lastTest.days_ago === "number") {
+    return `${lastTest.days_ago} днів тому`;
+  }
+
+  const testDate =
+    lastTest.test_date ||
+    lastTest.created_at ||
+    lastTest.date ||
+    lastTest.createdAt ||
+    null;
+
+  if (!testDate) {
+    return "є дані тесту";
+  }
+
+  return formatAquariumDate(testDate);
+}
+
+function getLastTestParamsText(lastTest) {
+  if (!lastTest || typeof lastTest !== "object") {
+    return "pH — · GH — · KH —";
+  }
+
+  return [
+    `pH ${formatWaterValue(lastTest.ph)}`,
+    `GH ${formatWaterValue(lastTest.gh)}`,
+    `KH ${formatWaterValue(lastTest.kh)}`,
+    `NH3 ${formatWaterValue(lastTest.nh3)}`,
+    `NO2 ${formatWaterValue(lastTest.no2)}`,
+    `NO3 ${formatWaterValue(lastTest.no3)}`,
+  ].join(" · ");
+}
+
 export function mapAquariumFromApi(item) {
   const volumeValue = item.volume ?? item.liters ?? 0;
 
@@ -88,7 +142,11 @@ export function mapAquariumFromApi(item) {
   let populationText = "Жителів ще немає";
 
   if (rawPopulation && typeof rawPopulation === "object") {
-    const totalQuantity = rawPopulation.total_quantity ?? 0;
+    const totalQuantity =
+      rawPopulation.total_quantity ??
+      rawPopulation.total_count ??
+      rawPopulation.count ??
+      0;
 
     const speciesNames = Array.isArray(rawPopulation.species_names)
       ? rawPopulation.species_names
@@ -105,22 +163,34 @@ export function mapAquariumFromApi(item) {
     populationText = `${rawPopulation} особин`;
   }
 
+  const lastTest = item.last_test || item.lastTest || null;
+
   return {
     id: item.id,
     name: item.name || "Без назви",
+
     volume: `${volumeValue} л`,
     volumeValue,
+
     environment: item.type || item.environment || "Прісноводний",
     type: item.type || item.environment || "Прісноводний",
     status: item.status || "Активний",
+
     image: imageUrl || "/images/fish-card.jpg",
     imageUrl,
+
     createdAt: item.created_at || item.createdAt || "",
     createdDate: formatAquariumDate(item.created_at || item.createdAt),
+
     population: populationText,
     populationData: rawPopulation || null,
-    lastTest: item.last_test || "Тестів ще немає",
-    params: item.params || "pH — · GH — · KH —",
+
+    lastTest,
+    last_test: lastTest,
+
+    lastTestText: getLastTestDateText(lastTest),
+    params: getLastTestParamsText(lastTest),
+
     raw: item,
   };
 }
@@ -577,4 +647,45 @@ export async function addInhabitantToAquarium({
   }
 
   return data;
+}
+
+function getAquariumImageUrl(item = {}) {
+  return (
+    item.image_url ||
+    item.cover_image_url ||
+    item.avatar_url ||
+    item.image?.url ||
+    item.image?.image_url ||
+    null
+  );
+}
+
+export async function getAquariumById(aquariumId) {
+  if (!aquariumId) {
+    throw new Error("Aquarium id is required");
+  }
+
+  const data = await apiJson(
+    `/api/aquariums/${aquariumId}`,
+    {
+      method: "GET",
+    },
+    "Не вдалося завантажити акваріум"
+  );
+
+  const imageUrl = getAquariumImageUrl(data);
+
+  return {
+    id: data.id,
+    name: data.name || "Без назви",
+    volume: data.volume ?? data.liters ?? 0,
+    type: data.type || data.environment || "Прісноводний",
+    status: data.status || "Активний",
+    created_at: data.created_at || data.createdAt || "",
+    createdAt: data.created_at || data.createdAt || "",
+    image: imageUrl || "/images/fish-card.jpg",
+    image_url: imageUrl,
+    cover_image_url: data.cover_image_url || null,
+    raw: data,
+  };
 }
