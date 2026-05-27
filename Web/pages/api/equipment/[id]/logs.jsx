@@ -59,6 +59,18 @@ export default async function handler(req, res) {
       is_resolved: Boolean(req.body?.is_resolved),
     };
 
+    if (!payload.log_type) {
+      return res.status(400).json({
+        message: "Тип запису є обовʼязковим",
+      });
+    }
+
+    if (!payload.log_date) {
+      return res.status(400).json({
+        message: "Дата запису є обовʼязковою",
+      });
+    }
+
     const response = await fetch(`${API_URL}/equipment/${id}/logs`, {
       method: "POST",
       headers: {

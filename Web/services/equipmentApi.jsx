@@ -33,6 +33,18 @@ function authHeaders() {
   };
 }
 
+async function readJsonResponse(response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return {
+      message: text || "Empty response",
+    };
+  }
+}
+
 function formatEquipmentDate(value) {
   if (!value) return "Дата не вказана";
 
@@ -103,7 +115,7 @@ function getEquipmentIcon(category, name) {
     return "💨";
   }
 
-  return "🔧";
+  return "⚙️";
 }
 
 function formatMaintenanceInterval(days) {
@@ -117,39 +129,85 @@ function formatMaintenanceInterval(days) {
   return `кожні ${value} днів`;
 }
 
-export function mapEquipmentFromApi(item) {
+function mapEquipmentLogFromApi(log = {}) {
+  return {
+    id: log.id,
+    logType: log.log_type || log.logType || "Запис",
+    log_type: log.log_type || log.logType || "Запис",
+    logDate: log.log_date || log.logDate || "",
+    log_date: log.log_date || log.logDate || "",
+    dateLabel: formatEquipmentDate(log.log_date || log.logDate),
+    description: log.description || "",
+    isResolved: Boolean(log.is_resolved ?? log.isResolved),
+    is_resolved: Boolean(log.is_resolved ?? log.isResolved),
+    raw: log,
+  };
+}
+
+export function mapEquipmentFromApi(item = {}) {
   const category = item.category || item.equipment_category || "Інше";
   const name = item.name || item.model || "Без назви";
+  const installationDate = item.installation_date || item.installationDate || "";
 
   return {
     id: item.id || item.equipment_id,
+    equipmentId: item.id || item.equipment_id,
+
     category,
     name,
     icon: getEquipmentIcon(category, name),
 
-    installationDate: item.installation_date || "",
-    installationDateFormatted: formatEquipmentDate(item.installation_date),
+    installationDate,
+    installation_date: installationDate,
+    installationDateLabel: formatEquipmentDate(installationDate),
+    installationDateFormatted: formatEquipmentDate(installationDate),
 
     specifications: item.specifications || "",
-    maintenanceIntervalDays: item.maintenance_interval_days || null,
+
+    maintenanceIntervalDays:
+      item.maintenance_interval_days ?? item.maintenanceIntervalDays ?? null,
+    maintenance_interval_days:
+      item.maintenance_interval_days ?? item.maintenanceIntervalDays ?? null,
     maintenanceIntervalText: formatMaintenanceInterval(
-      item.maintenance_interval_days
+      item.maintenance_interval_days ?? item.maintenanceIntervalDays
     ),
 
-    daysUntilMaintenance: item.days_until_maintenance,
-    logs: Array.isArray(item.logs) ? item.logs : [],
+    daysUntilMaintenance:
+      item.days_until_maintenance ?? item.daysUntilMaintenance ?? null,
+    days_until_maintenance:
+      item.days_until_maintenance ?? item.daysUntilMaintenance ?? null,
+
+    logs: Array.isArray(item.logs) ? item.logs.map(mapEquipmentLogFromApi) : [],
 
     desc: item.specifications || "Характеристики не вказані",
     raw: item,
   };
 }
 
-export async function getAquariumEquipment(aquariumId) {
-  if (!aquariumId) {
-    throw new Error("Aquarium id is required");
-  }
+export function mapAquariumNameFromApi(item = {}) {
+  return {
+    id: item.id || item.aquarium_id || item.aquariumId,
+    name: item.name || item.title || "Акваріум",
+    volume: item.volume || null,
+    raw: item,
+  };
+}
 
-  const response = await fetch(`/api/equipment/${aquariumId}`, {
+export function mapAlertStatusFromApi(data = {}) {
+  return {
+    needsAttentionCount:
+      data.needs_attention_count ?? data.needsAttentionCount ?? 0,
+    needs_attention_count:
+      data.needs_attention_count ?? data.needsAttentionCount ?? 0,
+    message: data.message || null,
+    equipmentId: data.equipment_id ?? data.equipmentId ?? null,
+    equipment_id: data.equipment_id ?? data.equipmentId ?? null,
+    raw: data,
+  };
+}
+
+export async function getAquariumNamesForEquipment() {
+  const response = await fetch("/api/aquariums/names", {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -157,34 +215,104 @@ export async function getAquariumEquipment(aquariumId) {
     },
   });
 
-  const data = await response.json().catch(() => null);
+  const data = await readJsonResponse(response);
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося завантажити обладнання"));
+    throw new Error(
+      getErrorMessage(data, "Не вдалося завантажити список акваріумів")
+    );
+  }
+
+  return Array.isArray(data) ? data.map(mapAquariumNameFromApi) : [];
+}
+
+export async function getEquipmentList(aquariumId, selectedCategory = "all") {
+  if (!aquariumId) {
+    throw new Error("Aquarium id is required");
+  }
+
+  const params = new URLSearchParams();
+
+  if (selectedCategory && selectedCategory !== "all") {
+    params.append("equipment_category", selectedCategory);
+  }
+
+  const query = params.toString();
+
+  const response = await fetch(
+    `/api/equipment/${aquariumId}${query ? `?${query}` : ""}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
+    }
+  );
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(data, "Не вдалося завантажити обладнання")
+    );
   }
 
   return Array.isArray(data) ? data.map(mapEquipmentFromApi) : [];
 }
 
-export async function addEquipmentToAquarium(aquariumId, payload) {
+export async function getEquipmentAlertStatus(aquariumId) {
   if (!aquariumId) {
     throw new Error("Aquarium id is required");
   }
 
-  const cleanPayload = {
+  const response = await fetch(`/api/equipment/${aquariumId}/alerts/status`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(data, "Не вдалося завантажити статус обладнання")
+    );
+  }
+
+  return mapAlertStatusFromApi(data);
+}
+
+function normalizeEquipmentPayload(payload = {}) {
+  return {
     category: String(payload.category || "").trim(),
     name: String(payload.name || "").trim(),
-    installation_date: payload.installation_date,
+    installation_date:
+      payload.installation_date || payload.installationDate || null,
     specifications: payload.specifications
       ? String(payload.specifications).trim()
       : null,
     maintenance_interval_days:
+      payload.maintenance_interval_days === "" ||
       payload.maintenance_interval_days === null ||
-      payload.maintenance_interval_days === undefined ||
-      payload.maintenance_interval_days === ""
-        ? null
+      payload.maintenance_interval_days === undefined
+        ? payload.maintenanceIntervalDays === "" ||
+          payload.maintenanceIntervalDays === null ||
+          payload.maintenanceIntervalDays === undefined
+          ? null
+          : Number(payload.maintenanceIntervalDays)
         : Number(payload.maintenance_interval_days),
   };
+}
+
+export async function createEquipment(aquariumId, payload) {
+  if (!aquariumId) {
+    throw new Error("Aquarium id is required");
+  }
+
+  const cleanPayload = normalizeEquipmentPayload(payload);
 
   const response = await fetch(`/api/equipment/${aquariumId}`, {
     method: "POST",
@@ -196,13 +324,7 @@ export async function addEquipmentToAquarium(aquariumId, payload) {
     body: JSON.stringify(cleanPayload),
   });
 
-  const data = await response.json().catch(() => null);
-
-  console.log("ADD EQUIPMENT FRONTEND:", {
-    status: response.status,
-    data,
-    sentPayload: cleanPayload,
-  });
+  const data = await readJsonResponse(response);
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося додати обладнання"));
@@ -211,7 +333,55 @@ export async function addEquipmentToAquarium(aquariumId, payload) {
   return mapEquipmentFromApi(data);
 }
 
-export async function serviceEquipment(equipmentId) {
+export async function updateEquipment(equipmentId, payload) {
+  if (!equipmentId) {
+    throw new Error("Equipment id is required");
+  }
+
+  const cleanPayload = normalizeEquipmentPayload(payload);
+
+  const response = await fetch(`/api/equipment/${equipmentId}`, {
+    method: "PATCH",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(cleanPayload),
+  });
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося оновити обладнання"));
+  }
+
+  return mapEquipmentFromApi(data);
+}
+
+export async function deleteEquipment(equipmentId) {
+  if (!equipmentId) {
+    throw new Error("Equipment id is required");
+  }
+
+  const response = await fetch(`/api/equipment/${equipmentId}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося видалити обладнання"));
+  }
+
+  return data;
+}
+
+export async function quickServiceEquipment(equipmentId) {
   if (!equipmentId) {
     throw new Error("Equipment id is required");
   }
@@ -224,13 +394,7 @@ export async function serviceEquipment(equipmentId) {
     },
   });
 
-  const data = await response.json().catch(() => null);
-
-  console.log("SERVICE EQUIPMENT FRONTEND:", {
-    status: response.status,
-    data,
-    equipmentId,
-  });
+  const data = await readJsonResponse(response);
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося обслужити обладнання"));
@@ -238,3 +402,44 @@ export async function serviceEquipment(equipmentId) {
 
   return data;
 }
+
+export async function addEquipmentLog(equipmentId, payload = {}) {
+  if (!equipmentId) {
+    throw new Error("Equipment id is required");
+  }
+
+  const cleanPayload = {
+    log_type: String(payload.log_type || payload.logType || "").trim(),
+    log_date: payload.log_date || payload.logDate || null,
+    description: payload.description
+      ? String(payload.description).trim()
+      : null,
+    is_resolved: Boolean(payload.is_resolved ?? payload.isResolved),
+  };
+
+  const response = await fetch(`/api/equipment/${equipmentId}/logs`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(cleanPayload),
+  });
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося додати запис"));
+  }
+
+  return mapEquipmentLogFromApi(data);
+}
+
+/*
+  Старі назви залишив як alias, щоб не ламати інші частини проєкту,
+  якщо вони десь ще використовуються.
+*/
+export const getAquariumEquipment = getEquipmentList;
+export const addEquipmentToAquarium = createEquipment;
+export const serviceEquipment = quickServiceEquipment;

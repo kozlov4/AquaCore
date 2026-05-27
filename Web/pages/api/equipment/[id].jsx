@@ -25,10 +25,33 @@ function getErrorMessage(data, fallbackMessage) {
   return fallbackMessage;
 }
 
+function normalizeEquipmentPayload(body) {
+  return {
+    category: body?.category ? String(body.category).trim() : undefined,
+    name: body?.name ? String(body.name).trim() : undefined,
+    installation_date: body?.installation_date || undefined,
+    specifications: body?.specifications
+      ? String(body.specifications).trim()
+      : null,
+    maintenance_interval_days:
+      body?.maintenance_interval_days === "" ||
+      body?.maintenance_interval_days === null ||
+      body?.maintenance_interval_days === undefined
+        ? null
+        : Number(body.maintenance_interval_days),
+  };
+}
+
+function removeUndefinedFields(payload) {
+  return Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined)
+  );
+}
+
 export default async function handler(req, res) {
   try {
     const token = req.headers.authorization;
-    const { id, equipment_category } = req.query;
+    const { id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -38,61 +61,59 @@ export default async function handler(req, res) {
 
     if (!id) {
       return res.status(400).json({
-        message: "id is required",
+        message: "Id is required",
       });
     }
 
     if (req.method === "GET") {
+      const { equipment_category } = req.query;
       const params = new URLSearchParams();
 
       if (equipment_category && equipment_category !== "all") {
         params.append("equipment_category", String(equipment_category));
       }
 
-      const queryString = params.toString();
-      const backendUrl = `${API_URL}/equipment/${id}${
-        queryString ? `?${queryString}` : ""
-      }`;
+      const query = params.toString();
 
-      const response = await fetch(backendUrl, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: token,
-        },
-      });
+      const response = await fetch(
+        `${API_URL}/equipment/${id}${query ? `?${query}` : ""}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: token,
+          },
+        }
+      );
 
       const data = await readResponse(response);
 
       console.log(`GET /equipment/${id} status:`, response.status);
       console.log(`GET /equipment/${id} response:`, data);
 
-      if (!response.ok) {
-        return res.status(response.status).json({
-          message: getErrorMessage(data, "Не вдалося завантажити обладнання"),
-          detail: data?.detail,
-          backendStatus: response.status,
-        });
-      }
-
-      return res.status(200).json(data);
+      return res.status(response.status).json(data);
     }
 
     if (req.method === "POST") {
-      const payload = {
-        category: String(req.body?.category || "").trim(),
-        name: String(req.body?.name || "").trim(),
-        installation_date: req.body?.installation_date,
-        specifications: req.body?.specifications
-          ? String(req.body.specifications).trim()
-          : null,
-        maintenance_interval_days:
-          req.body?.maintenance_interval_days === "" ||
-          req.body?.maintenance_interval_days === null ||
-          req.body?.maintenance_interval_days === undefined
-            ? null
-            : Number(req.body.maintenance_interval_days),
-      };
+      const payload = normalizeEquipmentPayload(req.body);
+
+      if (!payload.category) {
+        return res.status(400).json({
+          message: "Категорія обладнання є обовʼязковою",
+        });
+      }
+
+      if (!payload.name) {
+        return res.status(400).json({
+          message: "Назва обладнання є обовʼязковою",
+        });
+      }
+
+      if (!payload.installation_date) {
+        return res.status(400).json({
+          message: "Дата встановлення є обовʼязковою",
+        });
+      }
 
       const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "POST",
@@ -123,32 +144,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PATCH") {
-      const payload = {
-        category: req.body?.category
-          ? String(req.body.category).trim()
-          : undefined,
-        name: req.body?.name ? String(req.body.name).trim() : undefined,
-        installation_date: req.body?.installation_date || undefined,
-        specifications:
-          req.body?.specifications === null
-            ? null
-            : req.body?.specifications
-            ? String(req.body.specifications).trim()
-            : undefined,
-        maintenance_interval_days:
-          req.body?.maintenance_interval_days === "" ||
-          req.body?.maintenance_interval_days === undefined
-            ? undefined
-            : req.body?.maintenance_interval_days === null
-            ? null
-            : Number(req.body.maintenance_interval_days),
-      };
-
-      Object.keys(payload).forEach((key) => {
-        if (payload[key] === undefined) {
-          delete payload[key];
-        }
-      });
+      const payload = removeUndefinedFields(normalizeEquipmentPayload(req.body));
 
       const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "PATCH",
@@ -175,7 +171,7 @@ export default async function handler(req, res) {
         });
       }
 
-      return res.status(200).json(data);
+      return res.status(response.status || 200).json(data);
     }
 
     if (req.method === "DELETE") {
@@ -186,10 +182,6 @@ export default async function handler(req, res) {
           Authorization: token,
         },
       });
-
-      if (response.status === 204) {
-        return res.status(204).end();
-      }
 
       const data = await readResponse(response);
 
@@ -204,7 +196,7 @@ export default async function handler(req, res) {
         });
       }
 
-      return res.status(200).json(data);
+      return res.status(response.status || 204).json(data);
     }
 
     res.setHeader("Allow", ["GET", "POST", "PATCH", "DELETE"]);
