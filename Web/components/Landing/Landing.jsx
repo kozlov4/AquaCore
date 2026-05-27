@@ -122,7 +122,7 @@ const fadeSide = (direction = "left") => ({
 
 function LandingHeader() {
   return (
-    <header className="h-[76px] bg-[#ffffff] px-[30px] grid grid-cols-[180px_1fr_230px] items-center max-lg:h-auto max-lg:grid-cols-[120px_1fr] max-lg:gap-[18px] max-lg:px-5 max-lg:py-5 max-md:flex max-md:flex-col">
+    <header className="h-[76px] bg-[#fefefe] px-[30px] grid grid-cols-[180px_1fr_230px] items-center max-lg:h-auto max-lg:grid-cols-[120px_1fr] max-lg:gap-[18px] max-lg:px-5 max-lg:py-5 max-md:flex max-md:flex-col">
       <Link href="/" className="inline-flex w-fit items-center" aria-label="AquaCore">
         <img
           src="/images/Logo.svg"

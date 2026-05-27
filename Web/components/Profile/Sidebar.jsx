@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -145,6 +146,18 @@ const mobileMainItems = [
   },
 ];
 
+const guestPagesWithoutSidebar = ["/calculators", "/reviews"];
+
+function getAccessToken() {
+  if (typeof window === "undefined") return null;
+
+  return (
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token")
+  );
+}
+
 function SidebarIcon({ src, alt, size = 22 }) {
   return (
     <span
@@ -199,9 +212,30 @@ function SidebarItem({ item }) {
 export function Sidebar() {
   const router = useRouter();
 
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    setIsAuthorized(Boolean(getAccessToken()));
+    setIsAuthChecked(true);
+  }, []);
+
   const isDashboardActive =
     router.pathname === "/dashboard" ||
     router.pathname.startsWith("/dashboard/");
+
+  const shouldHideSidebarForGuest =
+    isAuthChecked &&
+    !isAuthorized &&
+    guestPagesWithoutSidebar.includes(router.pathname);
+
+  if (!isAuthChecked) {
+    return null;
+  }
+
+  if (shouldHideSidebarForGuest) {
+    return null;
+  }
 
   return (
     <>

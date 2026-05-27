@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import { createOrUpdateFeedback, getFeedbacks } from "../services/feedbackApi";
+import { isUserAuthorized } from "../services/authStorage";
 
 const sortMap = {
   "Нові спочатку": "newest",
@@ -20,10 +22,10 @@ function mapApiFeedbackToReview(item, index) {
 }
 
 export function useReviews() {
+  const router = useRouter();
+
   const [reviews, setReviews] = useState([]);
-
   const [showAll, setShowAll] = useState(false);
-
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
 
@@ -32,6 +34,7 @@ export function useReviews() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
 
   const minRate = selectedRating || 0;
   const sortBy = sortMap[selectedSort] || "newest";
@@ -65,7 +68,27 @@ export function useReviews() {
     loadReviews();
   }, [showAll, selectedRating, selectedSort]);
 
+  const handleOpenFeedback = () => {
+    setAuthMessage("");
+
+    if (!isUserAuthorized()) {
+      setAuthMessage("Щоб залишити відгук, потрібно увійти в акаунт.");
+
+      setTimeout(() => {
+        router.push("/signIn");
+      }, 900);
+
+      return;
+    }
+
+    setIsFeedbackOpen(true);
+  };
+
   const handleCreateFeedback = async ({ rating, text }) => {
+    if (!isUserAuthorized()) {
+      throw new Error("Щоб залишити відгук, потрібно увійти в акаунт");
+    }
+
     await createOrUpdateFeedback({
       rate: rating,
       description: text,
@@ -75,11 +98,6 @@ export function useReviews() {
     setIsSuccessOpen(true);
 
     await loadReviews();
-  };
-
-  const handleFeedbackSuccess = () => {
-    setIsFeedbackOpen(false);
-    setIsSuccessOpen(true);
   };
 
   const visibleReviews = useMemo(() => {
@@ -106,9 +124,10 @@ export function useReviews() {
 
     isLoading,
     reviewsError,
+    authMessage,
 
     loadReviews,
+    handleOpenFeedback,
     handleCreateFeedback,
-    handleFeedbackSuccess,
   };
 }
