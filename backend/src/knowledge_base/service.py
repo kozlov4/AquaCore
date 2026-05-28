@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import HTTPException
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -123,7 +125,7 @@ async def create_article(
     article_in: ArticlePublishCreate | ArticleDraftCreate,
     is_draft: bool,
 ):
-    status = "DRAFT" if is_draft else "PENDING"
+    status = "DRAFT" if is_draft else "PUBLISHED"
 
     content = article_in.content or ""
     reading_time = calculate_reading_time(content)
@@ -138,6 +140,9 @@ async def create_article(
         reading_time_minutes=reading_time,
     )
 
+    if status == "PUBLISHED":
+        new_article.published_at = datetime.utcnow()
+
     session.add(new_article)
 
     await session.commit()
@@ -147,18 +152,18 @@ async def create_article(
 
 
 async def update_article(
-    session: AsyncSession,
-    article_id: int,
-    user_id: int,
-    article_in: ArticleUpdate,
+        session: AsyncSession,
+        article_id: int,
+        user_id: int,
+        article_in: ArticleUpdate,
 ):
     article = await session.get(Article, article_id)
     if not article:
-        raise HTTPException(status_code=404, detail="Стаття не знайдена")
+        raise HTTPException(status_code=404, detail="Статья не найдена")
 
     if article.author_id != user_id:
         raise HTTPException(
-            status_code=403, detail="Ви не можете редагувати чужу статтю"
+            status_code=403, detail="Вы не можете редактировать чужую статью"
         )
 
     update_data = article_in.model_dump(exclude_unset=True, exclude={"is_draft"})
@@ -174,17 +179,20 @@ async def update_article(
             article.status = "DRAFT"
         elif article_in.is_draft == False:
             if (
-                not article.title
-                or not article.content
-                or not article.category_id
-                or not article.excerpt
-                or not article.image
+                    not article.title
+                    or not article.content
+                    or not article.category_id
+                    or not article.excerpt
+                    or not article.image_id
             ):
                 raise HTTPException(
                     status_code=400,
-                    detail="Щоб надіслати статтю модератору, заповніть всі поля",
+                    detail="Для публикации статьи необходимо заполнить все поля",
                 )
-            article.status = "PENDING"
+            article.status = "PUBLISHED"
+
+            if not article.published_at:
+                article.published_at = datetime.utcnow()
 
     await session.commit()
     await session.refresh(article)
