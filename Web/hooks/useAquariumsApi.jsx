@@ -15,6 +15,7 @@ import { createWaterTest } from "../services/testsApi";
 export function useAquariumsApi() {
   const [aquariums, setAquariums] = useState([]);
   const [aquariumNames, setAquariumNames] = useState([]);
+
   const [selectedAquarium, setSelectedAquarium] = useState(null);
   const [editingAquarium, setEditingAquarium] = useState(null);
   const [deletingAquarium, setDeletingAquarium] = useState(null);
@@ -61,11 +62,14 @@ export function useAquariumsApi() {
 
   const openCreateModal = () => {
     setEditingAquarium(null);
+    setAquariumsError("");
     setIsAddOpen(true);
   };
 
   const openEditModal = (aquarium) => {
     setEditingAquarium(aquarium);
+    setSelectedAquarium(aquarium);
+    setAquariumsError("");
     setIsSettingsOpen(false);
     setIsAddOpen(true);
   };
@@ -76,9 +80,11 @@ export function useAquariumsApi() {
   };
 
   const openSettingsModal = (aquarium) => {
-    setSelectedAquarium(aquarium);
-    setAquariumsError("");
-    setIsSettingsOpen(true);
+    /*
+      Тепер кнопка налаштувань відкриває саме модалку редагування,
+      бо AddAquariumModal уже підтримує завантаження нового фото.
+    */
+    openEditModal(aquarium);
   };
 
   const closeSettingsModal = () => {
@@ -110,9 +116,9 @@ export function useAquariumsApi() {
       setIsSaving(true);
       setAquariumsError("");
 
-      if (editingAquarium?.id) {
+      if (editingAquarium?.id || payload?.id) {
         await updateAquarium({
-          id: editingAquarium.id,
+          id: editingAquarium?.id || payload.id,
           ...payload,
         });
       } else {
@@ -139,6 +145,7 @@ export function useAquariumsApi() {
       await updateAquarium(payload);
 
       setIsSettingsOpen(false);
+      closeAddModal();
 
       await loadAquariums();
       await loadAquariumNames();
@@ -153,6 +160,7 @@ export function useAquariumsApi() {
   const askDeleteAquarium = (aquarium) => {
     setDeletingAquarium(aquarium);
     setIsSettingsOpen(false);
+    setIsAddOpen(false);
   };
 
   const cancelDeleteAquarium = () => {
@@ -199,7 +207,9 @@ export function useAquariumsApi() {
       setAquariums((prev) => prev.filter((aquarium) => aquarium.id !== id));
 
       setIsSettingsOpen(false);
+      setIsAddOpen(false);
       setSelectedAquarium(null);
+      setEditingAquarium(null);
       setDeletingAquarium(null);
 
       await loadAquariums();
@@ -233,10 +243,28 @@ export function useAquariumsApi() {
                   ph: params.ph,
                   gh: params.gh,
                   kh: params.kh,
+                  nh3: params.nh3,
+                  no2: params.no2,
+                  no3: params.no3,
                 },
-                params: `pH ${params.ph || "—"} · GH ${
-                  params.gh || "—"
-                } · KH ${params.kh || "—"}`,
+                last_test: {
+                  days_ago: 0,
+                  ph: params.ph,
+                  gh: params.gh,
+                  kh: params.kh,
+                  nh3: params.nh3,
+                  no2: params.no2,
+                  no3: params.no3,
+                },
+                lastTestText: "сьогодні",
+                params: [
+                  `pH ${params.ph || "—"}`,
+                  `GH ${params.gh || "—"}`,
+                  `KH ${params.kh || "—"}`,
+                  `NH3 ${params.nh3 || "—"}`,
+                  `NO2 ${params.no2 || "—"}`,
+                  `NO3 ${params.no3 || "—"}`,
+                ].join(" · "),
               }
             : aquarium
         )
@@ -256,6 +284,7 @@ export function useAquariumsApi() {
   return {
     aquariums,
     aquariumNames,
+
     selectedAquarium,
     editingAquarium,
     deletingAquarium,
@@ -294,9 +323,8 @@ export function useAquariumsApi() {
     deleteSelectedAquarium,
 
     saveWaterParams,
-
-    // залишив стару назву, щоб нічого не зламалось,
-    // якщо вона вже використовується в Aquariums.jsx
     saveWaterParamsLocally: saveWaterParams,
   };
 }
+
+export default useAquariumsApi;

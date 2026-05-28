@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+
 import {
+  getAquariumById,
   getAquariumPopulation,
   addInhabitantToAquarium,
 } from "../services/aquariumsApi";
+
 import {
   getAquariumEquipment,
   addEquipmentToAquarium,
@@ -22,6 +25,10 @@ export function useAquariumDetails() {
 
     return id || "";
   }, [router.query?.id]);
+
+  const [aquarium, setAquarium] = useState(null);
+  const [isAquariumLoading, setIsAquariumLoading] = useState(false);
+  const [aquariumError, setAquariumError] = useState("");
 
   const [activeTab, setActiveTab] = useState("Населення");
 
@@ -43,7 +50,25 @@ export function useAquariumDetails() {
   const [equipment, setEquipment] = useState([]);
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
   const [equipmentError, setEquipmentError] = useState("");
+
   const [servicingEquipmentId, setServicingEquipmentId] = useState(null);
+
+  const loadAquarium = useCallback(async () => {
+    if (!aquariumId) return;
+
+    try {
+      setIsAquariumLoading(true);
+      setAquariumError("");
+
+      const data = await getAquariumById(aquariumId);
+
+      setAquarium(data);
+    } catch (error) {
+      setAquariumError(error.message || "Не вдалося завантажити акваріум");
+    } finally {
+      setIsAquariumLoading(false);
+    }
+  }, [aquariumId]);
 
   const loadPopulation = useCallback(async () => {
     if (!aquariumId) return;
@@ -80,9 +105,10 @@ export function useAquariumDetails() {
   }, [aquariumId]);
 
   useEffect(() => {
+    loadAquarium();
     loadPopulation();
     loadEquipment();
-  }, [loadPopulation, loadEquipment]);
+  }, [loadAquarium, loadPopulation, loadEquipment]);
 
   const handleAddResident = async (resident) => {
     await addInhabitantToAquarium({
@@ -122,7 +148,12 @@ export function useAquariumDetails() {
   };
 
   return {
+    aquarium,
     aquariumId,
+
+    isAquariumLoading,
+    aquariumError,
+    reloadAquarium: loadAquarium,
 
     activeTab,
     setActiveTab,
@@ -135,6 +166,7 @@ export function useAquariumDetails() {
 
     population,
     residents: population.inhabitants,
+
     isPopulationLoading,
     populationError,
     reloadPopulation: loadPopulation,
@@ -143,6 +175,7 @@ export function useAquariumDetails() {
     isEquipmentLoading,
     equipmentError,
     reloadEquipment: loadEquipment,
+
     servicingEquipmentId,
 
     handleAddResident,

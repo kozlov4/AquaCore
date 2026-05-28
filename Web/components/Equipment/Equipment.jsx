@@ -43,11 +43,123 @@ function categoryIcon(category) {
 }
 
 function isNeedsAttention(item) {
-  if (item.daysUntilMaintenance === null || item.daysUntilMaintenance === undefined) {
+  if (
+    item.daysUntilMaintenance === null ||
+    item.daysUntilMaintenance === undefined
+  ) {
     return false;
   }
 
-  return item.daysUntilMaintenance <= 0;
+  return Number(item.daysUntilMaintenance) <= 0;
+}
+
+function clampProgress(value) {
+  if (Number.isNaN(value)) return 0;
+
+  return Math.min(100, Math.max(0, value));
+}
+
+function getMaintenanceInterval(item) {
+  const interval =
+    item.maintenanceIntervalDays ??
+    item.maintenance_interval_days ??
+    item.raw?.maintenance_interval_days ??
+    item.raw?.maintenanceIntervalDays ??
+    null;
+
+  const numericInterval = Number(interval);
+
+  if (!numericInterval || Number.isNaN(numericInterval) || numericInterval <= 0) {
+    return null;
+  }
+
+  return numericInterval;
+}
+
+function getDaysLeft(item) {
+  const days =
+    item.daysUntilMaintenance ??
+    item.days_until_maintenance ??
+    item.raw?.days_until_maintenance ??
+    item.raw?.daysUntilMaintenance ??
+    null;
+
+  if (days === null || days === undefined || days === "") {
+    return null;
+  }
+
+  const numericDays = Number(days);
+
+  if (Number.isNaN(numericDays)) {
+    return null;
+  }
+
+  return numericDays;
+}
+
+function getMaintenanceProgress(item) {
+  const interval = getMaintenanceInterval(item);
+  const daysLeft = getDaysLeft(item);
+
+  if (interval === null || daysLeft === null) {
+    return {
+      percent: 0,
+      label: "Графік не задано",
+      description: "Вкажіть інтервал обслуговування",
+      colorClass: "bg-slate-300",
+      textClass: "text-slate-400",
+    };
+  }
+
+  if (daysLeft <= 0) {
+    return {
+      percent: 0,
+      label: "Потрібно зараз",
+      description: `Інтервал: кожні ${interval} дн.`,
+      colorClass: "bg-red-500",
+      textClass: "text-red-500",
+    };
+  }
+
+  const remainingPercent = clampProgress((daysLeft / interval) * 100);
+
+  if (daysLeft <= 3) {
+    return {
+      percent: remainingPercent,
+      label: `Залишилось ${daysLeft} дн.`,
+      description: `Інтервал: кожні ${interval} дн.`,
+      colorClass: "bg-red-500",
+      textClass: "text-red-500",
+    };
+  }
+
+  if (remainingPercent <= 35) {
+    return {
+      percent: remainingPercent,
+      label: `Залишилось ${daysLeft} дн.`,
+      description: `Інтервал: кожні ${interval} дн.`,
+      colorClass: "bg-orange-400",
+      textClass: "text-orange-500",
+    };
+  }
+
+  if (remainingPercent <= 70) {
+    return {
+      percent: remainingPercent,
+      label: `Залишилось ${daysLeft} дн.`,
+      description: `Інтервал: кожні ${interval} дн.`,
+      colorClass: "bg-yellow-400",
+      textClass: "text-yellow-600",
+    };
+  }
+
+  return {
+    percent: remainingPercent,
+    label: `Залишилось ${daysLeft} дн.`,
+    description: `Інтервал: кожні ${interval} дн.`,
+    colorClass: "bg-emerald-500",
+    textClass: "text-emerald-600",
+  };
 }
 
 function EquipmentCard({
@@ -60,27 +172,40 @@ function EquipmentCard({
   isBusy,
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const attention = isNeedsAttention(item);
+  const progress = getMaintenanceProgress(item);
 
   return (
-    <article
-      className={`relative rounded-2xl border bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.04)] ${
-        attention ? "border-yellow-200" : "border-slate-100"
-      }`}
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.97 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+      className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]"
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl">
-          {categoryIcon(item.category)}
-        </div>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl ${
+              attention
+                ? "bg-red-50 text-red-500"
+                : "bg-[#f4f2ff] text-[#635BFF]"
+            }`}
+          >
+            {categoryIcon(item.category)}
+          </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-black uppercase text-slate-400">
-            {item.category}
-          </p>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">
+              {item.category}
+            </p>
 
-          <h3 className="mt-1 truncate text-[15px] font-black text-slate-950">
-            {item.name}
-          </h3>
+            <h3 className="mt-1 text-[17px] font-black leading-tight text-slate-950">
+              {item.name}
+            </h3>
+          </div>
         </div>
 
         <div className="relative">
@@ -89,11 +214,11 @@ function EquipmentCard({
             onClick={() => setIsMenuOpen((prev) => !prev)}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-700"
           >
-            <MoreVertical size={17} />
+            <MoreVertical size={18} />
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-9 z-30 w-48 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xl">
+            <div className="absolute right-0 top-10 z-20 w-[190px] overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
               <button
                 type="button"
                 onClick={() => {
@@ -114,7 +239,7 @@ function EquipmentCard({
                 }}
                 className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-bold text-orange-600 hover:bg-orange-50"
               >
-                <Wrench size={15} />
+                <AlertTriangle size={15} />
                 Додати поломку
               </button>
 
@@ -134,51 +259,54 @@ function EquipmentCard({
         </div>
       </div>
 
-      <div className="mt-5 space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="font-semibold text-slate-400">Встановлено:</span>
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-slate-500">
+          Встановлено:{" "}
           <span className="font-black text-slate-700">
             {item.installationDateLabel}
           </span>
-        </div>
+        </p>
 
         {item.specifications && (
-          <div className="flex justify-between gap-3">
-            <span className="font-semibold text-slate-400">Характеристики:</span>
-            <span className="text-right font-black text-slate-700">
+          <p className="text-sm font-semibold leading-5 text-slate-500">
+            Характеристики:{" "}
+            <span className="font-black text-slate-700">
               {item.specifications}
             </span>
-          </div>
+          </p>
         )}
 
-        <div className="flex justify-between">
-          <span className="font-semibold text-slate-400">Обслуговування:</span>
-          <span
-            className={`font-black ${
-              attention ? "text-orange-500" : "text-emerald-500"
-            }`}
-          >
-            {item.daysUntilMaintenance === null
-              ? "Не задано"
-              : attention
-              ? "Потрібно зараз"
-              : `через ${item.daysUntilMaintenance} дн.`}
-          </span>
-        </div>
-      </div>
+        <div className="rounded-2xl bg-slate-50 p-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">
+                Обслуговування
+              </p>
 
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className={`h-full rounded-full ${attention ? "bg-orange-400" : "bg-emerald-400"}`}
-          style={{
-            width:
-              item.daysUntilMaintenance === null
-                ? "0%"
-                : attention
-                ? "100%"
-                : "55%",
-          }}
-        />
+              <p className={`mt-1 text-sm font-black ${progress.textClass}`}>
+                {progress.label}
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm">
+              <Clock size={18} />
+            </div>
+          </div>
+
+          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress.percent}%` }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+              className={`h-full rounded-full ${progress.colorClass}`}
+            />
+          </div>
+
+          <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-400">
+            <span>{progress.description}</span>
+            <span>{Math.round(progress.percent)}%</span>
+          </div>
+        </div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
@@ -199,7 +327,7 @@ function EquipmentCard({
           Історія
         </button>
       </div>
-    </article>
+    </motion.article>
   );
 }
 

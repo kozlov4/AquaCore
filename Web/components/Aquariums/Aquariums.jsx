@@ -8,7 +8,6 @@ import { EmptyAquariums } from "./EmptyAquariums";
 import { AquariumCard } from "./AquariumCard";
 import { WaterParamsModal } from "./WaterParamsModal";
 import { TaskModal } from "./TaskModal";
-import { AquariumSettingsModal } from "./AquariumSettingsModal";
 import { AddAquariumModal } from "./AddAquariumModal";
 import { DeleteAquariumModal } from "./DeleteAquariumModal";
 
@@ -21,141 +20,130 @@ export function Aquariums() {
     Array.isArray(aquariums.aquariums) && aquariums.aquariums.length > 0;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white">
+    <div className="min-h-screen bg-white text-[#111827]">
       <Sidebar />
 
       <main
         className="
-          px-4 pb-28 pt-6
-          sm:px-6 sm:pb-32 sm:pt-8
-          lg:ml-[88px] lg:px-16 lg:py-12
+          min-h-screen
+          px-4 pb-28 pt-8
+          sm:px-6 sm:pt-10
+          lg:ml-[88px] lg:px-12 lg:py-10
         "
       >
-        <div className="mx-auto max-w-[1120px]">
-          <motion.header
-            initial={{ opacity: 0, y: 24 }}
+        <div className="mx-auto max-w-[1280px]">
+          <motion.div
+            initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="
-              mb-8 flex flex-col gap-5
-              md:flex-row md:items-start md:justify-between
-            "
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="mb-9 flex items-center justify-center gap-3"
           >
-            <div>
-              <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
-                Ваші екосистеми
-              </h1>
+            <h1
+              className="
+                text-center text-[18px] font-medium tracking-[0.14em]
+                text-[#111827]
+              "
+            >
+              Ваші екосистеми
+            </h1>
 
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Керуйте акваріумами, параметрами води та доглядом.
-              </p>
-            </div>
-          </motion.header>
+            <span className="text-[34px] leading-none">🐠</span>
+          </motion.div>
 
           {aquariums.aquariumsError && (
-            <p className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold text-red-500">
+            <div className="mx-auto mb-6 max-w-[900px] rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">
               {aquariums.aquariumsError}
-            </p>
+            </div>
           )}
 
           {aquariums.isLoading && (
-            <p className="mb-6 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-500">
+            <div className="mx-auto mb-6 max-w-[900px] rounded-2xl border border-slate-100 bg-white px-5 py-4 text-sm font-semibold text-slate-500 shadow-sm">
               Завантаження акваріумів...
-            </p>
+            </div>
           )}
 
           {!aquariums.isLoading && !hasAquariums ? (
-            <EmptyAquariums
-              onCreate={aquariums.openCreateModal}
-              onAdd={aquariums.openCreateModal}
-            />
+            <EmptyAquariums onCreate={aquariums.openCreateModal} />
           ) : (
             !aquariums.isLoading && (
-              <motion.section
+              <motion.div
                 layout
                 className="
-                  grid grid-cols-1 gap-6
-                  md:grid-cols-2
+                  grid gap-x-4 gap-y-7
+                  sm:grid-cols-2
                   xl:grid-cols-3
+                  2xl:grid-cols-4
                 "
               >
-                {aquariums.aquariums.map((aquarium, index) => (
-                  <AquariumCard
-                    key={aquarium.id}
-                    aquarium={aquarium}
-                    index={index}
-                    onOpenWaterParams={() =>
-                      aquariums.openWaterParamsModal(aquarium)
-                    }
-                    onOpenTask={() => aquariums.openTaskModal(aquarium)}
-                    onOpenSettings={() => aquariums.openSettingsModal(aquarium)}
-                  />
-                ))}
-              </motion.section>
+                <AnimatePresence mode="popLayout">
+                  {aquariums.aquariums.map((aquarium, index) => (
+                    <AquariumCard
+                      key={aquarium.id}
+                      aquarium={aquarium}
+                      index={index}
+                      onOpenWaterParams={() =>
+                        aquariums.openWaterParamsModal(aquarium)
+                      }
+                      onOpenTask={() => aquariums.openTaskModal(aquarium)}
+                      onOpenSettings={() =>
+                        aquariums.openSettingsModal(aquarium)
+                      }
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             )
           )}
         </div>
       </main>
 
-      {hasAquariums && (
-        <motion.button
-          type="button"
-          onClick={aquariums.openCreateModal}
-          whileHover={{
-            scale: 1.12,
-            rotate: 90,
-            boxShadow: "0 22px 48px rgba(109,93,251,0.42)",
-          }}
-          whileTap={{ scale: 0.92 }}
-          className="
-            fixed bottom-24 right-5 z-30
-            flex h-14 w-14 items-center justify-center
-            rounded-full bg-gradient-to-br from-[#6D5DFB] via-[#7C3AED] to-[#9333EA]
-            text-white shadow-[0_18px_40px_rgba(109,93,251,0.35)]
-            lg:bottom-10 lg:right-12 lg:h-16 lg:w-16
-          "
-        >
-          <Plus size={26} />
-        </motion.button>
-      )}
+      <motion.button
+        type="button"
+        onClick={aquariums.openCreateModal}
+        initial={{ opacity: 0, scale: 0.8, y: 18 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        whileHover={{ scale: 1.08, y: -2 }}
+        whileTap={{ scale: 0.94 }}
+        className="
+          fixed bottom-7 right-7 z-40
+          flex h-12 w-12 items-center justify-center
+          rounded-full bg-[#7657ff] text-white
+          shadow-[0_14px_35px_rgba(118,87,255,0.35)]
+          transition hover:bg-[#6547f3]
+          md:bottom-8 md:right-9
+        "
+        aria-label="Додати акваріум"
+        title="Додати акваріум"
+      >
+        <Plus size={25} strokeWidth={2.5} />
+      </motion.button>
 
-      <AnimatePresence>
-        {aquariums.isAddOpen && (
-          <AddAquariumModal
-            isOpen={aquariums.isAddOpen}
-            aquarium={aquariums.editingAquarium}
-            onClose={aquariums.closeAddModal}
-            onSave={aquariums.saveAquarium}
-            isLoading={aquariums.isSaving}
-          />
-        )}
-      </AnimatePresence>
+      <AddAquariumModal
+        isOpen={aquariums.isAddOpen}
+        aquarium={aquariums.editingAquarium}
+        onClose={aquariums.closeAddModal}
+        onSave={aquariums.saveAquarium}
+        isLoading={aquariums.isSaving}
+      />
 
       <WaterParamsModal
         isOpen={aquariums.isWaterParamsOpen}
+        aquarium={aquariums.selectedAquarium}
         onClose={aquariums.closeWaterParamsModal}
         onSave={aquariums.saveWaterParams}
-        isSaving={aquariums.isSaving}
+        isLoading={aquariums.isSaving}
       />
 
       <TaskModal
         isOpen={aquariums.isTaskOpen}
         aquarium={aquariums.selectedAquarium}
+        aquariumNames={aquariums.aquariumNames}
         onClose={aquariums.closeTaskModal}
-        onSave={aquariums.saveTask}
-        isSaving={aquariums.isSaving}
-      />
-
-      <AquariumSettingsModal
-        isOpen={aquariums.isSettingsOpen}
-        aquarium={aquariums.selectedAquarium}
-        onClose={aquariums.closeSettingsModal}
-        onSave={aquariums.saveSettingsAquarium}
-        onDelete={aquariums.deleteSelectedAquarium}
-        isSaving={aquariums.isSaving}
+        isLoading={aquariums.isSaving}
       />
 
       <DeleteAquariumModal
+        isOpen={Boolean(aquariums.deletingAquarium)}
         aquarium={aquariums.deletingAquarium}
         onClose={aquariums.cancelDeleteAquarium}
         onConfirm={aquariums.confirmDeleteAquarium}
@@ -164,3 +152,5 @@ export function Aquariums() {
     </div>
   );
 }
+
+export default Aquariums;

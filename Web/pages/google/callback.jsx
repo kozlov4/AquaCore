@@ -2,8 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Loader2 } from "lucide-react";
-import { googleCallbackLogin } from "../../services/authApi";
+
+function saveAuthTokens(data) {
+  const accessToken =
+    data?.access_token || data?.accessToken || data?.token || data?.access;
+
+  const refreshToken =
+    data?.refresh_token || data?.refreshToken || data?.refresh;
+
+  const tokenType = data?.token_type || data?.tokenType || "Bearer";
+
+  if (!accessToken) {
+    throw new Error("Backend не повернув access_token");
+  }
+
+  localStorage.setItem("access_token", accessToken);
+  localStorage.setItem("accessToken", accessToken);
+  localStorage.setItem("token", accessToken);
+  localStorage.setItem("token_type", tokenType);
+
+  if (refreshToken) {
+    localStorage.setItem("refresh_token", refreshToken);
+    localStorage.setItem("refreshToken", refreshToken);
+  }
+
+  if (data?.email) {
+    localStorage.setItem("user_email", data.email);
+  }
+
+  if (data?.name) {
+    localStorage.setItem("user_name", data.name);
+  }
+
+  if (data?.nickname) {
+    localStorage.setItem("user_nickname", data.nickname);
+  }
+}
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
@@ -26,9 +60,30 @@ export default function GoogleCallbackPage() {
           return;
         }
 
-        await googleCallbackLogin(code);
+        const response = await fetch(
+          `/api/google/callback?code=${encodeURIComponent(String(code))}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
 
-        router.replace("/dashboard");
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              data?.detail?.[0]?.msg ||
+              data?.detail ||
+              "Не вдалося завершити Google авторизацію"
+          );
+        }
+
+        saveAuthTokens(data);
+
+        router.replace("/aquariums");
       } catch (error) {
         setError(error.message || "Помилка Google авторизації");
       }
@@ -38,40 +93,32 @@ export default function GoogleCallbackPage() {
   }, [router.isReady, router.query, router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f8fafc] px-4">
-      <section className="w-full max-w-[430px] rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+    <main className="flex min-h-screen items-center justify-center bg-[#f8f9ff] px-4">
+      <section className="w-full max-w-[460px] rounded-[28px] bg-white px-8 py-10 text-center shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
         {!error ? (
           <>
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f3f0ff] text-[#635BFF]">
-              <Loader2 size={30} className="animate-spin" />
-            </div>
+            <div className="mx-auto mb-5 h-12 w-12 animate-spin rounded-full border-4 border-[#e5e7eb] border-t-[#635BFF]" />
 
-            <h1 className="text-[24px] font-black text-slate-950">
+            <h1 className="text-2xl font-black text-[#111827]">
               Авторизація через Google
             </h1>
 
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-              Зачекайте, ми завершуємо вхід у ваш акаунт AquaCore...
+            <p className="mt-3 text-sm text-[#6b7280]">
+              Зачекайте, виконується вхід у ваш акаунт...
             </p>
           </>
         ) : (
           <>
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
-              !
-            </div>
-
-            <h1 className="text-[24px] font-black text-slate-950">
+            <h1 className="text-2xl font-black text-[#111827]">
               Помилка входу
             </h1>
 
-            <p className="mt-3 text-sm font-semibold leading-6 text-red-500">
-              {error}
-            </p>
+            <p className="mt-3 text-sm text-[#dc2626]">{error}</p>
 
             <button
               type="button"
               onClick={() => router.push("/signIn")}
-              className="mt-6 h-11 rounded-xl bg-[#635BFF] px-6 text-sm font-black text-white transition hover:bg-[#5147f5]"
+              className="mt-6 rounded-xl bg-[#635BFF] px-6 py-3 text-sm font-black text-white transition hover:bg-[#5148e8]"
             >
               Повернутись до входу
             </button>

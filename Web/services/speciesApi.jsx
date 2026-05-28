@@ -502,18 +502,33 @@ export function normalizeCompatibility(data) {
 }
 
 export async function checkSpeciesCompatibility({ aquariumId, speciesId }) {
-  if (!aquariumId) {
+  const cleanAquariumId =
+    aquariumId?.id ||
+    aquariumId?.aquarium_id ||
+    aquariumId?.aquariumId ||
+    aquariumId;
+
+  const cleanSpeciesId =
+    speciesId?.id ||
+    speciesId?.species_id ||
+    speciesId?.speciesId ||
+    speciesId;
+
+  if (!cleanAquariumId) {
     throw new Error("Не передано id акваріума");
   }
 
-  if (!speciesId) {
+  if (!cleanSpeciesId) {
     throw new Error("Не передано id виду");
   }
 
+  const params = new URLSearchParams({
+    aquarium_id: String(cleanAquariumId),
+    species_id: String(cleanSpeciesId),
+  });
+
   const response = await fetch(
-    `/api/aquariums/${encodeURIComponent(
-      aquariumId
-    )}/check-compability/${encodeURIComponent(speciesId)}`,
+    `/api/aquariums/check-compatibility?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -525,8 +540,17 @@ export async function checkSpeciesCompatibility({ aquariumId, speciesId }) {
 
   const data = await response.json().catch(() => null);
 
+  console.log("CHECK SPECIES COMPATIBILITY FRONTEND:", {
+    aquariumId: cleanAquariumId,
+    speciesId: cleanSpeciesId,
+    status: response.status,
+    data,
+  });
+
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Не вдалося перевірити сумісність"));
+    throw new Error(
+      getErrorMessage(data, "Не вдалося перевірити сумісність")
+    );
   }
 
   return normalizeCompatibility(data);

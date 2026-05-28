@@ -1,61 +1,61 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
+import { ProtectedLandingLink } from "./ProtectedLandingLink";
 
 export function FeatureSection({ feature, index }) {
+  const isReverse = feature.reverse;
+
   return (
     <section
-      id={index === 2 ? "calculators" : index === 0 ? "features" : undefined}
-      className={`grid items-center gap-12 md:grid-cols-2 ${
-        feature.reverse ? "md:[&>*:first-child]:order-2" : ""
+      className={`mx-auto grid max-w-[1180px] items-center gap-10 px-5 py-16 md:grid-cols-2 md:px-8 lg:px-0 ${
+        isReverse ? "md:[&>*:first-child]:order-2" : ""
       }`}
     >
       <motion.div
-        initial={{ opacity: 0, x: feature.reverse ? 40 : -40 }}
+        initial={{ opacity: 0, x: isReverse ? 35 : -35 }}
         whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, margin: "-120px" }}
-        transition={{ duration: 0.5 }}
-        className="max-w-[380px]"
-      >
-        <h2 className="text-3xl font-light tracking-[0.1em] text-slate-950">
-          {feature.title}
-        </h2>
-
-        <p className="mt-5 text-sm leading-7 text-slate-500">
-          {feature.text}
-        </p>
-
-        <Link href="/dashboard">
-          <motion.button
-            whileHover={{
-              y: -2,
-              boxShadow: "0 14px 30px rgba(99,91,255,0.25)",
-            }}
-            whileTap={{ scale: 0.96 }}
-            className="mt-7 rounded-lg bg-[#635BFF] px-5 py-2.5 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#5147f5]"
-          >
-            {feature.button}
-          </motion.button>
-        </Link>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.96 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1 }}
-        viewport={{ once: true, margin: "-120px" }}
-        transition={{ duration: 0.55 }}
-        whileHover={{ y: -6 }}
-        className="relative"
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.75, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-[34px] bg-slate-100 shadow-[0_30px_90px_rgba(15,23,42,0.12)]"
       >
         <Image
           src={feature.image}
           alt={feature.title}
-          width={760}
-          height={460}
-          className="h-auto w-full object-contain drop-shadow-[0_24px_45px_rgba(15,23,42,0.16)]"
+          width={720}
+          height={520}
+          className="h-[320px] w-full object-cover md:h-[420px]"
         />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, x: isReverse ? -35 : 35 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.75, ease: "easeOut" }}
+        className="max-w-[520px]"
+      >
+        <h2 className="text-[34px] font-black leading-tight tracking-[-0.04em] text-slate-950 md:text-[46px]">
+          {feature.title}
+        </h2>
+
+        <p className="mt-5 whitespace-pre-line text-[16px] font-medium leading-8 text-slate-500">
+          {feature.text}
+        </p>
+
+        <ProtectedLandingLink
+          href={feature.href}
+          className="mt-8 inline-flex h-12 items-center gap-2 rounded-2xl bg-[#635BFF] px-6 text-sm font-black text-white shadow-[0_18px_40px_rgba(99,91,255,0.28)] transition hover:bg-[#5147f5]"
+          motionProps={{
+            whileHover: { scale: 1.03, y: -2 },
+            whileTap: { scale: 0.97 },
+          }}
+        >
+          {feature.button}
+          <ArrowRight size={17} />
+        </ProtectedLandingLink>
       </motion.div>
     </section>
   );
