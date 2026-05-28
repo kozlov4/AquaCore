@@ -1,4 +1,5 @@
 import urllib.parse
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +17,10 @@ from .service import register_user, refresh_access_token
 router = APIRouter(tags=["Authentication"])
 
 
+FRONTEND_URL = "/aquariums"
+
+
+
 @router.get("/google/login")
 async def google_login():
 
@@ -31,12 +36,13 @@ async def google_login():
     return RedirectResponse(url)
 
 
-@router.get("/google/callback", response_model=TokenInfo)
+@router.get("/google/callback")
 async def google_callback(
-    code: str, session: AsyncSession = Depends(db_helper.session_dependency)
+    code: str,
+    session: AsyncSession = Depends(db_helper.session_dependency),
 ):
-
     token_url = "https://oauth2.googleapis.com/token"
+
     token_data = {
         "client_id": settings.google_client_id,
         "client_secret": settings.google_client_secret,
@@ -47,25 +53,49 @@ async def google_callback(
 
     async with httpx.AsyncClient() as client:
         token_response = await client.post(token_url, data=token_data)
+
         if token_response.status_code != 200:
             raise HTTPException(
-                status_code=400, detail="Помилка авторизації через Google"
+                status_code=400,
+                detail="Google token error",
             )
 
         google_access_token = token_response.json().get("access_token")
 
         user_info_url = "https://www.googleapis.com/oauth2/v3/userinfo"
-        headers = {"Authorization": f"Bearer {google_access_token}"}
-        user_response = await client.get(user_info_url, headers=headers)
+
+        headers = {
+            "Authorization": f"Bearer {google_access_token}"
+        }
+
+        user_response = await client.get(
+            user_info_url,
+            headers=headers,
+        )
 
         if user_response.status_code != 200:
             raise HTTPException(
-                status_code=400, detail="Не вдалося отримати дані профіля"
+                status_code=400,
+                detail="Google user info error",
             )
 
         user_info = user_response.json()
 
-    return await service.process_google_user(session, user_info)
+    token_info = await service.process_google_user(
+        session,
+        user_info,
+    )
+
+    params = urlencode({
+        "access_token": token_info.access_token,
+        "refresh_token": token_info.refresh_token,
+        "token_type": token_info.token_type,
+    })
+
+    return RedirectResponse(
+        url=f"{FRONTEND_URL}/google/callback?{params}",
+        status_code=302,
+    )
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
