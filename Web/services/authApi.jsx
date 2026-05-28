@@ -9,17 +9,64 @@ function getErrorMessage(data, fallbackMessage) {
   return fallbackMessage;
 }
 
-function saveAuthTokens(data) {
+function parseJwtPayload(token) {
+  try {
+    const payload = token.split(".")[1];
+
+    if (!payload) return null;
+
+    const decodedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(decodedPayload)
+        .split("")
+        .map((char) => `%${`00${char.charCodeAt(0).toString(16)}`.slice(-2)}`)
+        .join("")
+    );
+
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function saveUserFromToken(accessToken) {
+  if (typeof window === "undefined" || !accessToken) return;
+
+  const payload = parseJwtPayload(accessToken);
+
+  if (!payload) return;
+
+  const email = payload.email || payload.sub || "";
+  const name = payload.name || payload.username || payload.nickname || "";
+
+  if (email) {
+    localStorage.setItem("user_email", email);
+  }
+
+  if (name) {
+    localStorage.setItem("user_name", name);
+  }
+
+  if (payload.nickname) {
+    localStorage.setItem("user_nickname", payload.nickname);
+  }
+}
+
+export function saveAuthTokens(data) {
+  if (typeof window === "undefined") return;
+
   const accessToken =
     data?.access_token ||
     data?.accessToken ||
     data?.token ||
-    data?.access;
+    data?.access ||
+    data?.accessTokenValue;
 
   const refreshToken =
     data?.refresh_token ||
     data?.refreshToken ||
-    data?.refresh;
+    data?.refresh ||
+    data?.refreshTokenValue;
 
   const tokenType = data?.token_type || data?.tokenType || "bearer";
 
@@ -27,6 +74,8 @@ function saveAuthTokens(data) {
     localStorage.setItem("access_token", accessToken);
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("token", accessToken);
+
+    saveUserFromToken(accessToken);
   }
 
   if (refreshToken) {
@@ -36,6 +85,18 @@ function saveAuthTokens(data) {
 
   if (tokenType) {
     localStorage.setItem("token_type", tokenType);
+  }
+
+  if (data?.email) {
+    localStorage.setItem("user_email", data.email);
+  }
+
+  if (data?.name) {
+    localStorage.setItem("user_name", data.name);
+  }
+
+  if (data?.nickname) {
+    localStorage.setItem("user_nickname", data.nickname);
   }
 }
 
@@ -56,6 +117,11 @@ export async function registerUser({ name, email, password }) {
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Помилка реєстрації"));
+  }
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("user_name", name || "");
+    localStorage.setItem("user_email", email || "");
   }
 
   return data;
@@ -80,6 +146,18 @@ export async function loginUser({ email, password }) {
   }
 
   saveAuthTokens(data);
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("user_email", email || "");
+
+    if (data?.name) {
+      localStorage.setItem("user_name", data.name);
+    }
+
+    if (data?.nickname) {
+      localStorage.setItem("user_nickname", data.nickname);
+    }
+  }
 
   return data;
 }
@@ -120,10 +198,16 @@ export async function googleCallbackLogin(code) {
 }
 
 export function logoutUser() {
+  if (typeof window === "undefined") return;
+
   localStorage.removeItem("access_token");
   localStorage.removeItem("accessToken");
   localStorage.removeItem("token");
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("token_type");
+
+  localStorage.removeItem("user_name");
+  localStorage.removeItem("user_email");
+  localStorage.removeItem("user_nickname");
 }

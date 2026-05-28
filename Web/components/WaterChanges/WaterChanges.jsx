@@ -37,10 +37,65 @@ function formatDate(value) {
   });
 }
 
+function calculateDaysLeftFromDate(value) {
+  if (!value) return null;
+
+  const targetDate = new Date(value);
+
+  if (Number.isNaN(targetDate.getTime())) return null;
+
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffMs = targetDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  return diffDays;
+}
+
+function getDaysWord(days) {
+  const value = Math.abs(Number(days));
+
+  if (value % 10 === 1 && value % 100 !== 11) {
+    return "день";
+  }
+
+  if (
+    [2, 3, 4].includes(value % 10) &&
+    ![12, 13, 14].includes(value % 100)
+  ) {
+    return "дні";
+  }
+
+  return "днів";
+}
+
+function getCycleStatusText(daysLeft) {
+  if (daysLeft === null || daysLeft === undefined) {
+    return "Налаштуйте графік";
+  }
+
+  if (Number(daysLeft) < 0) {
+    const overdueDays = Math.abs(Number(daysLeft));
+
+    return `Підміна прострочена на ${overdueDays} ${getDaysWord(
+      overdueDays,
+    )}`;
+  }
+
+  if (Number(daysLeft) === 0) {
+    return "Підміну потрібно виконати сьогодні";
+  }
+
+  return `Підміна через ${daysLeft} ${getDaysWord(daysLeft)}`;
+}
+
 function getSafePercentage(value) {
   const numberValue = Number(value);
 
-  if (!numberValue || Number.isNaN(numberValue) || numberValue <= 0) {
+  if (Number.isNaN(numberValue) || numberValue <= 0) {
     return 30;
   }
 
@@ -48,10 +103,16 @@ function getSafePercentage(value) {
 }
 
 function calculateLiters(volume, percentage) {
-  const aquariumVolume = Number(volume || 0);
+  const aquariumVolume = Number(volume);
   const percent = getSafePercentage(percentage);
 
-  if (!aquariumVolume || Number.isNaN(aquariumVolume)) {
+  if (
+    volume === null ||
+    volume === undefined ||
+    volume === "" ||
+    Number.isNaN(aquariumVolume) ||
+    aquariumVolume <= 0
+  ) {
     return 0;
   }
 
@@ -68,7 +129,7 @@ function RecordWaterChangeModal({
 }) {
   const [changeType, setChangeType] = useState("Планова підміна");
   const [percentage, setPercentage] = useState(
-    getSafePercentage(targetPercentage)
+    getSafePercentage(targetPercentage),
   );
   const [changeDate, setChangeDate] = useState(getTodayInput());
   const [comment, setComment] = useState("");
@@ -237,7 +298,7 @@ function ScheduleModal({
 }) {
   const [localInterval, setLocalInterval] = useState(intervalDays || 7);
   const [localPercentage, setLocalPercentage] = useState(
-    getSafePercentage(percentage)
+    getSafePercentage(percentage),
   );
 
   useEffect(() => {
@@ -305,9 +366,7 @@ function ScheduleModal({
                 className="h-10 w-20 rounded-xl border border-slate-200 px-3 text-center text-sm font-black outline-none focus:border-[#635BFF]"
               />
 
-              <span className="text-sm font-semibold text-slate-500">
-                днів
-              </span>
+              <span className="text-sm font-semibold text-slate-500">днів</span>
             </div>
           </div>
 
@@ -371,9 +430,7 @@ function HistoryItem({ item }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <h3 className="text-sm font-black text-slate-950">
-          {item.changeType}
-        </h3>
+        <h3 className="text-sm font-black text-slate-950">{item.changeType}</h3>
 
         {item.comment && (
           <p className="mt-1 truncate text-xs font-semibold text-slate-400">
@@ -413,7 +470,7 @@ export function WaterChanges() {
 
   const selectedAquarium = useMemo(() => {
     return aquariums.find(
-      (item) => String(item.id) === String(selectedAquariumId)
+      (item) => String(item.id) === String(selectedAquariumId),
     );
   }, [aquariums, selectedAquariumId]);
 
@@ -421,20 +478,65 @@ export function WaterChanges() {
     return getSafePercentage(dashboard?.targetPercentage);
   }, [dashboard]);
 
+  const selectedAquariumVolume = useMemo(() => {
+    const volume = Number(selectedAquarium?.volume);
+
+    if (
+      selectedAquarium?.volume === null ||
+      selectedAquarium?.volume === undefined ||
+      selectedAquarium?.volume === "" ||
+      Number.isNaN(volume) ||
+      volume <= 0
+    ) {
+      return null;
+    }
+
+    return volume;
+  }, [selectedAquarium]);
+
   const waterLiters = useMemo(() => {
-    return calculateLiters(selectedAquarium?.volume, effectivePercentage);
-  }, [selectedAquarium, effectivePercentage]);
+    return calculateLiters(selectedAquariumVolume, effectivePercentage);
+  }, [selectedAquariumVolume, effectivePercentage]);
+
+  const effectiveDaysLeft = useMemo(() => {
+    if (
+      dashboard?.daysLeft !== null &&
+      dashboard?.daysLeft !== undefined &&
+      dashboard?.daysLeft !== ""
+    ) {
+      const value = Number(dashboard.daysLeft);
+
+      if (!Number.isNaN(value)) {
+        return value;
+      }
+    }
+
+    return calculateDaysLeftFromDate(dashboard?.nextChangeDate);
+  }, [dashboard]);
+
+  const cycleStatusText = useMemo(() => {
+    return getCycleStatusText(effectiveDaysLeft);
+  }, [effectiveDaysLeft]);
 
   const progress = useMemo(() => {
     const interval = Number(dashboard?.intervalDays || 0);
-    const daysLeft = Number(dashboard?.daysLeft || 0);
 
-    if (!interval) return 0;
+    if (
+      !interval ||
+      effectiveDaysLeft === null ||
+      effectiveDaysLeft === undefined
+    ) {
+      return 0;
+    }
 
-    const passed = Math.max(0, interval - daysLeft);
+    if (effectiveDaysLeft <= 0) {
+      return 100;
+    }
+
+    const passed = Math.max(0, interval - Number(effectiveDaysLeft));
 
     return Math.min(100, Math.round((passed / interval) * 100));
-  }, [dashboard]);
+  }, [dashboard, effectiveDaysLeft]);
 
   async function loadSelectedAquariumDetails(aquariumId) {
     if (!aquariumId) return;
@@ -450,8 +552,8 @@ export function WaterChanges() {
                 ...fullAquarium,
                 volume: fullAquarium.volume || item.volume || null,
               }
-            : item
-        )
+            : item,
+        ),
       );
     } catch (error) {
       console.log("Не вдалося підтягнути повний акваріум:", error);
@@ -473,6 +575,8 @@ export function WaterChanges() {
         intervalDays: 7,
         targetPercentage: 30,
         daysLeft: null,
+        lastChangeDate: null,
+        nextChangeDate: null,
         history: [],
       });
 
@@ -586,7 +690,9 @@ export function WaterChanges() {
               <div className="relative">
                 <select
                   value={selectedAquariumId}
-                  onChange={(event) => setSelectedAquariumId(event.target.value)}
+                  onChange={(event) =>
+                    setSelectedAquariumId(event.target.value)
+                  }
                   className="h-10 min-w-[210px] appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-9 text-sm font-black text-slate-700 outline-none focus:border-[#635BFF]"
                 >
                   {aquariums.length === 0 ? (
@@ -595,7 +701,6 @@ export function WaterChanges() {
                     aquariums.map((aquarium) => (
                       <option key={aquarium.id} value={aquarium.id}>
                         {aquarium.name}
-                        {aquarium.volume ? ` • ${aquarium.volume} л` : ""}
                       </option>
                     ))
                   )}
@@ -641,12 +746,7 @@ export function WaterChanges() {
                     </p>
 
                     <h2 className="mt-2 text-[28px] font-black tracking-[-0.03em] text-slate-950">
-                      {dashboard?.daysLeft === null ||
-                      dashboard?.daysLeft === undefined
-                        ? "Налаштуйте графік"
-                        : dashboard.daysLeft <= 0
-                        ? "Підміну потрібно виконати"
-                        : `Підміна через ${dashboard.daysLeft} дні`}
+                      {cycleStatusText}
                     </h2>
 
                     <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
@@ -726,13 +826,15 @@ export function WaterChanges() {
                   </div>
 
                   <p className="mt-3 text-sm font-semibold leading-5 text-white/75">
-                    Це {effectivePercentage}% від загального обʼєму акваріума{" "}
-                    {selectedAquarium?.volume || "—"} л.
+                    {selectedAquariumVolume
+                      ? `Це ${effectivePercentage}% від загального обʼєму акваріума — ${selectedAquariumVolume} л.`
+                      : "Обʼєм акваріума ще завантажується або відсутній у даних."}
                   </p>
 
-                  {!selectedAquarium?.volume && (
+                  {!selectedAquariumVolume && (
                     <p className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-xs font-bold text-white">
-                      Обʼєм ще завантажується або відсутній у даних акваріума.
+                      Перевірте, чи для вибраного акваріума на backend
+                      повертається поле volume.
                     </p>
                   )}
 

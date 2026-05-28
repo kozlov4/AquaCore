@@ -21,6 +21,7 @@ function getErrorMessage(data, fallbackMessage) {
 
   if (typeof data?.detail === "string") return data.detail;
   if (typeof data?.message === "string") return data.message;
+  if (typeof data?.error === "string") return data.error;
 
   return fallbackMessage;
 }
@@ -56,7 +57,9 @@ export default async function handler(req, res) {
       });
     }
 
-    const backendUrl = `${API_URL}/aquariums/${aquarium_id}/check-compatibility/${species_id}`;
+    const backendUrl = `${API_URL}/aquariums/${encodeURIComponent(
+      String(aquarium_id)
+    )}/check-compatibility/${encodeURIComponent(String(species_id))}`;
 
     console.log("CHECK COMPATIBILITY PROXY URL:", backendUrl);
 
@@ -78,6 +81,7 @@ export default async function handler(req, res) {
         message: getErrorMessage(data, "Не вдалося перевірити сумісність"),
         detail: data?.detail,
         backendStatus: response.status,
+        backendResponse: data,
       });
     }
 

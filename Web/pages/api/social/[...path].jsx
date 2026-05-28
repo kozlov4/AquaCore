@@ -25,51 +25,52 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
+    const token = req.headers.authorization;
+    const path = Array.isArray(req.query.path) ? req.query.path.join("/") : "";
+
+    if (!token) {
+      return res.status(401).json({
+        message: "Authorization token is missing",
+      });
+    }
+
+    const allowedMethods = ["GET", "POST", "PATCH", "PUT", "DELETE"];
+
+    if (!allowedMethods.includes(req.method)) {
+      res.setHeader("Allow", allowedMethods);
 
       return res.status(405).json({
-        message: "Method not allowed",
+        message: "Method Not Allowed",
       });
     }
 
-    const { code } = req.query;
-
-    if (!code) {
-      return res.status(400).json({
-        message: "Google code is required",
-      });
-    }
-
-    const params = new URLSearchParams({
-      code: String(code),
+    const response = await fetch(`${API_URL}/social/${path}`, {
+      method: req.method,
+      headers: {
+        Authorization: token,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: ["GET", "DELETE"].includes(req.method)
+        ? undefined
+        : JSON.stringify(req.body || {}),
     });
-
-    const response = await fetch(
-      `${API_URL}/google/callback?${params.toString()}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
 
     const data = await readResponse(response);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завершити Google авторизацію"),
+        message: getErrorMessage(data, "Backend request failed"),
         backendStatus: response.status,
         detail: data?.detail,
         raw: data,
       });
     }
 
-    return res.status(200).json(data);
+    return res.status(response.status).json(data);
   } catch (error) {
     return res.status(500).json({
-      message: error.message || "Google callback proxy server error",
+      message: error.message || "Internal Server Error",
     });
   }
 }

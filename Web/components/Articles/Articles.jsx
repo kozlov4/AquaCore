@@ -24,7 +24,7 @@ import {
   deleteArticle,
   getArticle,
   getArticleCategories,
-  getArticles,
+  getArticlesByTab,
   getDraftArticles,
   updateArticle,
 } from "../../services/articlesApi";
@@ -99,7 +99,7 @@ function ArticleCard({ article, index, onOpen, onEdit, onDelete, showActions }) 
         </span>
       )}
 
-      {article.isOfficial && (
+      {article.isOfficial && !article.isDraft && (
         <span className="absolute left-4 top-4 rounded-full bg-[#635BFF] px-3 py-1 text-[11px] font-black uppercase text-white shadow-sm">
           Офіційний гайд
         </span>
@@ -630,7 +630,10 @@ function DeleteArticleModal({ article, isDeleting, onCancel, onConfirm }) {
         <div className="px-6 py-6">
           <p className="text-sm font-medium leading-6 text-slate-600">
             Ви впевнені, що хочете видалити статтю{" "}
-            <span className="font-black text-slate-950">«{article.title}»</span>?
+            <span className="font-black text-slate-950">
+              «{article.title}»
+            </span>
+            ?
           </p>
 
           <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-600">
@@ -689,25 +692,37 @@ export function Articles() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
 
+  const isDraftsTab = activeTab === "drafts";
+
   const loadArticles = useCallback(async () => {
     try {
       setIsLoading(true);
       setError("");
 
-      const data = await getArticles({
+      const data = await getArticlesByTab({
+        tab: activeTab,
         search,
         category: selectedCategory,
-        targetType: activeTab,
       });
 
-      setArticles(data);
+      if (isDraftsTab) {
+        setDrafts(data);
+        setArticles([]);
+      } else {
+        setArticles(data);
+      }
     } catch (error) {
-      setArticles([]);
+      if (isDraftsTab) {
+        setDrafts([]);
+      } else {
+        setArticles([]);
+      }
+
       setError(error.message || "Не вдалося завантажити статті");
     } finally {
       setIsLoading(false);
     }
-  }, [search, selectedCategory, activeTab]);
+  }, [activeTab, search, selectedCategory, isDraftsTab]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -741,29 +756,15 @@ export function Articles() {
 
   useEffect(() => {
     const timeout = setTimeout(loadArticles, 250);
+
     return () => clearTimeout(timeout);
   }, [loadArticles]);
 
-  useEffect(() => {
-    if (activeTab === "drafts") {
-      loadDrafts();
-    }
-  }, [activeTab, loadDrafts]);
-
   const visibleArticles = useMemo(() => {
-    if (activeTab === "drafts") return drafts;
-    if (activeTab === "mine") {
-      return articles.filter((article) => article.isMine);
-    }
-    if (activeTab === "official") {
-      return articles.filter((article) => article.isOfficial);
-    }
-    if (activeTab === "community") {
-      return articles.filter((article) => !article.isOfficial);
-    }
+    if (isDraftsTab) return drafts;
 
     return articles;
-  }, [articles, drafts, activeTab]);
+  }, [articles, drafts, isDraftsTab]);
 
   const openArticle = async (article) => {
     try {
@@ -800,7 +801,9 @@ export function Articles() {
     try {
       setError("");
 
-      const fullArticle = article.content ? article : await getArticle(article.id);
+      const fullArticle = article.content
+        ? article
+        : await getArticle(article.id);
 
       setEditingArticle({
         ...article,
@@ -833,30 +836,67 @@ export function Articles() {
     }
   };
 
-  const handlePublish = async (payload) => {
-    try {
-      validateArticlePayload(payload);
+ const handlePublish = async (payload) => {
+  try {
+    validateArticlePayload(payload);
 
-      setIsSaving(true);
-      setError("");
+    setIsSaving(true);
+    setError("");
 
-      if (editingArticle?.id) {
-        await updateArticle(editingArticle.id, payload);
-      } else {
-        await createArticle(payload);
-      }
+    let savedArticle = null;
 
-      setIsEditorOpen(false);
-      setEditingArticle(null);
-
-      await loadArticles();
-      await loadDrafts();
-    } catch (error) {
-      setError(error.message || "Не вдалося опублікувати статтю");
-    } finally {
-      setIsSaving(false);
+    if (editingArticle?.id) {
+      savedArticle = await updateArticle(editingArticle.id, payload);
+    } else {
+      savedArticle = await createArticle(payload);
     }
-  };
+
+    const normalizedSavedArticle = {
+      ...savedArticle,
+      isDraft: false,
+      isMine: true,
+    };
+
+    setIsEditorOpen(false);
+    setEditingArticle(null);
+    setSelectedArticle(null);
+
+    setActiveTab("mine");
+
+    setArticles((prev) => {
+      const withoutDuplicate = prev.filter(
+        (article) => String(article.id) !== String(normalizedSavedArticle.id)
+      );
+
+      return [normalizedSavedArticle, ...withoutDuplicate];
+    });
+
+    setDrafts((prev) =>
+      prev.filter(
+        (draft) => String(draft.id) !== String(normalizedSavedArticle.id)
+      )
+    );
+
+    setTimeout(async () => {
+      try {
+        const freshArticles = await getArticlesByTab({
+          tab: "mine",
+          search,
+          category: selectedCategory,
+        });
+
+        setArticles(freshArticles);
+      } catch {
+        // Якщо backend ще не встиг віддати нову статтю у списку,
+        // залишаємо локально додану статтю, щоб вона не зникала з UI.
+      }
+    }, 700);
+  } catch (error) {
+    setError(error.message || "Не вдалося опублікувати статтю");
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleSaveDraft = async (payload) => {
     try {
@@ -1025,7 +1065,7 @@ export function Articles() {
             ))}
           </div>
 
-          {isLoading || (activeTab === "drafts" && isDraftsLoading) ? (
+          {isLoading || (isDraftsTab && isDraftsLoading) ? (
             <div className="flex h-[320px] items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
               <Loader2 size={22} className="mr-3 animate-spin text-slate-400" />
               <span className="text-sm font-bold text-slate-400">

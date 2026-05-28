@@ -111,12 +111,35 @@ function normalizeCategory(item) {
   };
 }
 
+/**
+ * Backend приймає НЕ англійські ключі, а enum українською:
+ * - "Всі статті"
+ * - "Офіційні"
+ * - "Спіьнота"   ← саме так написано на backend
+ * - "Мої статті"
+ *
+ * Тому всі frontend-значення переводимо тут.
+ */
 function normalizeTargetType(targetType) {
-  if (!targetType || targetType === "all") return "Всі статті";
-  if (targetType === "official") return "Офіційні";
-  if (targetType === "community") return "Спільнота";
+  const value = String(targetType || "all").trim();
 
-  return String(targetType);
+  const targetTypesMap = {
+    all: "Всі статті",
+    official: "Офіційні",
+    community: "Спіьнота",
+    mine: "Мої статті",
+
+    "Всі статті": "Всі статті",
+    Офіційні: "Офіційні",
+
+    // підтримка двох варіантів, але на backend відправляємо саме "Спіьнота"
+    Спільнота: "Спіьнота",
+    Спіьнота: "Спіьнота",
+
+    "Мої статті": "Мої статті",
+  };
+
+  return targetTypesMap[value] || "Всі статті";
 }
 
 export function normalizeArticle(item) {
@@ -156,6 +179,22 @@ export function normalizeArticle(item) {
     item.preview ||
     String(content || "").slice(0, 180);
 
+  const coverImageUrl =
+    item.cover_url ||
+    item.coverUrl ||
+    item.cover_image_url ||
+    item.coverImageUrl ||
+    item.image_url ||
+    item.imageUrl ||
+    item.avatar_url ||
+    item.photo_url ||
+    item.image?.url ||
+    item.image?.image_url ||
+    item.image?.cover_url ||
+    item.raw?.cover_url ||
+    item.raw?.cover_image_url ||
+    "";
+
   return {
     id: item.id || item.article_id,
 
@@ -167,15 +206,14 @@ export function normalizeArticle(item) {
     category: String(categoryName),
     categoryId,
 
-    imageId: item.image_id || item.imageId || item.image?.id || null,
-    coverImageUrl:
-      item.cover_image_url ||
-      item.coverImageUrl ||
-      item.image_url ||
-      item.imageUrl ||
-      item.image?.url ||
-      item.image?.image_url ||
-      "",
+    imageId:
+      item.image_id ||
+      item.imageId ||
+      item.image?.id ||
+      item.raw?.image_id ||
+      null,
+
+    coverImageUrl,
 
     authorName: String(authorName),
     authorAvatar:
@@ -185,12 +223,17 @@ export function normalizeArticle(item) {
         ? rawAuthor.avatar || rawAuthor.image_url || ""
         : ""),
 
-    views: item.views || item.views_count || item.reads || 0,
+    views: item.views || item.views_count || item.reads || item.reading_time_minutes || 0,
 
     status: item.status || (item.is_draft ? "draft" : "published"),
     isOfficial: Boolean(item.is_official || item.official),
     isMine: Boolean(item.is_mine || item.is_author || item.mine),
-    isDraft: Boolean(item.is_draft || item.status === "draft"),
+    isDraft: Boolean(
+      item.is_draft ||
+        item.status === "draft" ||
+        item.status === "чернетка" ||
+        item.status === "Чернетка"
+    ),
 
     createdAt: item.created_at || item.createdAt || item.published_at || "",
     updatedAt: item.updated_at || item.updatedAt || "",
@@ -283,6 +326,10 @@ export async function getArticles({
 
   const backendTargetType = normalizeTargetType(targetType);
 
+  /**
+   * Для "Всі статті" можна не передавати target_type,
+   * бо backend має default = "Всі статті".
+   */
   if (backendTargetType && backendTargetType !== "Всі статті") {
     params.append("target_type", backendTargetType);
   }
@@ -324,7 +371,65 @@ export async function getDraftArticles() {
     throw new Error(getErrorMessage(data, "Не вдалося завантажити чернетки"));
   }
 
-  return Array.isArray(data) ? data.map(normalizeArticle) : [];
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  const normalizedDrafts = data.map((item) =>
+    normalizeArticle({
+      ...item,
+      is_draft: true,
+      status: "draft",
+    })
+  );
+
+  const detailedDrafts = await Promise.all(
+    normalizedDrafts.map(async (draft) => {
+      try {
+        if (!draft.id) return draft;
+
+        const fullDraft = await getArticle(draft.id);
+
+        return normalizeArticle({
+          ...draft,
+          ...fullDraft,
+          id: draft.id,
+          is_draft: true,
+          status: "draft",
+          category: fullDraft.category || draft.category,
+          category_id: fullDraft.categoryId || draft.categoryId,
+          cover_url: fullDraft.coverImageUrl || draft.coverImageUrl,
+          cover_image_url: fullDraft.coverImageUrl || draft.coverImageUrl,
+          image_id: fullDraft.imageId || draft.imageId,
+        });
+      } catch {
+        return draft;
+      }
+    })
+  );
+
+  return detailedDrafts;
+}
+
+/**
+ * Зручна функція для вкладок сторінки /articles.
+ * Якщо активна вкладка "drafts", використовуємо окремий endpoint:
+ * GET /articles/draft
+ */
+export async function getArticlesByTab({
+  tab = "all",
+  search = "",
+  category = "all",
+} = {}) {
+  if (tab === "drafts" || tab === "draft") {
+    return getDraftArticles();
+  }
+
+  return getArticles({
+    search,
+    category,
+    targetType: tab,
+  });
 }
 
 export async function getArticle(articleId) {
@@ -377,7 +482,17 @@ export async function createArticle(payload) {
     throw new Error(getErrorMessage(data, "Не вдалося опублікувати статтю"));
   }
 
-  return normalizeArticle(data);
+  return normalizeArticle({
+    ...data,
+    image_id: data?.image_id || cleanPayload.image_id,
+    category_id: data?.category_id || cleanPayload.category_id,
+    title: data?.title || cleanPayload.title,
+    excerpt: data?.excerpt || cleanPayload.excerpt,
+    content: data?.content || cleanPayload.content,
+    is_draft: false,
+    status: "published",
+    is_mine: true,
+  });
 }
 
 export async function createDraftArticle(payload) {

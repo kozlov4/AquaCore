@@ -61,6 +61,12 @@ export function Reviews() {
             </p>
           )}
 
+          {reviews.authMessage && (
+            <p className="mb-6 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-600">
+              {reviews.authMessage}
+            </p>
+          )}
+
           <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
             <ReviewsGrid
               reviews={reviews.reviews}
@@ -80,7 +86,7 @@ export function Reviews() {
           <ReviewsFooter
             showAll={reviews.showAll}
             onBack={() => reviews.setShowAll(false)}
-            onOpenFeedback={() => reviews.setIsFeedbackOpen(true)}
+            onOpenFeedback={reviews.handleOpenFeedback}
           />
         </div>
       </motion.main>
@@ -104,3 +110,5 @@ export function Reviews() {
     </div>
   );
 }
+
+export default Reviews;

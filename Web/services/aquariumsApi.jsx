@@ -48,17 +48,83 @@ function extractImageId(data) {
   );
 }
 
+function getAquariumImageUrl(item = {}) {
+  return (
+    item.image_url ||
+    item.cover_image_url ||
+    item.avatar_url ||
+    item.image?.url ||
+    item.image?.image_url ||
+    null
+  );
+}
+
+function getSavedAquariumCreatedAt(aquariumId) {
+  if (typeof window === "undefined" || !aquariumId) return "";
+
+  try {
+    const saved = localStorage.getItem("aquarium_created_dates");
+
+    if (!saved) return "";
+
+    const parsed = JSON.parse(saved);
+
+    return parsed?.[String(aquariumId)] || "";
+  } catch {
+    return "";
+  }
+}
+
+function saveAquariumCreatedAt(aquariumId, createdAt) {
+  if (typeof window === "undefined" || !aquariumId || !createdAt) return;
+
+  try {
+    const saved = localStorage.getItem("aquarium_created_dates");
+    const parsed = saved ? JSON.parse(saved) : {};
+
+    parsed[String(aquariumId)] = createdAt;
+
+    localStorage.setItem("aquarium_created_dates", JSON.stringify(parsed));
+  } catch {
+    // Якщо localStorage недоступний, не блокуємо роботу застосунку
+  }
+}
+
+function getAquariumCreatedAt(item = {}) {
+  return (
+    item.created_at ||
+    item.createdAt ||
+    item.launch_date ||
+    item.launchDate ||
+    item.started_at ||
+    item.startedAt ||
+    item.start_date ||
+    item.startDate ||
+    item.setup_date ||
+    item.setupDate ||
+    item.date ||
+    getSavedAquariumCreatedAt(item.id) ||
+    ""
+  );
+}
+
 export function formatAquariumDate(value) {
   if (!value) return "";
 
   try {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
     return new Intl.DateTimeFormat("uk-UA", {
       day: "numeric",
       month: "long",
       year: "numeric",
-    }).format(new Date(value));
+    }).format(date);
   } catch {
-    return value;
+    return String(value);
   }
 }
 
@@ -72,23 +138,73 @@ export function toInputDate(value) {
   }
 }
 
-export function mapAquariumFromApi(item) {
-  const volumeValue = item.volume ?? item.liters ?? 0;
+function formatWaterValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
 
-  const imageUrl =
-    item.image_url ||
-    item.cover_image_url ||
-    item.avatar_url ||
-    item.image?.url ||
-    item.image?.image_url ||
+  return String(value);
+}
+
+function getLastTestDateText(lastTest) {
+  if (!lastTest || typeof lastTest !== "object") {
+    return "Тестів ще немає";
+  }
+
+  if (lastTest.days_ago === 0) {
+    return "сьогодні";
+  }
+
+  if (lastTest.days_ago === 1) {
+    return "1 день тому";
+  }
+
+  if (typeof lastTest.days_ago === "number") {
+    return `${lastTest.days_ago} днів тому`;
+  }
+
+  const testDate =
+    lastTest.test_date ||
+    lastTest.created_at ||
+    lastTest.date ||
+    lastTest.createdAt ||
     null;
 
+  if (!testDate) {
+    return "є дані тесту";
+  }
+
+  return formatAquariumDate(testDate);
+}
+
+function getLastTestParamsText(lastTest) {
+  if (!lastTest || typeof lastTest !== "object") {
+    return "pH — · GH — · KH —";
+  }
+
+  return [
+    `pH ${formatWaterValue(lastTest.ph)}`,
+    `GH ${formatWaterValue(lastTest.gh)}`,
+    `KH ${formatWaterValue(lastTest.kh)}`,
+    `NH3 ${formatWaterValue(lastTest.nh3)}`,
+    `NO2 ${formatWaterValue(lastTest.no2)}`,
+    `NO3 ${formatWaterValue(lastTest.no3)}`,
+  ].join(" · ");
+}
+
+export function mapAquariumFromApi(item = {}) {
+  const volumeValue = item.volume ?? item.liters ?? 0;
+  const imageUrl = getAquariumImageUrl(item);
   const rawPopulation = item.population;
 
   let populationText = "Жителів ще немає";
 
   if (rawPopulation && typeof rawPopulation === "object") {
-    const totalQuantity = rawPopulation.total_quantity ?? 0;
+    const totalQuantity =
+      rawPopulation.total_quantity ??
+      rawPopulation.total_count ??
+      rawPopulation.count ??
+      0;
 
     const speciesNames = Array.isArray(rawPopulation.species_names)
       ? rawPopulation.species_names
@@ -105,22 +221,42 @@ export function mapAquariumFromApi(item) {
     populationText = `${rawPopulation} особин`;
   }
 
+  const lastTest = item.last_test || item.lastTest || null;
+  const createdAt = getAquariumCreatedAt(item);
+
+  if (createdAt && item.id) {
+    saveAquariumCreatedAt(item.id, createdAt);
+  }
+
   return {
     id: item.id,
     name: item.name || "Без назви",
+
     volume: `${volumeValue} л`,
     volumeValue,
+
     environment: item.type || item.environment || "Прісноводний",
     type: item.type || item.environment || "Прісноводний",
     status: item.status || "Активний",
+
     image: imageUrl || "/images/fish-card.jpg",
     imageUrl,
-    createdAt: item.created_at || item.createdAt || "",
-    createdDate: formatAquariumDate(item.created_at || item.createdAt),
+    image_url: imageUrl,
+    cover_image_url: item.cover_image_url || null,
+
+    createdAt,
+    created_at: createdAt,
+    createdDate: formatAquariumDate(createdAt),
+
     population: populationText,
     populationData: rawPopulation || null,
-    lastTest: item.last_test || "Тестів ще немає",
-    params: item.params || "pH — · GH — · KH —",
+
+    lastTest,
+    last_test: lastTest,
+
+    lastTestText: getLastTestDateText(lastTest),
+    params: getLastTestParamsText(lastTest),
+
     raw: item,
   };
 }
@@ -202,6 +338,7 @@ export async function createAquarium({
   file = null,
 }) {
   const imageId = file ? await uploadAquariumImage(file) : null;
+  const finalCreatedAt = createdAt || new Date().toISOString();
 
   const response = await fetch("/api/aquariums", {
     method: "POST",
@@ -214,7 +351,7 @@ export async function createAquarium({
       name,
       volume: Number(volume),
       type,
-      created_at: createdAt || new Date().toISOString(),
+      created_at: finalCreatedAt,
       image_id: imageId,
     }),
   });
@@ -223,6 +360,10 @@ export async function createAquarium({
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося створити акваріум"));
+  }
+
+  if (data?.id) {
+    saveAquariumCreatedAt(data.id, finalCreatedAt);
   }
 
   return data;
@@ -238,6 +379,7 @@ export async function updateAquarium({
   keepImage = true,
 }) {
   let imageId;
+  const finalCreatedAt = createdAt || new Date().toISOString();
 
   if (file) {
     imageId = await uploadAquariumImage(file);
@@ -249,7 +391,7 @@ export async function updateAquarium({
     name,
     volume: Number(volume),
     type,
-    created_at: createdAt || new Date().toISOString(),
+    created_at: finalCreatedAt,
   };
 
   if (file || !keepImage) {
@@ -271,6 +413,8 @@ export async function updateAquarium({
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Не вдалося оновити акваріум"));
   }
+
+  saveAquariumCreatedAt(id, finalCreatedAt);
 
   return data;
 }
@@ -577,4 +721,56 @@ export async function addInhabitantToAquarium({
   }
 
   return data;
+}
+
+export async function getAquariumById(aquariumId) {
+  if (!aquariumId) {
+    throw new Error("Aquarium id is required");
+  }
+
+  const response = await fetch(`/api/aquariums/${aquariumId}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Не вдалося завантажити акваріум"));
+  }
+
+  console.log("Aquarium details data:", data);
+
+  const imageUrl = getAquariumImageUrl(data);
+  const createdAt = getAquariumCreatedAt(data);
+
+  if (createdAt) {
+    saveAquariumCreatedAt(data.id || aquariumId, createdAt);
+  }
+
+  return {
+    id: data.id || aquariumId,
+    name: data.name || "Без назви",
+
+    volume: data.volume ?? data.liters ?? 0,
+    volumeValue: data.volume ?? data.liters ?? 0,
+
+    type: data.type || data.environment || "Прісноводний",
+    environment: data.type || data.environment || "Прісноводний",
+
+    status: data.status || "Активний",
+
+    created_at: createdAt,
+    createdAt,
+    createdDate: formatAquariumDate(createdAt),
+
+    image: imageUrl || "/images/fish-card.jpg",
+    image_url: imageUrl,
+    cover_image_url: data.cover_image_url || null,
+
+    raw: data,
+  };
 }
