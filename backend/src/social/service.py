@@ -2,7 +2,7 @@ import logging
 import random
 
 logger = logging.getLogger(__name__)
-from fastapi import HTTPException, status, BackgroundTasks, logger
+from fastapi import HTTPException, status, BackgroundTasks
 from fastapi_mail import MessageSchema, MessageType, FastMail
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
