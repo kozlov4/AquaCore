@@ -33,18 +33,12 @@ export default async function handler(req, res) {
       });
     }
 
-    const { code, error } = req.query;
-
-    if (error) {
-      return res.redirect(
-        `/google/callback?error=${encodeURIComponent(String(error))}`
-      );
-    }
+    const { code } = req.query;
 
     if (!code) {
-      return res.redirect(
-        `/google/callback?error=${encodeURIComponent("Google code is required")}`
-      );
+      return res.status(400).json({
+        message: "Google code is required",
+      });
     }
 
     const params = new URLSearchParams({
@@ -64,59 +58,18 @@ export default async function handler(req, res) {
     const data = await readResponse(response);
 
     if (!response.ok) {
-      const errorMessage = getErrorMessage(
-        data,
-        "Не вдалося завершити Google авторизацію"
-      );
-
-      return res.redirect(
-        `/google/callback?error=${encodeURIComponent(errorMessage)}`
-      );
+      return res.status(response.status).json({
+        message: getErrorMessage(data, "Не вдалося завершити Google авторизацію"),
+        backendStatus: response.status,
+        detail: data?.detail,
+        raw: data,
+      });
     }
 
-    const accessToken =
-      data?.access_token || data?.accessToken || data?.token || data?.access;
-
-    const refreshToken =
-      data?.refresh_token || data?.refreshToken || data?.refresh;
-
-    const tokenType = data?.token_type || data?.tokenType || "Bearer";
-
-    if (!accessToken) {
-      return res.redirect(
-        `/google/callback?error=${encodeURIComponent(
-          "Backend не повернув access_token"
-        )}`
-      );
-    }
-
-    const redirectParams = new URLSearchParams({
-      access_token: accessToken,
-      token_type: tokenType,
-    });
-
-    if (refreshToken) {
-      redirectParams.set("refresh_token", refreshToken);
-    }
-
-    if (data?.email) {
-      redirectParams.set("email", data.email);
-    }
-
-    if (data?.name) {
-      redirectParams.set("name", data.name);
-    }
-
-    if (data?.nickname) {
-      redirectParams.set("nickname", data.nickname);
-    }
-
-    return res.redirect(`/google/callback?${redirectParams.toString()}`);
+    return res.status(200).json(data);
   } catch (error) {
-    return res.redirect(
-      `/google/callback?error=${encodeURIComponent(
-        error.message || "Google callback proxy server error"
-      )}`
-    );
+    return res.status(500).json({
+      message: error.message || "Google callback proxy server error",
+    });
   }
 }

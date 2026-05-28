@@ -3,39 +3,39 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
-function saveGoogleTokensFromQuery(query) {
+function saveAuthTokens(data) {
   const accessToken =
-    query.access_token || query.accessToken || query.token || query.access;
+    data?.access_token || data?.accessToken || data?.token || data?.access;
 
   const refreshToken =
-    query.refresh_token || query.refreshToken || query.refresh;
+    data?.refresh_token || data?.refreshToken || data?.refresh;
 
-  const tokenType = query.token_type || query.tokenType || "Bearer";
+  const tokenType = data?.token_type || data?.tokenType || "Bearer";
 
   if (!accessToken) {
-    throw new Error("Access token відсутній");
+    throw new Error("Backend не повернув access_token");
   }
 
-  localStorage.setItem("access_token", String(accessToken));
-  localStorage.setItem("accessToken", String(accessToken));
-  localStorage.setItem("token", String(accessToken));
-  localStorage.setItem("token_type", String(tokenType));
+  localStorage.setItem("access_token", accessToken);
+  localStorage.setItem("accessToken", accessToken);
+  localStorage.setItem("token", accessToken);
+  localStorage.setItem("token_type", tokenType);
 
   if (refreshToken) {
-    localStorage.setItem("refresh_token", String(refreshToken));
-    localStorage.setItem("refreshToken", String(refreshToken));
+    localStorage.setItem("refresh_token", refreshToken);
+    localStorage.setItem("refreshToken", refreshToken);
   }
 
-  if (query.email) {
-    localStorage.setItem("user_email", String(query.email));
+  if (data?.email) {
+    localStorage.setItem("user_email", data.email);
   }
 
-  if (query.name) {
-    localStorage.setItem("user_name", String(query.name));
+  if (data?.name) {
+    localStorage.setItem("user_name", data.name);
   }
 
-  if (query.nickname) {
-    localStorage.setItem("user_nickname", String(query.nickname));
+  if (data?.nickname) {
+    localStorage.setItem("user_nickname", data.nickname);
   }
 }
 
@@ -44,22 +44,52 @@ export default function GoogleCallbackPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!router.isReady) return;
+    async function finishGoogleLogin() {
+      try {
+        if (!router.isReady) return;
 
-    try {
-      const { error: googleError } = router.query;
+        const { code, error: googleError } = router.query;
 
-      if (googleError) {
-        setError(String(googleError));
-        return;
+        if (googleError) {
+          setError(String(googleError));
+          return;
+        }
+
+        if (!code) {
+          setError("Google code відсутній");
+          return;
+        }
+
+        const response = await fetch(
+          `/api/google/callback?code=${encodeURIComponent(String(code))}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              data?.detail?.[0]?.msg ||
+              data?.detail ||
+              "Не вдалося завершити Google авторизацію"
+          );
+        }
+
+        saveAuthTokens(data);
+
+        router.replace("/aquariums");
+      } catch (error) {
+        setError(error.message || "Помилка Google авторизації");
       }
-
-      saveGoogleTokensFromQuery(router.query);
-
-      router.replace("/dashboard");
-    } catch (error) {
-      setError(error.message || "Помилка Google авторизації");
     }
+
+    finishGoogleLogin();
   }, [router.isReady, router.query, router]);
 
   return (
@@ -74,7 +104,7 @@ export default function GoogleCallbackPage() {
             </h1>
 
             <p className="mt-3 text-sm text-[#6b7280]">
-              Зачекайте, ми завершуємо вхід у ваш акаунт...
+              Зачекайте, виконується вхід у ваш акаунт...
             </p>
           </>
         ) : (
