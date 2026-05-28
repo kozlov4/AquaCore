@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Calendar,
   Check,
   ChevronDown,
   Droplets,
@@ -15,6 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "../Profile/Sidebar";
 import {
   getAquariumNamesForWaterChanges,
+  getAquariumForWaterChange,
   getWaterChangeDashboard,
   recordWaterChange,
   updateWaterChangeSchedule,
@@ -37,11 +37,23 @@ function formatDate(value) {
   });
 }
 
+function getSafePercentage(value) {
+  const numberValue = Number(value);
+
+  if (!numberValue || Number.isNaN(numberValue) || numberValue <= 0) {
+    return 30;
+  }
+
+  return numberValue;
+}
+
 function calculateLiters(volume, percentage) {
   const aquariumVolume = Number(volume || 0);
-  const percent = Number(percentage || 0);
+  const percent = getSafePercentage(percentage);
 
-  if (!aquariumVolume || !percent) return 0;
+  if (!aquariumVolume || Number.isNaN(aquariumVolume)) {
+    return 0;
+  }
 
   return Math.round((aquariumVolume * percent) / 100);
 }
@@ -55,14 +67,14 @@ function RecordWaterChangeModal({
   onSubmit,
 }) {
   const [changeType, setChangeType] = useState("Планова підміна");
-  const [percentage, setPercentage] = useState(targetPercentage || 30);
+  const [percentage, setPercentage] = useState(
+    getSafePercentage(targetPercentage)
+  );
   const [changeDate, setChangeDate] = useState(getTodayInput());
   const [comment, setComment] = useState("");
 
   useEffect(() => {
-    if (targetPercentage) {
-      setPercentage(targetPercentage);
-    }
+    setPercentage(getSafePercentage(targetPercentage));
   }, [targetPercentage]);
 
   if (!isOpen) return null;
@@ -84,15 +96,15 @@ function RecordWaterChangeModal({
         initial={{ opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 24, scale: 0.98 }}
-        className="w-full max-w-[440px] overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="w-full max-w-[430px] overflow-hidden rounded-2xl bg-white shadow-2xl"
       >
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
           <div>
-            <h2 className="text-xl font-black text-slate-950">
+            <h2 className="text-[18px] font-black text-slate-950">
               Зафіксувати підміну
             </h2>
 
-            <p className="mt-1 text-sm font-bold text-[#635BFF]">
+            <p className="mt-1 text-xs font-bold text-slate-400">
               {aquarium?.name || "Акваріум"}
             </p>
           </div>
@@ -101,15 +113,15 @@ function RecordWaterChangeModal({
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="text-slate-400 hover:text-slate-700"
           >
-            <X size={18} />
+            <X size={19} />
           </button>
         </div>
 
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-5 px-6 py-5">
           <div>
-            <label className="mb-2 block text-[12px] font-black uppercase tracking-[0.04em] text-slate-400">
+            <label className="mb-2 block text-sm font-black text-slate-800">
               Тип підміни
             </label>
 
@@ -131,57 +143,51 @@ function RecordWaterChangeModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-2 block text-[12px] font-black uppercase tracking-[0.04em] text-slate-400">
-                Обʼєм підміни (%)
-              </label>
+          <div>
+            <label className="mb-2 block text-sm font-black text-slate-800">
+              Обʼєм підміни (%)
+            </label>
 
-              <div className="relative">
-                <input
-                  type="number"
-                  min="1"
-                  max="90"
-                  value={percentage}
-                  onChange={(event) => setPercentage(event.target.value)}
-                  disabled={isSaving}
-                  className="h-11 w-full rounded-xl border border-slate-200 px-4 pr-9 text-sm font-bold text-slate-700 outline-none focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
-                />
+            <div className="relative">
+              <input
+                type="number"
+                min="1"
+                max="90"
+                value={percentage}
+                onChange={(event) => setPercentage(event.target.value)}
+                disabled={isSaving}
+                className="h-11 w-full rounded-xl border border-slate-200 px-4 pr-9 text-sm font-bold text-slate-700 outline-none focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+              />
 
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
-                  %
-                </span>
-              </div>
-
-              <p className="mt-2 text-[11px] font-semibold text-slate-400">
-                Приблизно {liters} літрів
-              </p>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                %
+              </span>
             </div>
 
-            <div>
-              <label className="mb-2 block text-[12px] font-black uppercase tracking-[0.04em] text-slate-400">
-                Дата
-              </label>
-
-              <div className="relative">
-                <input
-                  type="date"
-                  value={changeDate}
-                  onChange={(event) => setChangeDate(event.target.value)}
-                  disabled={isSaving}
-                  className="h-11 w-full rounded-xl border border-slate-200 px-4 pr-9 text-sm font-bold text-slate-700 outline-none focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
-                />
-
-                <Calendar
-                  size={16}
-                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-              </div>
+            <div className="mt-3 rounded-xl bg-blue-50 px-4 py-3 text-xs font-semibold leading-5 text-blue-600">
+              При загальному обʼємі{" "}
+              <span className="font-black">{aquarium?.volume || "—"} л</span>,
+              потрібно підготувати{" "}
+              <span className="font-black">{liters} л</span> води.
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-[12px] font-black uppercase tracking-[0.04em] text-slate-400">
+            <label className="mb-2 block text-sm font-black text-slate-800">
+              Дата
+            </label>
+
+            <input
+              type="date"
+              value={changeDate}
+              onChange={(event) => setChangeDate(event.target.value)}
+              disabled={isSaving}
+              className="h-11 w-full rounded-xl border border-slate-200 px-4 pr-9 text-sm font-bold text-slate-700 outline-none focus:border-[#635BFF] focus:ring-4 focus:ring-[#635BFF]/10"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-black text-slate-800">
               Виконані дії / коментар
             </label>
 
@@ -230,11 +236,13 @@ function ScheduleModal({
   onSubmit,
 }) {
   const [localInterval, setLocalInterval] = useState(intervalDays || 7);
-  const [localPercentage, setLocalPercentage] = useState(percentage || 30);
+  const [localPercentage, setLocalPercentage] = useState(
+    getSafePercentage(percentage)
+  );
 
   useEffect(() => {
     setLocalInterval(intervalDays || 7);
-    setLocalPercentage(percentage || 30);
+    setLocalPercentage(getSafePercentage(percentage));
   }, [intervalDays, percentage]);
 
   if (!isOpen) return null;
@@ -284,7 +292,9 @@ function ScheduleModal({
             </p>
 
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-slate-500">Кожні</span>
+              <span className="text-sm font-semibold text-slate-500">
+                Кожні
+              </span>
 
               <input
                 type="number"
@@ -295,7 +305,9 @@ function ScheduleModal({
                 className="h-10 w-20 rounded-xl border border-slate-200 px-3 text-center text-sm font-black outline-none focus:border-[#635BFF]"
               />
 
-              <span className="text-sm font-semibold text-slate-500">днів</span>
+              <span className="text-sm font-semibold text-slate-500">
+                днів
+              </span>
             </div>
           </div>
 
@@ -372,6 +384,7 @@ function HistoryItem({ item }) {
 
       <div className="text-right">
         <p className="text-sm font-black text-slate-950">{item.dateLabel}</p>
+
         <p
           className={`mt-1 text-xs font-black ${
             isEmergency ? "text-orange-500" : "text-emerald-500"
@@ -404,12 +417,13 @@ export function WaterChanges() {
     );
   }, [aquariums, selectedAquariumId]);
 
+  const effectivePercentage = useMemo(() => {
+    return getSafePercentage(dashboard?.targetPercentage);
+  }, [dashboard]);
+
   const waterLiters = useMemo(() => {
-    return calculateLiters(
-      selectedAquarium?.volume,
-      dashboard?.targetPercentage || 0
-    );
-  }, [selectedAquarium, dashboard]);
+    return calculateLiters(selectedAquarium?.volume, effectivePercentage);
+  }, [selectedAquarium, effectivePercentage]);
 
   const progress = useMemo(() => {
     const interval = Number(dashboard?.intervalDays || 0);
@@ -422,6 +436,28 @@ export function WaterChanges() {
     return Math.min(100, Math.round((passed / interval) * 100));
   }, [dashboard]);
 
+  async function loadSelectedAquariumDetails(aquariumId) {
+    if (!aquariumId) return;
+
+    try {
+      const fullAquarium = await getAquariumForWaterChange(aquariumId);
+
+      setAquariums((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(aquariumId)
+            ? {
+                ...item,
+                ...fullAquarium,
+                volume: fullAquarium.volume || item.volume || null,
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.log("Не вдалося підтягнути повний акваріум:", error);
+    }
+  }
+
   async function loadDashboard(aquariumId = selectedAquariumId) {
     if (!aquariumId) return;
 
@@ -433,7 +469,13 @@ export function WaterChanges() {
 
       setDashboard(data);
     } catch (error) {
-      setDashboard(null);
+      setDashboard({
+        intervalDays: 7,
+        targetPercentage: 30,
+        daysLeft: null,
+        history: [],
+      });
+
       setError(error.message || "Не вдалося завантажити графік підмін");
     } finally {
       setIsLoading(false);
@@ -462,6 +504,7 @@ export function WaterChanges() {
 
   useEffect(() => {
     if (selectedAquariumId) {
+      loadSelectedAquariumDetails(selectedAquariumId);
       loadDashboard(selectedAquariumId);
     }
   }, [selectedAquariumId]);
@@ -482,6 +525,7 @@ export function WaterChanges() {
       await recordWaterChange(selectedAquariumId, payload);
 
       setIsRecordOpen(false);
+
       await loadDashboard(selectedAquariumId);
     } catch (error) {
       setError(error.message || "Не вдалося зафіксувати підміну");
@@ -505,7 +549,14 @@ export function WaterChanges() {
 
       await updateWaterChangeSchedule(selectedAquariumId, payload);
 
+      setDashboard((prev) => ({
+        ...(prev || {}),
+        intervalDays: Number(payload.intervalDays),
+        targetPercentage: Number(payload.percentage),
+      }));
+
       setIsScheduleOpen(false);
+
       await loadDashboard(selectedAquariumId);
     } catch (error) {
       setError(error.message || "Не вдалося оновити параметри підміни");
@@ -544,6 +595,7 @@ export function WaterChanges() {
                     aquariums.map((aquarium) => (
                       <option key={aquarium.id} value={aquarium.id}>
                         {aquarium.name}
+                        {aquarium.volume ? ` • ${aquarium.volume} л` : ""}
                       </option>
                     ))
                   )}
@@ -605,7 +657,9 @@ export function WaterChanges() {
                     </div>
 
                     <div className="mt-3 flex justify-between text-xs font-bold text-slate-400">
-                      <span>Остання: {formatDate(dashboard?.lastChangeDate)}</span>
+                      <span>
+                        Остання: {formatDate(dashboard?.lastChangeDate)}
+                      </span>
                       <span>План: {formatDate(dashboard?.nextChangeDate)}</span>
                     </div>
                   </div>
@@ -648,7 +702,8 @@ export function WaterChanges() {
                         </p>
 
                         <p className="mt-1 text-xs font-semibold text-slate-400">
-                          Натисніть “Зафіксувати підміну”, щоб додати перший запис.
+                          Натисніть “Зафіксувати підміну”, щоб додати перший
+                          запис.
                         </p>
                       </div>
                     )}
@@ -664,15 +719,22 @@ export function WaterChanges() {
                     <span className="text-[34px] font-black leading-none">
                       {waterLiters}
                     </span>
+
                     <span className="pb-1 text-sm font-bold text-white/80">
                       літрів
                     </span>
                   </div>
 
                   <p className="mt-3 text-sm font-semibold leading-5 text-white/75">
-                    Це {dashboard?.targetPercentage || 0}% від загального обʼєму
-                    акваріума {selectedAquarium?.volume || "—"} л.
+                    Це {effectivePercentage}% від загального обʼєму акваріума{" "}
+                    {selectedAquarium?.volume || "—"} л.
                   </p>
+
+                  {!selectedAquarium?.volume && (
+                    <p className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-xs font-bold text-white">
+                      Обʼєм ще завантажується або відсутній у даних акваріума.
+                    </p>
+                  )}
 
                   <button
                     type="button"
@@ -693,7 +755,7 @@ export function WaterChanges() {
           <RecordWaterChangeModal
             isOpen={isRecordOpen}
             aquarium={selectedAquarium}
-            targetPercentage={dashboard?.targetPercentage || 30}
+            targetPercentage={effectivePercentage}
             isSaving={isSavingRecord}
             onClose={() => setIsRecordOpen(false)}
             onSubmit={handleRecordSubmit}
@@ -705,7 +767,7 @@ export function WaterChanges() {
             isOpen={isScheduleOpen}
             aquarium={selectedAquarium}
             intervalDays={dashboard?.intervalDays || 7}
-            percentage={dashboard?.targetPercentage || 30}
+            percentage={effectivePercentage}
             isSaving={isSavingSchedule}
             onClose={() => setIsScheduleOpen(false)}
             onSubmit={handleScheduleSubmit}

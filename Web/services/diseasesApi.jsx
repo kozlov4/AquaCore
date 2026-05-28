@@ -33,7 +33,7 @@ function getDangerLabel(dangerLevel) {
   return value;
 }
 
-export function mapDiseaseCardFromApi(item) {
+export function mapDiseaseCardFromApi(item = {}) {
   return {
     id: item.id,
     title: item.name || "Без назви",
@@ -47,9 +47,11 @@ export function mapDiseaseCardFromApi(item) {
   };
 }
 
-export function mapDiseaseDetailsFromApi(item) {
+export function mapDiseaseDetailsFromApi(item = {}) {
   const diagnostics = Array.isArray(item.diagnostic_steps)
-    ? item.diagnostic_steps.map((step) => step.text).filter(Boolean)
+    ? item.diagnostic_steps
+        .map((step) => step?.text)
+        .filter(Boolean)
     : [];
 
   const treatment = Array.isArray(item.treatment_steps)
@@ -102,7 +104,7 @@ export async function getDiseases({
     params.append("target_type", targetType);
   }
 
-  if (searchText.trim()) {
+  if (searchText && searchText.trim()) {
     params.append("search_text", searchText.trim());
   }
 
@@ -115,8 +117,9 @@ export async function getDiseases({
       });
   }
 
+  const query = params.toString();
   const data = await apiJson(
-    `/api/diseases${params.toString() ? `?${params.toString()}` : ""}`,
+    `/api/diseases${query ? `?${query}` : ""}`,
     {
       method: "GET",
     },

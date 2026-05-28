@@ -15,8 +15,6 @@ async function readResponse(response) {
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
-
       return res.status(405).json({
         message: "Method not allowed",
       });
@@ -56,18 +54,21 @@ export default async function handler(req, res) {
         });
     }
 
-    const response = await fetch(
-      `${API_URL}/diseases${params.toString() ? `?${params.toString()}` : ""}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: token,
-        },
-      }
-    );
+    const query = params.toString();
+    const url = `${API_URL}/diseases${query ? `?${query}` : ""}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: token,
+        Accept: "application/json",
+      },
+    });
 
     const data = await readResponse(response);
+
+    console.log("GET /diseases status:", response.status);
+    console.log("GET /diseases response:", data);
 
     return res.status(response.status).json(data);
   } catch (error) {

@@ -14,7 +14,9 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
@@ -25,6 +27,14 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
+
+      return res.status(405).json({
+        message: "Method not allowed",
+      });
+    }
+
     const token = req.headers.authorization;
     const { id } = req.query;
 
@@ -40,14 +50,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
-
-      return res.status(405).json({
-        message: "Method not allowed",
-      });
-    }
-
     const response = await fetch(`${API_URL}/equipment/${id}/alerts/status`, {
       method: "GET",
       headers: {
@@ -58,9 +60,15 @@ export default async function handler(req, res) {
 
     const data = await readResponse(response);
 
+    console.log(`GET /equipment/${id}/alerts/status status:`, response.status);
+    console.log(`GET /equipment/${id}/alerts/status response:`, data);
+
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завантажити сповіщення"),
+        message: getErrorMessage(
+          data,
+          "Не вдалося завантажити статус обладнання"
+        ),
         detail: data?.detail,
         backendStatus: response.status,
       });

@@ -17,13 +17,8 @@ function getErrorMessage(data, fallbackMessage) {
     return data.detail[0]?.msg || fallbackMessage;
   }
 
-  if (typeof data?.detail === "string") {
-    return data.detail;
-  }
-
-  if (typeof data?.message === "string") {
-    return data.message;
-  }
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.message === "string") return data.message;
 
   return fallbackMessage;
 }
@@ -53,35 +48,29 @@ export default async function handler(req, res) {
       });
     }
 
-    const speciesId = Number(req.body?.species_id);
-    const quantity = Number(req.body?.quantity);
-    const settlementDate = req.body?.settlement_date;
-    const ignoreWarnings = Boolean(req.body?.ignore_warnings);
+    const payload = {
+      species_id: Number(req.body?.species_id),
+      quantity: Number(req.body?.quantity),
+      settlement_date: req.body?.settlement_date,
+    };
 
-    if (!speciesId) {
+    if (!payload.species_id) {
       return res.status(400).json({
         message: "species_id is required",
       });
     }
 
-    if (!quantity || quantity <= 0) {
+    if (!payload.quantity || payload.quantity <= 0) {
       return res.status(400).json({
         message: "quantity must be greater than 0",
       });
     }
 
-    if (!settlementDate) {
+    if (!payload.settlement_date) {
       return res.status(400).json({
         message: "settlement_date is required",
       });
     }
-
-    const payload = {
-      species_id: speciesId,
-      quantity,
-      settlement_date: settlementDate,
-      ignore_warnings: ignoreWarnings,
-    };
 
     const response = await fetch(`${API_URL}/aquariums/${id}/inhabitants`, {
       method: "POST",
@@ -95,16 +84,19 @@ export default async function handler(req, res) {
 
     const data = await readResponse(response);
 
+    console.log(`POST /aquariums/${id}/inhabitants status:`, response.status);
+    console.log(`POST /aquariums/${id}/inhabitants payload:`, payload);
+    console.log(`POST /aquariums/${id}/inhabitants response:`, data);
+
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося заселити вид в акваріум"),
+        message: getErrorMessage(data, "Не вдалося заселити рибу"),
         detail: data?.detail,
-        backendStatus: response.status,
         sentPayload: payload,
       });
     }
 
-    return res.status(response.status || 201).json(data);
+    return res.status(response.status).json(data);
   } catch (error) {
     console.error("Add inhabitant proxy error:", error);
 

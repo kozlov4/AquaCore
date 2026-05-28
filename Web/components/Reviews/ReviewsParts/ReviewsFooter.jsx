@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight } from "lucide-react";
+
 import { motion } from "framer-motion";
 
 export function ReviewsFooter({ showAll, onBack, onOpenFeedback }) {
@@ -20,7 +21,10 @@ export function ReviewsFooter({ showAll, onBack, onOpenFeedback }) {
           whileTap={{ scale: 0.98 }}
           className="
             flex cursor-pointer items-center gap-2
-            text-sm font-semibold text-[#2196F3]
+            rounded-2xl bg-[#5B4CF6] px-5 py-3
+            text-sm font-black text-white
+            shadow-[0_16px_35px_rgba(91,76,246,0.25)]
+            transition hover:bg-[#4f43df]
             sm:text-base
           "
         >

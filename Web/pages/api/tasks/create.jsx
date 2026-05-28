@@ -25,6 +25,21 @@ function getErrorMessage(data, fallbackMessage) {
   return fallbackMessage;
 }
 
+const allowedTaskTypes = [
+  "Підміна води",
+  "Обслуговування",
+  "Тести води",
+  "Рослини",
+  "Власне завдання",
+];
+
+const allowedRepeatTypes = [
+  "Не повторювати",
+  "Щодня",
+  "Щотижня",
+  "Щомісяця",
+];
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -45,21 +60,20 @@ export default async function handler(req, res) {
 
     const body = req.body || {};
 
- const payload = {
-  aquarium_id: Number(body.aquarium_id),
-  title: String(body.title || "").trim(),
-  description: String(body.description || "").trim(),
-  due_date: body.due_date,
-  recurrence: body.recurrence || "none",
-  category: body.category || "Власне завдання",
-  task_type: body.task_type || "Власне завдання",
-};
+    const payload = {
+      aquarium_id:
+        body.aquarium_id === null ||
+        body.aquarium_id === undefined ||
+        body.aquarium_id === ""
+          ? null
+          : Number(body.aquarium_id),
 
-    if (!payload.aquarium_id) {
-      return res.status(400).json({
-        message: "aquarium_id is required",
-      });
-    }
+      task_type: String(body.task_type || "Власне завдання").trim(),
+      title: String(body.title || "").trim(),
+      notes: body.notes ? String(body.notes).trim() : null,
+      due_date: body.due_date,
+      repeat_type: String(body.repeat_type || "Не повторювати").trim(),
+    };
 
     if (!payload.title) {
       return res.status(400).json({
@@ -70,6 +84,22 @@ export default async function handler(req, res) {
     if (!payload.due_date) {
       return res.status(400).json({
         message: "due_date is required",
+      });
+    }
+
+    if (!allowedTaskTypes.includes(payload.task_type)) {
+      return res.status(400).json({
+        message:
+          "task_type повинен бути одним із: Підміна води, Обслуговування, Тести води, Рослини, Власне завдання",
+        sentTaskType: payload.task_type,
+      });
+    }
+
+    if (!allowedRepeatTypes.includes(payload.repeat_type)) {
+      return res.status(400).json({
+        message:
+          "repeat_type повинен бути одним із: Не повторювати, Щодня, Щотижня, Щомісяця",
+        sentRepeatType: payload.repeat_type,
       });
     }
 

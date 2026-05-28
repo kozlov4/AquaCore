@@ -1,137 +1,115 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Filter, Lightbulb, Thermometer, Wrench } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-
-function todayInputDate() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const categories = [
   {
     label: "Фільтрація",
     value: "Фільтрація",
-    icon: Filter,
-    specsLabel: "Потужність",
-    placeholder: "Напр., 800 л/год",
+    placeholderName: "Напр., Aquael Fan 1 Plus",
+    placeholderSpecs: "Напр., 800 л/год",
+    defaultInterval: 30,
   },
   {
     label: "Освітлення",
     value: "Освітлення",
-    icon: Lightbulb,
-    specsLabel: "Графік та інтенсивність",
-    placeholder: "Напр., 8 годин, 70%",
+    placeholderName: "Напр., Chihiros WRGB II",
+    placeholderSpecs: "Напр., 8 годин, 70%",
+    defaultInterval: 60,
   },
   {
     label: "Обігрів",
-    value: "Обігрів / Охолодження",
-    icon: Thermometer,
-    specsLabel: "Потужність",
-    placeholder: "Напр., 100 Вт",
+    value: "Обігрів",
+    placeholderName: "Напр., Aquael Ultra Heater",
+    placeholderSpecs: "Напр., 100 Вт",
+    defaultInterval: 90,
   },
   {
     label: "Інше",
     value: "Інше",
-    icon: Wrench,
-    specsLabel: "Додаткові характеристики",
-    placeholder: "Будь-які деталі...",
+    placeholderName: "Напр., CO₂ система",
+    placeholderSpecs: "Будь-які деталі...",
+    defaultInterval: 14,
   },
 ];
 
-const maintenanceOptions = [
-  {
-    label: "Не потребує",
-    value: "",
-  },
-  {
-    label: "Кожні 7 днів",
-    value: 7,
-  },
-  {
-    label: "Кожні 14 днів",
-    value: 14,
-  },
-  {
-    label: "Кожні 30 днів",
-    value: 30,
-  },
-  {
-    label: "Кожні 90 днів",
-    value: 90,
-  },
-  {
-    label: "Кожні 180 днів",
-    value: 180,
-  },
-];
+function todayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
 
-export function AddEquipmentModal({
-  isOpen,
-  onClose,
-  onSave,
-  isSaving = false,
-}) {
-  const [formData, setFormData] = useState({
-    category: "Фільтрація",
-    name: "",
-    specifications: "",
-    installation_date: todayInputDate(),
-    maintenance_interval_days: 14,
-  });
+export function AddEquipmentModal({ isOpen, onClose, onSave }) {
+  const [category, setCategory] = useState("Фільтрація");
+  const [name, setName] = useState("");
+  const [specifications, setSpecifications] = useState("");
+  const [installationDate, setInstallationDate] = useState(todayInputDate());
+  const [maintenanceIntervalDays, setMaintenanceIntervalDays] = useState("30");
 
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const activeCategory =
-    categories.find((category) => category.value === formData.category) ||
-    categories[0];
+  const selectedCategory = useMemo(() => {
+    return categories.find((item) => item.value === category) || categories[0];
+  }, [category]);
 
   useEffect(() => {
-    if (isOpen) {
-      setErrorMessage("");
-      setIsSubmitting(false);
-      setFormData({
-        category: "Фільтрація",
-        name: "",
-        specifications: "",
-        installation_date: todayInputDate(),
-        maintenance_interval_days: 14,
-      });
-    }
+    if (!isOpen) return;
+
+    setCategory("Фільтрація");
+    setName("");
+    setSpecifications("");
+    setInstallationDate(todayInputDate());
+    setMaintenanceIntervalDays("30");
+    setIsSaving(false);
+    setError("");
   }, [isOpen]);
 
-  const saving = isSaving || isSubmitting;
+  const handleCategoryChange = (item) => {
+    setCategory(item.value);
+    setMaintenanceIntervalDays(String(item.defaultInterval));
+  };
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleClose = () => {
+    if (isSaving) return;
+    onClose?.();
   };
 
   const handleSubmit = async () => {
     try {
-      setIsSubmitting(true);
-      setErrorMessage("");
+      setIsSaving(true);
+      setError("");
 
-      if (!formData.name.trim()) {
+      if (!name.trim()) {
         throw new Error("Введіть бренд та модель обладнання");
       }
 
+      if (!installationDate) {
+        throw new Error("Оберіть дату встановлення");
+      }
+
+      if (
+        maintenanceIntervalDays &&
+        Number(maintenanceIntervalDays) <= 0
+      ) {
+        throw new Error("Інтервал обслуговування має бути більшим за 0");
+      }
+
       await onSave?.({
-        category: formData.category,
-        name: formData.name.trim(),
-        specifications: formData.specifications.trim(),
-        installation_date: formData.installation_date,
-        maintenance_interval_days: formData.maintenance_interval_days,
+        category,
+        name: name.trim(),
+        specifications: specifications.trim(),
+        installationDate,
+        maintenanceIntervalDays: maintenanceIntervalDays
+          ? Number(maintenanceIntervalDays)
+          : null,
       });
 
       onClose?.();
-    } catch (error) {
-      setErrorMessage(error.message || "Не вдалося додати обладнання");
+    } catch (saveError) {
+      setError(saveError.message || "Не вдалося додати обладнання");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
@@ -140,159 +118,143 @@ export function AddEquipmentModal({
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => {
-              if (!saving) onClose?.();
-            }}
+            onClick={handleClose}
           />
 
           <motion.div
-            className="fixed inset-0 z-[90] flex items-center justify-center px-4 py-6"
-            initial={{ opacity: 0, y: 28, scale: 0.96 }}
+            className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-[520px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[22px] bg-white shadow-2xl"
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 28, scale: 0.96 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            exit={{ opacity: 0, y: 24, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            onClick={(event) => event.stopPropagation()}
           >
-            <div
-              className="w-full max-w-[520px] overflow-hidden rounded-[20px] bg-white shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-[#eef0f4] px-7 py-5">
-                <h2 className="text-[20px] font-extrabold tracking-[-0.03em] text-[#111827]">
-                  Нове обладнання
-                </h2>
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h2 className="text-base font-black text-gray-900">
+                Нове обладнання
+              </h2>
 
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={saving}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#9ca3af] transition hover:bg-slate-100 hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <X size={20} />
-                </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={isSaving}
+                className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {error && (
+                <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {error}
+                </div>
+              )}
+
+              <label className="mb-3 block text-xs font-black uppercase tracking-wide text-gray-500">
+                Категорія
+              </label>
+
+              <div className="mb-5 flex flex-wrap gap-2">
+                {categories.map((item) => {
+                  const active = category === item.value;
+
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => handleCategoryChange(item)}
+                      disabled={isSaving}
+                      className={`rounded-full px-4 py-2 text-xs font-black transition ${
+                        active
+                          ? "bg-[#5B4CF6] text-white shadow-lg shadow-[#5B4CF6]/20"
+                          : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                      } disabled:opacity-60`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="px-7 py-6">
-                {errorMessage && (
-                  <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
-                    {errorMessage}
-                  </div>
-                )}
+              <div className="mb-4">
+                <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">
+                  Бренд та модель
+                </label>
 
-                <div className="mb-5">
-                  <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#98a2b3]">
-                    Категорія
-                  </p>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  disabled={isSaving}
+                  placeholder={selectedCategory.placeholderName}
+                  className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10 disabled:bg-gray-100"
+                />
+              </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {categories.map((category) => {
-                      const Icon = category.icon;
-                      const isActive = formData.category === category.value;
+              <div className="mb-4">
+                <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">
+                  Характеристики
+                </label>
 
-                      return (
-                        <button
-                          key={category.value}
-                          type="button"
-                          disabled={saving}
-                          onClick={() => handleChange("category", category.value)}
-                          className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[12px] font-extrabold transition-all ${
-                            isActive
-                              ? "border-[#5b4cf6] bg-[#5b4cf6] text-white shadow-[0_10px_24px_rgba(91,76,246,0.22)]"
-                              : "border-[#e2e8f0] bg-white text-[#64748b] hover:border-[#cfd7e6] hover:bg-[#f8fafc]"
-                          } disabled:cursor-not-allowed disabled:opacity-60`}
-                        >
-                          <Icon size={14} />
-                          {category.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <input
+                  value={specifications}
+                  onChange={(event) => setSpecifications(event.target.value)}
+                  disabled={isSaving}
+                  placeholder={selectedCategory.placeholderSpecs}
+                  className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10 disabled:bg-gray-100"
+                />
+              </div>
+
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">
+                    Дата установки
+                  </label>
+
+                  <input
+                    type="date"
+                    value={installationDate}
+                    onChange={(event) =>
+                      setInstallationDate(event.target.value)
+                    }
+                    disabled={isSaving}
+                    className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-900 outline-none transition focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10 disabled:bg-gray-100"
+                  />
                 </div>
 
-                <div className="space-y-5">
-                  <div>
-                    <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#98a2b3]">
-                      Бренд та модель
-                    </label>
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500">
+                    Обслуговування
+                  </label>
 
-                    <input
-                      value={formData.name}
-                      onChange={(event) => handleChange("name", event.target.value)}
-                      disabled={saving}
-                      placeholder="Напр. Aquael Fan 1 Plus"
-                      className="h-12 w-full rounded-xl border border-[#d6dbe4] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#5b4cf6] focus:ring-4 focus:ring-[#5b4cf6]/10 disabled:bg-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#5b4cf6]">
-                      {activeCategory.specsLabel}
-                    </label>
-
-                    <input
-                      value={formData.specifications}
-                      onChange={(event) =>
-                        handleChange("specifications", event.target.value)
-                      }
-                      disabled={saving}
-                      placeholder={activeCategory.placeholder}
-                      className="h-12 w-full rounded-xl border border-[#c7d2fe] bg-[#f8fbff] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#5b4cf6] focus:ring-4 focus:ring-[#5b4cf6]/10 disabled:bg-slate-100"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#98a2b3]">
-                        Дата установки
-                      </label>
-
-                      <input
-                        type="date"
-                        value={formData.installation_date}
-                        onChange={(event) =>
-                          handleChange("installation_date", event.target.value)
-                        }
-                        disabled={saving}
-                        className="h-12 w-full rounded-xl border border-[#d6dbe4] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#5b4cf6] focus:ring-4 focus:ring-[#5b4cf6]/10 disabled:bg-slate-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#98a2b3]">
-                        Обслуговування
-                      </label>
-
-                      <select
-                        value={formData.maintenance_interval_days}
-                        onChange={(event) =>
-                          handleChange(
-                            "maintenance_interval_days",
-                            event.target.value
-                          )
-                        }
-                        disabled={saving}
-                        className="h-12 w-full rounded-xl border border-[#d6dbe4] bg-white px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#5b4cf6] focus:ring-4 focus:ring-[#5b4cf6]/10 disabled:bg-slate-100"
-                      >
-                        {maintenanceOptions.map((option) => (
-                          <option key={option.label} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  <select
+                    value={maintenanceIntervalDays}
+                    onChange={(event) =>
+                      setMaintenanceIntervalDays(event.target.value)
+                    }
+                    disabled={isSaving}
+                    className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-900 outline-none transition focus:border-[#5B4CF6] focus:ring-4 focus:ring-[#5B4CF6]/10 disabled:bg-gray-100"
+                  >
+                    <option value="7">Кожні 7 днів</option>
+                    <option value="14">Кожні 14 днів</option>
+                    <option value="30">Кожні 30 днів</option>
+                    <option value="60">Кожні 60 днів</option>
+                    <option value="90">Кожні 90 днів</option>
+                    <option value="">Не вказувати</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-[#eef0f4] bg-[#f8fafc] px-7 py-5">
+              <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
                 <button
                   type="button"
-                  onClick={onClose}
-                  disabled={saving}
-                  className="rounded-xl px-5 py-3 text-sm font-extrabold text-[#64748b] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={handleClose}
+                  disabled={isSaving}
+                  className="h-10 rounded-xl px-4 text-sm font-black text-gray-500 transition hover:bg-gray-100 disabled:opacity-50"
                 >
                   Скасувати
                 </button>
@@ -300,10 +262,10 @@ export function AddEquipmentModal({
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={saving}
-                  className="rounded-xl bg-[#5b4cf6] px-6 py-3 text-sm font-extrabold text-white shadow-[0_12px_28px_rgba(91,76,246,0.24)] transition hover:bg-[#4d3fe0] disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isSaving}
+                  className="h-10 rounded-xl bg-[#5B4CF6] px-5 text-sm font-black text-white shadow-lg shadow-[#5B4CF6]/20 transition hover:bg-[#4f43df] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving ? "Додавання..." : "Додати пристрій"}
+                  {isSaving ? "Додавання..." : "Додати пристрій"}
                 </button>
               </div>
             </div>

@@ -27,8 +27,8 @@ function getErrorMessage(data, fallbackMessage) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      res.setHeader("Allow", ["POST"]);
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
 
       return res.status(405).json({
         message: "Method not allowed",
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     const token = req.headers.authorization;
-    const { id } = req.query;
+    const { aquarium_id, species_id } = req.query;
 
     if (!token) {
       return res.status(401).json({
@@ -44,14 +44,24 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!id) {
+    if (!aquarium_id) {
       return res.status(400).json({
-        message: "Equipment id is required",
+        message: "aquarium_id is required",
       });
     }
 
-    const response = await fetch(`${API_URL}/equipment/${id}/service`, {
-      method: "POST",
+    if (!species_id) {
+      return res.status(400).json({
+        message: "species_id is required",
+      });
+    }
+
+    const backendUrl = `${API_URL}/aquariums/${aquarium_id}/check-compatibility/${species_id}`;
+
+    console.log("CHECK COMPATIBILITY PROXY URL:", backendUrl);
+
+    const response = await fetch(backendUrl, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: token,
@@ -60,23 +70,23 @@ export default async function handler(req, res) {
 
     const data = await readResponse(response);
 
-    console.log(`POST /equipment/${id}/service status:`, response.status);
-    console.log(`POST /equipment/${id}/service response:`, data);
+    console.log("CHECK COMPATIBILITY BACKEND STATUS:", response.status);
+    console.log("CHECK COMPATIBILITY BACKEND RESPONSE:", data);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося обслужити обладнання"),
+        message: getErrorMessage(data, "Не вдалося перевірити сумісність"),
         detail: data?.detail,
         backendStatus: response.status,
       });
     }
 
-    return res.status(response.status || 200).json(data);
+    return res.status(200).json(data);
   } catch (error) {
-    console.error("Equipment service proxy error:", error);
+    console.error("Check compatibility proxy error:", error);
 
     return res.status(500).json({
-      message: error.message || "Equipment service proxy server error",
+      message: error.message || "Check compatibility proxy server error",
     });
   }
 }

@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Edit3,
@@ -16,10 +15,11 @@ import {
 
 import { Sidebar } from "../Profile/Sidebar";
 import {
-  getTasks,
-  updateTaskStatus,
-  updateTask,
   deleteTask,
+  getAquariumNamesForTasks,
+  getTasks,
+  updateTask,
+  updateTaskStatus,
 } from "../../services/tasksApi";
 import { CreateTaskModal } from "./CreateTaskModal";
 
@@ -37,13 +37,6 @@ const monthNames = [
   "Листопад",
   "Грудень",
 ];
-
-function formatDateTitle(date) {
-  return date.toLocaleDateString("uk-UA", {
-    day: "numeric",
-    month: "long",
-  });
-}
 
 function toDateOnly(value) {
   if (!value) return null;
@@ -65,11 +58,19 @@ function isSameDay(first, second) {
   );
 }
 
-function isTaskOverdue(task, selectedDate) {
+function formatDateTitle(date) {
+  return date.toLocaleDateString("uk-UA", {
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function isTaskOverdue(task) {
   if (task.isCompleted) return false;
 
   const dueDate = toDateOnly(task.dueDate);
   const today = new Date();
+
   const todayOnly = new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -78,7 +79,7 @@ function isTaskOverdue(task, selectedDate) {
 
   if (task.isOverdue) return true;
 
-  return dueDate && dueDate < todayOnly && isSameDay(selectedDate, todayOnly);
+  return dueDate && dueDate < todayOnly;
 }
 
 function CalendarMini({ selectedDate, setSelectedDate }) {
@@ -99,55 +100,58 @@ function CalendarMini({ selectedDate, setSelectedDate }) {
     cells.push(new Date(year, month, day));
   }
 
-  const previousMonth = () => {
-    setSelectedDate(new Date(year, month - 1, selectedDate.getDate()));
-  };
-
-  const nextMonth = () => {
-    setSelectedDate(new Date(year, month + 1, selectedDate.getDate()));
-  };
-
   return (
-    <div className="rounded-[18px] border border-[#edf0f5] bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.04)]">
-      <div className="mb-5 flex items-center justify-between">
-        <h3 className="text-[14px] font-extrabold text-[#111827]">
+    <div className="rounded-[16px] border border-[#edf0f5] bg-white p-[18px] shadow-[0_10px_30px_rgba(15,23,42,0.035)]">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-[13px] font-black text-[#111827]">
           {monthNames[month]} {year}
         </h3>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={previousMonth}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#98a2b3] hover:bg-[#f4f6fb] hover:text-[#111827]"
+            onClick={() =>
+              setSelectedDate(new Date(year, month - 1, selectedDate.getDate()))
+            }
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#98a2b3] transition hover:bg-[#f4f6fb] hover:text-[#111827]"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={15} />
           </button>
 
           <button
             type="button"
-            onClick={nextMonth}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#98a2b3] hover:bg-[#f4f6fb] hover:text-[#111827]"
+            onClick={() =>
+              setSelectedDate(new Date(year, month + 1, selectedDate.getDate()))
+            }
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#98a2b3] transition hover:bg-[#f4f6fb] hover:text-[#111827]"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-bold text-[#98a2b3]">
+      <div className="mb-2 grid grid-cols-7 text-center">
         {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"].map((day) => (
           <span
             key={day}
-            className={day === "Сб" || day === "Нд" ? "text-red-400" : ""}
+            className={`text-[10px] font-black ${
+              day === "Сб" || day === "Нд" ? "text-red-400" : "text-[#98a2b3]"
+            }`}
           >
             {day}
           </span>
         ))}
       </div>
 
-      <div className="mt-3 grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1">
         {cells.map((date, index) => {
           if (!date) {
-            return <div key={`empty-${index}`} className="h-8" />;
+            return (
+              <div
+                key={`empty-${index}`}
+                className="flex h-7 items-center justify-center text-[11px] font-bold text-[#d0d5dd]"
+              />
+            );
           }
 
           const active = isSameDay(date, selectedDate);
@@ -159,11 +163,10 @@ function CalendarMini({ selectedDate, setSelectedDate }) {
               type="button"
               onClick={() => setSelectedDate(date)}
               className={`
-                relative flex h-8 items-center justify-center rounded-lg
-                text-[12px] font-bold transition
+                relative flex h-7 items-center justify-center rounded-lg text-[11px] font-bold transition
                 ${
                   active
-                    ? "bg-[#635bff] text-white shadow-[0_8px_18px_rgba(99,91,255,0.28)]"
+                    ? "bg-[#635bff] text-white shadow-[0_8px_18px_rgba(99,91,255,0.32)]"
                     : "text-[#475467] hover:bg-[#f4f6fb]"
                 }
               `}
@@ -171,7 +174,7 @@ function CalendarMini({ selectedDate, setSelectedDate }) {
               {date.getDate()}
 
               {today && !active && (
-                <span className="absolute bottom-[3px] h-[3px] w-[3px] rounded-full bg-[#635bff]" />
+                <span className="absolute bottom-1 h-1 w-1 rounded-full bg-[#635bff]" />
               )}
             </button>
           );
@@ -181,28 +184,61 @@ function CalendarMini({ selectedDate, setSelectedDate }) {
   );
 }
 
-function TaskItem({
-  task,
-  selectedDate,
-  onToggle,
-  onEdit,
-  onDelete,
-  isUpdating,
-}) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const overdue = isTaskOverdue(task, selectedDate);
+function FilterButton({ active, icon, label, count, onClick, type = "all" }) {
+  const isOverdue = type === "overdue";
 
   return (
-    <article
+    <button
+      type="button"
+      onClick={onClick}
       className={`
-        relative flex items-start gap-4 rounded-[16px] border bg-white px-5 py-4
-        shadow-[0_10px_28px_rgba(15,23,42,0.035)]
+        flex h-10 w-full items-center justify-between rounded-lg px-3
+        text-[12px] font-black transition
         ${
-          task.isCompleted
-            ? "border-[#eef0f4] bg-[#f8fafc] opacity-60"
+          active && !isOverdue
+            ? "bg-[#eef0ff] text-[#635bff]"
+            : "bg-transparent text-[#475467] hover:bg-[#f8fafc]"
+        }
+      `}
+    >
+      <span className="flex items-center gap-2">
+        <span className="text-[13px]">{icon}</span>
+        {label}
+      </span>
+
+      <span
+        className={`
+          flex h-6 min-w-6 items-center justify-center rounded-full px-2
+          text-[11px] font-black
+          ${
+            isOverdue
+              ? "bg-red-100 text-red-500"
+              : "bg-[#cfd5ff] text-[#635bff]"
+          }
+        `}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function TaskItem({ task, onToggle, onEdit, onDelete, isUpdating }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const overdue = isTaskOverdue(task);
+
+  return (
+    <div
+      className={`
+        relative flex min-h-[64px] gap-3 rounded-[12px] border bg-white px-4 py-3
+        shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition hover:shadow-[0_12px_30px_rgba(15,23,42,0.06)]
+        ${
+          overdue
+            ? "border-red-100 border-l-[3px] border-l-red-500"
+            : task.isCompleted
+            ? "border-[#edf0f5] bg-[#f8fafc]"
             : "border-[#edf0f5]"
         }
-        ${overdue ? "border-l-4 border-l-red-500" : ""}
       `}
     >
       <button
@@ -210,7 +246,7 @@ function TaskItem({
         onClick={() => onToggle(task)}
         disabled={isUpdating}
         className={`
-          mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border transition
+          mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition
           ${
             task.isCompleted
               ? "border-[#8b7cff] bg-[#8b7cff] text-white"
@@ -218,67 +254,63 @@ function TaskItem({
           }
         `}
       >
-        {task.isCompleted && <Check size={14} />}
+        {task.isCompleted && <Check size={11} />}
       </button>
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           {overdue && (
-            <span className="rounded-md bg-red-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.04em] text-red-500">
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-black uppercase text-red-500">
               Прострочено
             </span>
           )}
 
-          <span className="text-[11px] font-bold text-[#98a2b3]">
-            {task.category}
-          </span>
-
-          <span className="text-[11px] font-bold text-[#98a2b3]">
-            🐟 {task.aquariumName}
-          </span>
+          {task.aquariumName && (
+            <span className="text-[10px] font-bold text-[#98a2b3]">
+              🐠 {task.aquariumName}
+            </span>
+          )}
         </div>
 
         <h3
-          className={`
-            text-[15px] font-extrabold text-[#111827]
-            ${task.isCompleted ? "line-through text-[#98a2b3]" : ""}
-          `}
+          className={`text-[13px] font-black leading-snug ${
+            task.isCompleted ? "text-[#98a2b3] line-through" : "text-[#111827]"
+          }`}
         >
           {task.title}
         </h3>
 
         {task.description && (
           <p
-            className={`
-              mt-1 text-[13px] font-medium text-[#98a2b3]
-              ${task.isCompleted ? "line-through" : ""}
-            `}
+            className={`mt-1 text-[11px] font-semibold leading-5 ${
+              task.isCompleted ? "text-[#b8c0cc]" : "text-[#667085]"
+            }`}
           >
             {task.description}
           </p>
         )}
       </div>
 
-      <div className="relative mt-1">
+      <div className="relative">
         <button
           type="button"
           onClick={() => setIsMenuOpen((prev) => !prev)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#98a2b3] hover:bg-[#f4f6fb] hover:text-[#111827]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#98a2b3] transition hover:bg-[#f4f6fb] hover:text-[#111827]"
         >
-          <MoreVertical size={17} />
+          <MoreVertical size={15} />
         </button>
 
         {isMenuOpen && (
-          <div className="absolute right-0 top-10 z-40 w-44 overflow-hidden rounded-xl border border-[#edf0f5] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.12)]">
+          <div className="absolute right-0 top-8 z-20 w-40 overflow-hidden rounded-xl border border-[#edf0f5] bg-white shadow-xl">
             <button
               type="button"
               onClick={() => {
                 setIsMenuOpen(false);
                 onEdit(task);
               }}
-              className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-bold text-[#475467] transition hover:bg-[#f8fafc] hover:text-[#111827]"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] font-bold text-[#475467] hover:bg-[#f8fafc]"
             >
-              <Edit3 size={15} />
+              <Edit3 size={14} />
               Редагувати
             </button>
 
@@ -288,25 +320,30 @@ function TaskItem({
                 setIsMenuOpen(false);
                 onDelete(task);
               }}
-              className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-bold text-red-500 transition hover:bg-red-50"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] font-bold text-red-500 hover:bg-red-50"
             >
-              <Trash2 size={15} />
+              <Trash2 size={14} />
               Видалити
             </button>
           </div>
         )}
       </div>
-    </article>
+    </div>
   );
 }
 
 export function Tasks() {
   const [tasks, setTasks] = useState([]);
+  const [aquariums, setAquariums] = useState([]);
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeFilter, setActiveFilter] = useState("all");
+  const [selectedAquariumId, setSelectedAquariumId] = useState("all");
+
   const [isLoading, setIsLoading] = useState(false);
   const [tasksError, setTasksError] = useState("");
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [editingTask, setEditingTask] = useState(null);
@@ -317,27 +354,42 @@ export function Tasks() {
   const [isEditSaving, setIsEditSaving] = useState(false);
 
   useEffect(() => {
-    async function loadTasks() {
+    async function loadPageData() {
       try {
         setIsLoading(true);
         setTasksError("");
 
-        const data = await getTasks();
+        const [tasksData, aquariumsData] = await Promise.all([
+          getTasks(),
+          getAquariumNamesForTasks(),
+        ]);
 
-        setTasks(data);
+        setTasks(tasksData);
+        setAquariums(aquariumsData);
       } catch (error) {
         setTasks([]);
-        setTasksError(error.message || "Не вдалося завантажити завдання");
+        setAquariums([]);
+        setTasksError(
+          error.message || "Не вдалося завантажити завдання або акваріуми"
+        );
       } finally {
         setIsLoading(false);
       }
     }
 
-    loadTasks();
+    loadPageData();
   }, []);
 
-  const selectedDateTasks = useMemo(() => {
-    let list = tasks.filter((task) => {
+  const aquariumFilteredTasks = useMemo(() => {
+    if (selectedAquariumId === "all") return tasks;
+
+    return tasks.filter(
+      (task) => String(task.aquariumId) === String(selectedAquariumId)
+    );
+  }, [tasks, selectedAquariumId]);
+
+  const visibleTasks = useMemo(() => {
+    let list = aquariumFilteredTasks.filter((task) => {
       const taskDate = toDateOnly(task.dueDate);
 
       if (!taskDate) return true;
@@ -346,15 +398,24 @@ export function Tasks() {
     });
 
     if (activeFilter === "overdue") {
-      list = list.filter((task) => isTaskOverdue(task, selectedDate));
+      list = list.filter((task) => isTaskOverdue(task));
     }
 
     return list;
-  }, [tasks, selectedDate, activeFilter]);
+  }, [aquariumFilteredTasks, selectedDate, activeFilter]);
 
-  const overdueCount = useMemo(() => {
-    return tasks.filter((task) => isTaskOverdue(task, new Date())).length;
-  }, [tasks]);
+  const allCount = aquariumFilteredTasks.length;
+  const overdueCount = aquariumFilteredTasks.filter(isTaskOverdue).length;
+
+  const selectedAquariumName = useMemo(() => {
+    if (selectedAquariumId === "all") return "Усі екосистеми";
+
+    const found = aquariums.find(
+      (aquarium) => String(aquarium.id) === String(selectedAquariumId)
+    );
+
+    return found?.name || "Обраний акваріум";
+  }, [aquariums, selectedAquariumId]);
 
   const handleToggleTask = async (task) => {
     try {
@@ -362,10 +423,10 @@ export function Tasks() {
         throw new Error("Task id is required");
       }
 
+      const nextStatus = !task.isCompleted;
+
       setUpdatingTaskId(task.id);
       setTasksError("");
-
-      const nextStatus = !task.isCompleted;
 
       setTasks((prev) =>
         prev.map((item) =>
@@ -417,9 +478,7 @@ export function Tasks() {
       const updatedTask = await updateTask(editingTask.id, {
         aquarium_id: editingTask.aquariumId,
         task_type:
-          editingTask.taskType ||
-          editingTask.category ||
-          "Власне завдання",
+          editingTask.taskType || editingTask.category || "Власне завдання",
         title: editTitle.trim(),
         notes: editDescription.trim(),
         due_date: editDueDate,
@@ -448,10 +507,9 @@ export function Tasks() {
 
       if (!confirmed) return;
 
-      setTasksError("");
-
       const previousTasks = tasks;
 
+      setTasksError("");
       setTasks((prev) => prev.filter((item) => item.id !== task.id));
 
       try {
@@ -473,15 +531,15 @@ export function Tasks() {
     <main className="min-h-screen bg-white text-[#111827]">
       <Sidebar />
 
-      <section className="min-h-screen px-5 py-9 md:ml-[88px] md:px-10 lg:px-[54px]">
-        <div className="mx-auto max-w-[1030px]">
-          <header className="mb-7 flex items-start justify-between gap-5">
+      <section className="min-h-screen px-5 py-7 md:ml-[88px] md:px-10 lg:px-[54px]">
+        <div className="mx-auto max-w-[920px]">
+          <header className="mb-6 flex items-start justify-between gap-5">
             <div>
-              <h1 className="text-[22px] font-extrabold tracking-[-0.02em] text-[#111827]">
+              <h1 className="text-[22px] font-black tracking-[-0.02em] text-[#111827]">
                 Планування та Догляд
               </h1>
 
-              <p className="mt-2 text-[13px] font-medium text-[#98a2b3]">
+              <p className="mt-1 text-[11px] font-semibold text-[#98a2b3]">
                 Організуйте рутину для всіх ваших екосистем
               </p>
             </div>
@@ -489,105 +547,116 @@ export function Tasks() {
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#635bff] px-5 text-[13px] font-extrabold text-white shadow-[0_12px_26px_rgba(99,91,255,0.25)] transition hover:bg-[#544cf0]"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#635bff] px-4 text-[11px] font-black text-white shadow-[0_10px_22px_rgba(99,91,255,0.25)] transition hover:bg-[#544cf0]"
             >
-              <Plus size={17} />
+              <Plus size={14} />
               Нове завдання
             </button>
           </header>
 
-          <div className="grid grid-cols-1 gap-7 lg:grid-cols-[300px_1fr]">
-            <aside className="space-y-5">
+          <div className="grid gap-5 lg:grid-cols-[250px_1fr]">
+            <aside className="space-y-4">
               <CalendarMini
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
               />
 
-              <div className="rounded-[18px] border border-[#edf0f5] bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.04)]">
-                <h3 className="mb-4 text-[12px] font-black uppercase tracking-[0.04em] text-[#98a2b3]">
+              <div className="rounded-[16px] border border-[#edf0f5] bg-white p-[18px] shadow-[0_10px_30px_rgba(15,23,42,0.035)]">
+                <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.08em] text-[#98a2b3]">
                   Фільтрація
-                </h3>
+                </h2>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveFilter("all")}
-                  className={`
-                    mb-3 flex h-10 w-full items-center justify-between rounded-lg px-4
-                    text-[13px] font-extrabold transition
-                    ${
-                      activeFilter === "all"
-                        ? "bg-[#edf0ff] text-[#635bff]"
-                        : "text-[#475467] hover:bg-[#f8fafc]"
-                    }
-                  `}
-                >
-                  <span>📅 Всі завдання</span>
-                  <span className="rounded-full bg-[#dfe3ff] px-2 py-1 text-[11px] text-[#635bff]">
-                    {tasks.length}
-                  </span>
-                </button>
+                <div className="space-y-2">
+                  <FilterButton
+                    active={activeFilter === "all"}
+                    icon="🗓️"
+                    label="Всі завдання"
+                    count={allCount}
+                    type="all"
+                    onClick={() => setActiveFilter("all")}
+                  />
 
-                <button
-                  type="button"
-                  onClick={() => setActiveFilter("overdue")}
-                  className={`
-                    flex h-10 w-full items-center justify-between rounded-lg px-4
-                    text-[13px] font-extrabold transition
-                    ${
-                      activeFilter === "overdue"
-                        ? "bg-red-50 text-red-500"
-                        : "text-[#475467] hover:bg-[#f8fafc]"
-                    }
-                  `}
-                >
-                  <span className="flex items-center gap-2">
-                    <AlertTriangle size={15} />
-                    Прострочені
-                  </span>
-                  <span className="rounded-full bg-red-100 px-2 py-1 text-[11px] text-red-500">
-                    {overdueCount}
-                  </span>
-                </button>
+                  <FilterButton
+                    active={activeFilter === "overdue"}
+                    icon="⚠️"
+                    label="Прострочені"
+                    count={overdueCount}
+                    type="overdue"
+                    onClick={() => setActiveFilter("overdue")}
+                  />
+                </div>
 
-                <div className="mt-6">
-                  <label className="mb-2 block text-[12px] font-bold text-[#667085]">
+                <div className="my-4 h-px w-full bg-[#edf0f5]" />
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-black text-[#667085]">
                     За акваріумом
                   </label>
 
-                  <select className="h-10 w-full rounded-lg border border-[#e3e9f2] bg-[#f8fafc] px-3 text-[13px] font-semibold text-[#475467] outline-none">
-                    <option>Усі екосистеми</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedAquariumId}
+                      onChange={(event) =>
+                        setSelectedAquariumId(event.target.value)
+                      }
+                      className="
+                        h-10 w-full appearance-none rounded-lg border border-[#dfe5ef]
+                        bg-white px-3 pr-9 text-[12px] font-semibold text-[#263445]
+                        outline-none transition
+                        focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10
+                      "
+                    >
+                      <option value="all">Усі екосистеми</option>
+
+                      {aquariums.map((aquarium) => (
+                        <option key={aquarium.id} value={aquarium.id}>
+                          {aquarium.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <ChevronDown
+                      size={15}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#475467]"
+                    />
+                  </div>
                 </div>
               </div>
             </aside>
 
             <section>
-              <h2 className="mb-4 text-[18px] font-extrabold text-[#111827]">
-                Сьогодні, {formatDateTitle(selectedDate)}
-              </h2>
+              <div className="mb-3">
+                <h2 className="text-[16px] font-black text-[#111827]">
+                  Сьогодні, {formatDateTitle(selectedDate)}
+                </h2>
+
+                <p className="mt-1 text-[11px] font-semibold text-[#98a2b3]">
+                  {selectedAquariumName} • показано {visibleTasks.length}{" "}
+                  завдань
+                </p>
+              </div>
 
               {tasksError && (
-                <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+                <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-bold text-red-500">
                   {tasksError}
                 </div>
               )}
 
               {isLoading ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {Array.from({ length: 3 }).map((_, index) => (
                     <div
                       key={index}
-                      className="h-[88px] animate-pulse rounded-[16px] border border-[#edf0f5] bg-[#f8fafc]"
+                      className="h-[70px] animate-pulse rounded-[12px] bg-slate-100"
                     />
                   ))}
                 </div>
-              ) : selectedDateTasks.length > 0 ? (
-                <div className="space-y-4">
-                  {selectedDateTasks.map((task) => (
+              ) : visibleTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {visibleTasks.map((task) => (
                     <TaskItem
                       key={task.id}
                       task={task}
-                      selectedDate={selectedDate}
                       onToggle={handleToggleTask}
                       onEdit={handleOpenEdit}
                       onDelete={handleDeleteTask}
@@ -596,18 +665,14 @@ export function Tasks() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-[18px] border border-dashed border-[#d9dee8] bg-[#fbfcfe] p-10 text-center">
-                  <CalendarDays
-                    size={34}
-                    className="mx-auto mb-3 text-[#98a2b3]"
-                  />
-
-                  <p className="text-[16px] font-extrabold text-[#111827]">
+                <div className="rounded-[14px] border border-dashed border-[#d9dee8] bg-[#fbfcfe] p-8 text-center">
+                  <p className="text-[15px] font-black text-[#111827]">
                     На цей день завдань немає
                   </p>
 
-                  <p className="mt-2 text-[13px] font-medium text-[#98a2b3]">
-                    Оберіть інший день або створіть нове завдання.
+                  <p className="mt-2 text-[12px] font-semibold text-[#98a2b3]">
+                    Оберіть інший день, змініть фільтри або створіть нове
+                    завдання.
                   </p>
                 </div>
               )}
@@ -617,15 +682,15 @@ export function Tasks() {
       </section>
 
       {editingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-[460px] overflow-hidden rounded-[22px] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#edf0f5] px-5 py-4">
               <div>
-                <h2 className="text-xl font-black text-[#111827]">
+                <h2 className="text-lg font-black text-[#111827]">
                   Редагувати завдання
                 </h2>
 
-                <p className="mt-1 text-sm font-semibold text-[#98a2b3]">
+                <p className="mt-1 text-xs font-semibold text-[#98a2b3]">
                   Змініть назву, опис або дату виконання.
                 </p>
               </div>
@@ -640,76 +705,78 @@ export function Tasks() {
               </button>
             </div>
 
-            <label className="mb-2 block text-[13px] font-black text-[#475467]">
-              Назва завдання
-            </label>
+            <div className="px-5 py-5">
+              <label className="mb-2 block text-xs font-black uppercase text-[#98a2b3]">
+                Назва завдання
+              </label>
 
-            <input
-              value={editTitle}
-              onChange={(event) => setEditTitle(event.target.value)}
-              disabled={isEditSaving}
-              className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
-              placeholder="Наприклад: Підміна води 30%"
-            />
-
-            <label className="mb-2 block text-[13px] font-black text-[#475467]">
-              Опис
-            </label>
-
-            <input
-              value={editDescription}
-              onChange={(event) => setEditDescription(event.target.value)}
-              disabled={isEditSaving}
-              className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
-              placeholder="Додатковий опис завдання"
-            />
-
-            <label className="mb-2 block text-[13px] font-black text-[#475467]">
-              Дата виконання
-            </label>
-
-            <input
-              type="date"
-              value={editDueDate}
-              onChange={(event) => setEditDueDate(event.target.value)}
-              disabled={isEditSaving}
-              className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
-            />
-
-            <label className="mb-2 block text-[13px] font-black text-[#475467]">
-              Повторювати
-            </label>
-
-            <select
-              value={editRepeat}
-              onChange={(event) => setEditRepeat(event.target.value)}
-              disabled={isEditSaving}
-              className="mb-6 h-11 w-full rounded-xl border border-[#e3e9f2] bg-white px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
-            >
-              <option value="Не повторювати">Не повторювати</option>
-              <option value="Щодня">Щодня</option>
-              <option value="Щотижня">Щотижня</option>
-              <option value="Щомісяця">Щомісяця</option>
-            </select>
-
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setEditingTask(null)}
+              <input
+                value={editTitle}
+                onChange={(event) => setEditTitle(event.target.value)}
                 disabled={isEditSaving}
-                className="h-11 rounded-xl border border-[#e3e9f2] px-5 text-sm font-black text-[#475467] transition hover:bg-[#f8fafc]"
-              >
-                Скасувати
-              </button>
+                className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+                placeholder="Наприклад: Підміна води 30%"
+              />
 
-              <button
-                type="button"
-                onClick={handleSaveEdit}
+              <label className="mb-2 block text-xs font-black uppercase text-[#98a2b3]">
+                Опис
+              </label>
+
+              <input
+                value={editDescription}
+                onChange={(event) => setEditDescription(event.target.value)}
                 disabled={isEditSaving}
-                className="h-11 rounded-xl bg-[#635bff] px-5 text-sm font-black text-white transition hover:bg-[#544cf0] disabled:opacity-60"
+                className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+                placeholder="Додатковий опис завдання"
+              />
+
+              <label className="mb-2 block text-xs font-black uppercase text-[#98a2b3]">
+                Дата виконання
+              </label>
+
+              <input
+                type="date"
+                value={editDueDate}
+                onChange={(event) => setEditDueDate(event.target.value)}
+                disabled={isEditSaving}
+                className="mb-4 h-11 w-full rounded-xl border border-[#e3e9f2] px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
+              />
+
+              <label className="mb-2 block text-xs font-black uppercase text-[#98a2b3]">
+                Повторювати
+              </label>
+
+              <select
+                value={editRepeat}
+                onChange={(event) => setEditRepeat(event.target.value)}
+                disabled={isEditSaving}
+                className="mb-6 h-11 w-full rounded-xl border border-[#e3e9f2] bg-white px-4 text-sm font-bold text-[#111827] outline-none transition focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10"
               >
-                {isEditSaving ? "Збереження..." : "Зберегти"}
-              </button>
+                <option value="Не повторювати">Не повторювати</option>
+                <option value="Щодня">Щодня</option>
+                <option value="Щотижня">Щотижня</option>
+                <option value="Щомісяця">Щомісяця</option>
+              </select>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingTask(null)}
+                  disabled={isEditSaving}
+                  className="h-10 rounded-xl border border-[#e3e9f2] px-5 text-sm font-black text-[#475467] transition hover:bg-[#f8fafc]"
+                >
+                  Скасувати
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={isEditSaving}
+                  className="h-10 rounded-xl bg-[#635bff] px-5 text-sm font-black text-white shadow-[0_12px_26px_rgba(99,91,255,0.25)] transition hover:bg-[#544cf0] disabled:opacity-60"
+                >
+                  {isEditSaving ? "Збереження..." : "Зберегти"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
