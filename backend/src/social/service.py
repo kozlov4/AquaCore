@@ -1,10 +1,11 @@
+import logging
 import random
 
+logger = logging.getLogger(__name__)
 from fastapi import HTTPException, status, BackgroundTasks, logger
 from fastapi_mail import MessageSchema, MessageType, FastMail
-from sqlalchemy import select, Result, or_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from auth.utils import validate_password, hash_password
 from core.config import settings
@@ -48,22 +49,22 @@ from .schemas import (
 #     return post
 
 
-async def search_users(
-    session: AsyncSession, curr_user_id: int, search_text: str = None
-):
-    stmt = select(User).options(selectinload(User.avatar))
-
-    if search_text:
-        search_pattern = f"%{search_text}%"
-        stmt = stmt.where(
-            or_(User.nickname.ilike(search_pattern), User.name.ilike(search_pattern)),
-            User.id != curr_user_id,
-        )
-
-    result: Result = await session.execute(stmt)
-    users = result.scalars().all()
-
-    return list(users)
+# async def search_users(
+#     session: AsyncSession, curr_user_id: int, search_text: str = None
+# ):
+#     stmt = select(User).options(selectinload(User.avatar))
+#
+#     if search_text:
+#         search_pattern = f"%{search_text}%"
+#         stmt = stmt.where(
+#             or_(User.nickname.ilike(search_pattern), User.name.ilike(search_pattern)),
+#             User.id != curr_user_id,
+#         )
+#
+#     result: Result = await session.execute(stmt)
+#     users = result.scalars().all()
+#
+#     return list(users)
 
 #
 # async def get_post_by_id(
@@ -449,9 +450,9 @@ async def request_email_change(
     )
 
     if settings.environment.lower() == "production":
-        logger.info(f"Mock send change email code {verify_code} to {request.new_email}")
-    else:
         background_tasks.add_task(fm.send_message, message)
+    else:
+        logger.info(f"Mock send change email code {verify_code} to {request.new_email}")
 
     return {"message": "Повідомлення надіслано"}
 
