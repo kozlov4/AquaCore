@@ -964,22 +964,27 @@ export function Sidebar() {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const token = getAccessToken();
+    function checkAuth() {
+      const token = getAccessToken();
 
-    setIsAuthorized(Boolean(token));
-    setIsAuthChecked(true);
+      setIsAuthorized(Boolean(token));
+      setIsAuthChecked(true);
+    }
+
+    checkAuth();
+
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+    };
   }, [router.pathname]);
-
-  const shouldHideForGuest =
-    isAuthChecked &&
-    !isAuthorized &&
-    pagesWithoutSidebarForGuests.includes(router.pathname);
 
   if (!isAuthChecked) {
     return null;
   }
 
-  if (shouldHideForGuest) {
+  if (!isAuthorized) {
     return null;
   }
 

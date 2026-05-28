@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -120,6 +121,43 @@ const fadeSide = (direction = "left") => ({
   },
 });
 
+function getAccessToken() {
+  if (typeof window === "undefined") return null;
+
+  return (
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token")
+  );
+}
+
+function ProtectedLandingButton({
+  href,
+  children,
+  className,
+  withArrow = false,
+}) {
+  const router = useRouter();
+
+  const handleClick = () => {
+    const token = getAccessToken();
+
+    if (!token) {
+      router.push("/registration");
+      return;
+    }
+
+    router.push(href);
+  };
+
+  return (
+    <button type="button" onClick={handleClick} className={className}>
+      {children}
+      {withArrow && <ArrowRight size={17} />}
+    </button>
+  );
+}
+
 function LandingHeader() {
   return (
     <header className="h-[76px] bg-[#fefefe] px-[30px] grid grid-cols-[180px_1fr_230px] items-center max-lg:h-auto max-lg:grid-cols-[120px_1fr] max-lg:gap-[18px] max-lg:px-5 max-lg:py-5 max-md:flex max-md:flex-col">
@@ -156,12 +194,12 @@ function LandingHeader() {
           Увійти
         </Link>
 
-        <Link
-          href="/registration"
+        <ProtectedLandingButton
+          href="/aquariums"
           className="inline-flex h-[38px] min-w-[145px] items-center justify-center rounded-lg bg-gradient-to-r from-[#7957ff] to-[#af35ff] text-md font-semibold text-white shadow-[0_13px_30px_rgba(121,87,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(121,87,255,0.3)]"
         >
           Почати зараз
-        </Link>
+        </ProtectedLandingButton>
       </div>
     </header>
   );
@@ -284,12 +322,12 @@ function FeatureSection({ feature }) {
           {feature.text}
         </p>
 
-        <Link
+        <ProtectedLandingButton
           href={feature.href}
           className="inline-flex h-8 w-[238px] items-center justify-center rounded-[7px] bg-gradient-to-r from-[#7957ff] to-[#af35ff] text-[10px] font-semibold uppercase tracking-[0.04em] text-white shadow-[0_13px_30px_rgba(121,87,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(121,87,255,0.3)] max-md:w-[220px]"
         >
           {feature.button}
-        </Link>
+        </ProtectedLandingButton>
       </motion.div>
 
       <motion.div
@@ -370,13 +408,13 @@ function CommunitySection() {
           калькуляторами та ділитися досвідом.
         </p>
 
-        <Link
-          href="/registration"
+        <ProtectedLandingButton
+          href="/aquariums"
+          withArrow
           className="inline-flex h-11 min-w-[270px] items-center justify-center gap-2 rounded-[7px] bg-gradient-to-r from-[#7957ff] to-[#af35ff] text-xs font-semibold text-white shadow-[0_13px_30px_rgba(121,87,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(121,87,255,0.3)]"
         >
           Зареєструватися безкоштовно
-          <ArrowRight size={17} />
-        </Link>
+        </ProtectedLandingButton>
       </motion.div>
     </section>
   );
