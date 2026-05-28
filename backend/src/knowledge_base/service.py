@@ -23,11 +23,17 @@ async def get_draft_articles(
     session: AsyncSession,
     user_id: int = None,
 ):
-    stmt = select(Article).where(
-        Article.author_id == user_id, Article.status == "DRAFT"
+    stmt = (
+        select(Article)
+        .where(
+            Article.author_id == user_id,
+            Article.status == "DRAFT"
+        )
+        .options(
+            selectinload(Article.category)
+        )
+        .order_by(Article.created_at.desc())
     )
-
-    stmt = stmt.order_by(Article.created_at.desc())
 
     result = await session.execute(stmt)
     return result.scalars().all()
