@@ -1,11 +1,4 @@
-const API_URL = "https://aquacore.onrender.com";
-
-function getFrontendUrl(req) {
-  const proto = req.headers["x-forwarded-proto"] || "http";
-  const host = req.headers.host;
-
-  return `${proto}://${host}`;
-}
+const API_URL = "http://127.0.0.1:8000";
 
 async function readResponse(response) {
   const text = await response.text();
@@ -30,14 +23,6 @@ function getRedirectUrl(data) {
   );
 }
 
-function rewriteRedirectUri(googleUrl, frontendCallbackUrl) {
-  const url = new URL(googleUrl);
-
-  url.searchParams.set("redirect_uri", frontendCallbackUrl);
-
-  return url.toString();
-}
-
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
@@ -56,25 +41,17 @@ export default async function handler(req, res) {
       },
     });
 
-    const frontendCallbackUrl = `${getFrontendUrl(req)}/google/callback`;
-
     const location = response.headers.get("location");
 
     if (location) {
-      const fixedLocation = rewriteRedirectUri(location, frontendCallbackUrl);
-      return res.redirect(fixedLocation);
+      return res.redirect(location);
     }
 
     const data = await readResponse(response);
     const redirectUrl = getRedirectUrl(data);
 
     if (redirectUrl) {
-      const fixedRedirectUrl = rewriteRedirectUri(
-        redirectUrl,
-        frontendCallbackUrl
-      );
-
-      return res.redirect(fixedRedirectUrl);
+      return res.redirect(redirectUrl);
     }
 
     return res.status(response.status).json(data);

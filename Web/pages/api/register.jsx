@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch("https://aquacore.onrender.com/register/", {
+    const response = await fetch("http://127.0.0.1:8000/register/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

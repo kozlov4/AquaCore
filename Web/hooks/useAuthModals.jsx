@@ -176,57 +176,63 @@ export function useAuthModals() {
     }
   };
 
-  const handleSavePassword = async () => {
-    try {
-      setResetLoading(true);
-      setResetError("");
-      setResetSuccess("");
+const handleSavePassword = async () => {
+  try {
+    setResetLoading(true);
+    setResetError("");
+    setResetSuccess("");
 
-      const code = resetCode.join("");
+    const code = resetCode.join("");
 
-      if (!resetEmail.trim()) {
-        setResetError("Email відсутній. Спробуйте ще раз");
-        return;
-      }
-
-      if (code.length !== 6) {
-        setResetError("Введіть 6-значний код");
-        return;
-      }
-
-      if (!newPassword.trim()) {
-        setResetError("Введіть новий пароль");
-        return;
-      }
-
-      if (newPassword.length < 8) {
-        setResetError("Новий пароль має містити мінімум 8 символів");
-        return;
-      }
-
-      if (newPassword !== repeatPassword) {
-        setResetError("Паролі не співпадають");
-        return;
-      }
-
-      await resetPassword({
-        email: resetEmail.trim(),
-        code,
-        newPassword,
-      });
-
-      setResetSuccess("Пароль успішно змінено");
-
-      setTimeout(() => {
-        closeResetPasswordModal();
-        router.push("/signIn");
-      }, 900);
-    } catch (error) {
-      setResetError(error.message || "Не вдалося змінити пароль");
-    } finally {
-      setResetLoading(false);
+    if (!resetEmail.trim()) {
+      setResetError("Email відсутній. Спробуйте ще раз");
+      return;
     }
-  };
+
+    if (code.length !== 6) {
+      setResetError("Введіть 6-значний код");
+      return;
+    }
+
+    if (!newPassword.trim()) {
+      setResetError("Введіть новий пароль");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setResetError("Новий пароль має містити мінімум 8 символів");
+      return;
+    }
+
+    if (!repeatPassword.trim()) {
+      setResetError("Повторіть новий пароль");
+      return;
+    }
+
+    if (newPassword !== repeatPassword) {
+      setResetError("Паролі не співпадають");
+      return;
+    }
+
+    await resetPassword({
+      email: resetEmail.trim(),
+      code,
+      newPassword,
+      repeatNewPassword: repeatPassword,
+    });
+
+    setResetSuccess("Пароль успішно змінено");
+
+    setTimeout(() => {
+      closeResetPasswordModal();
+      router.push("/signIn");
+    }, 900);
+  } catch (error) {
+    setResetError(error.message || "Не вдалося змінити пароль");
+  } finally {
+    setResetLoading(false);
+  }
+};
 
   return {
     name,

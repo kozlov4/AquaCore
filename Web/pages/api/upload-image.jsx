@@ -4,7 +4,7 @@ export const config = {
   },
 };
 
-const API_URL = "https://aquacore.onrender.com";
+const API_URL = "http://127.0.0.1:8000";
 
 async function readResponse(response) {
   const text = await response.text();

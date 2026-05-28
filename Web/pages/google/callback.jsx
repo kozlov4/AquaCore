@@ -2,41 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { googleCallbackLogin, saveAuthTokens } from "../../services/authApi";
 
-function saveAuthTokens(data) {
+function readTokensFromQuery(query) {
   const accessToken =
-    data?.access_token || data?.accessToken || data?.token || data?.access;
+    query.access_token || query.accessToken || query.token || query.access;
 
-  const refreshToken =
-    data?.refresh_token || data?.refreshToken || data?.refresh;
+  if (!accessToken) return null;
 
-  const tokenType = data?.token_type || data?.tokenType || "Bearer";
-
-  if (!accessToken) {
-    throw new Error("Backend не повернув access_token");
-  }
-
-  localStorage.setItem("access_token", accessToken);
-  localStorage.setItem("accessToken", accessToken);
-  localStorage.setItem("token", accessToken);
-  localStorage.setItem("token_type", tokenType);
-
-  if (refreshToken) {
-    localStorage.setItem("refresh_token", refreshToken);
-    localStorage.setItem("refreshToken", refreshToken);
-  }
-
-  if (data?.email) {
-    localStorage.setItem("user_email", data.email);
-  }
-
-  if (data?.name) {
-    localStorage.setItem("user_name", data.name);
-  }
-
-  if (data?.nickname) {
-    localStorage.setItem("user_nickname", data.nickname);
-  }
+  return {
+    access_token: String(accessToken),
+    refresh_token: query.refresh_token
+      ? String(query.refresh_token)
+      : query.refreshToken
+        ? String(query.refreshToken)
+        : "",
+    token_type: query.token_type
+      ? String(query.token_type)
+      : query.tokenType
+        ? String(query.tokenType)
+        : "Bearer",
+  };
 }
 
 export default function GoogleCallbackPage() {
@@ -55,33 +41,20 @@ export default function GoogleCallbackPage() {
           return;
         }
 
-        if (!code) {
-          setError("Google code відсутній");
+        const tokensFromQuery = readTokensFromQuery(router.query);
+
+        if (tokensFromQuery) {
+          saveAuthTokens(tokensFromQuery);
+          router.replace("/aquariums");
           return;
         }
 
-        const response = await fetch(
-          `/api/google/callback?code=${encodeURIComponent(String(code))}`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              data?.detail?.[0]?.msg ||
-              data?.detail ||
-              "Не вдалося завершити Google авторизацію"
-          );
+        if (!code) {
+          setError("Google code або access_token відсутній");
+          return;
         }
 
-        saveAuthTokens(data);
+        await googleCallbackLogin(code);
 
         router.replace("/aquariums");
       } catch (error) {
@@ -113,7 +86,7 @@ export default function GoogleCallbackPage() {
               Помилка входу
             </h1>
 
-            <p className="mt-3 text-sm text-[#dc2626]">{error}</p>
+            <p className="mt-3 break-words text-sm text-[#dc2626]">{error}</p>
 
             <button
               type="button"

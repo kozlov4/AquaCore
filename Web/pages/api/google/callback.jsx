@@ -1,4 +1,4 @@
-const API_URL = "https://aquacore.onrender.com";
+const API_URL = "http://127.0.0.1:8000";
 
 async function readResponse(response) {
   const text = await response.text();
@@ -14,11 +14,14 @@ async function readResponse(response) {
 
 function getErrorMessage(data, fallbackMessage) {
   if (Array.isArray(data?.detail) && data.detail.length > 0) {
-    return data.detail[0]?.msg || fallbackMessage;
+    return data.detail
+      .map((item) => item?.msg || JSON.stringify(item))
+      .join("; ");
   }
 
   if (typeof data?.detail === "string") return data.detail;
   if (typeof data?.message === "string") return data.message;
+  if (typeof data?.error === "string") return data.error;
 
   return fallbackMessage;
 }
@@ -41,28 +44,28 @@ export default async function handler(req, res) {
       });
     }
 
-    const params = new URLSearchParams({
-      code: String(code),
-    });
+    const backendUrl = `${API_URL}/google/callback?code=${encodeURIComponent(
+      String(code)
+    )}`;
 
-    const response = await fetch(
-      `${API_URL}/google/callback?${params.toString()}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
+    const response = await fetch(backendUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
 
     const data = await readResponse(response);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        message: getErrorMessage(data, "Не вдалося завершити Google авторизацію"),
+        message: getErrorMessage(
+          data,
+          "Не вдалося завершити Google авторизацію"
+        ),
         backendStatus: response.status,
-        detail: data?.detail,
-        raw: data,
+        backendUrl,
+        backendResponse: data,
       });
     }
 
